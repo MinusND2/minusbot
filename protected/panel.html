@@ -164,6 +164,50 @@
             color: #9db0d9;
         }
         .hidden { display: none; }
+        .modstats-box {
+            margin-top: 14px;
+            border: 1px solid rgba(123, 151, 220, 0.35);
+            border-radius: 14px;
+            padding: 14px;
+            background: rgba(9, 17, 36, 0.85);
+        }
+        .modstats-grid {
+            display: grid;
+            grid-template-columns: 1fr 160px 160px auto;
+            gap: 10px;
+            align-items: end;
+            margin-top: 8px;
+        }
+        .modstats-grid label {
+            display: block;
+            font-size: 12px;
+            color: #9db0d9;
+            margin-bottom: 5px;
+        }
+        .modstats-grid select,
+        .modstats-grid input {
+            width: 100%;
+        }
+        .modstats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .modstats-table th,
+        .modstats-table td {
+            text-align: left;
+            padding: 9px 8px;
+            border-bottom: 1px solid #24345d;
+            font-size: 14px;
+        }
+        .modstats-table th {
+            color: #9fb5df;
+            font-weight: 600;
+        }
+        .num {
+            font-variant-numeric: tabular-nums;
+            font-weight: 700;
+        }
     </style>
 </head>
 <body>
@@ -192,6 +236,33 @@
                 <button id="createBtn">Overlay erstellen</button>
             </div>
             <div id="streams" class="links"></div>
+
+            <div class="modstats-box">
+                <div class="row space-between">
+                    <h3 style="margin:0;">Mod Tracking</h3>
+                    <span id="modStatsInfo" class="muted">Lade Daten ...</span>
+                </div>
+                <div class="modstats-grid">
+                    <div>
+                        <label for="channelSelect">Streamer</label>
+                        <select id="channelSelect">
+                            <option value="">Alle Streamer</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="fromDate">Von</label>
+                        <input id="fromDate" type="date">
+                    </div>
+                    <div>
+                        <label for="toDate">Bis</label>
+                        <input id="toDate" type="date">
+                    </div>
+                    <div>
+                        <button type="button" id="refreshModStatsBtn">Aktualisieren</button>
+                    </div>
+                </div>
+                <div id="modStatsContent" class="links" style="margin-top:10px;"></div>
+            </div>
         </div>
     </div>
 
@@ -208,6 +279,17 @@
         const streamNameEl = document.getElementById("streamName");
         const streamsEl = document.getElementById("streams");
         const statusEl = document.getElementById("globalStatus");
+        const channelSelectEl = document.getElementById("channelSelect");
+        const fromDateEl = document.getElementById("fromDate");
+        const toDateEl = document.getElementById("toDate");
+        const refreshModStatsBtnEl = document.getElementById("refreshModStatsBtn");
+        const modStatsInfoEl = document.getElementById("modStatsInfo");
+        const modStatsContentEl = document.getElementById("modStatsContent");
+        const MODSTATS_API_BASE =
+            new URLSearchParams(window.location.search).get("api") ||
+            window.BINGO_CONFIG.modstatsApiBase ||
+            "https://minusbot.onrender.com";
+        let latestChannels = [];
 
         function showStatus(text, kind) {
             statusEl.textContent = text;
@@ -305,6 +387,88 @@
             renderStreams(list);
         }
 
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;");
+        }
+
+        function renderModTable(channel) {
+            const mods = Object.values(channel.mods || {})
+                .sort((a, b) => (b.timeouts + b.bans) - (a.timeouts + a.bans));
+            if (!mods.length) {
+                return `<div class="muted">Keine Einträge im gewählten Zeitraum.</div>`;
+            }
+            const rows = mods.map((m) => `
+                <tr>
+                    <td>${escapeHtml(m.moderatorName || "Unknown")}</td>
+                    <td class="num">${m.timeouts || 0}</td>
+                    <td class="num">${m.bans || 0}</td>
+                    <td class="num">${(m.timeouts || 0) + (m.bans || 0)}</td>
+                </tr>
+            `).join("");
+            return `
+                <table class="modstats-table">
+                    <thead>
+                        <tr>
+                            <th>Mod</th>
+                            <th>Timeouts</th>
+                            <th>Bans</th>
+                            <th>Gesamt</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+        }
+
+        function renderModStatsView() {
+            const selected = channelSelectEl.value;
+            const channels = selected
+                ? latestChannels.filter((c) => c.broadcasterId === selected)
+                : latestChannels;
+
+            if (!channels.length) {
+                modStatsContentEl.innerHTML = `<div class="muted">Keine Daten für die Auswahl.</div>`;
+                return;
+            }
+
+            modStatsContentEl.innerHTML = channels.map((channel) => `
+                <div class="stream">
+                    <h3>${escapeHtml(channel.broadcasterName)}</h3>
+                    <div class="muted">Bans: ${channel.totals?.bans || 0} | Timeouts: ${channel.totals?.timeouts || 0}</div>
+                    ${renderModTable(channel)}
+                </div>
+            `).join("");
+        }
+
+        async function loadModStats() {
+            const root = MODSTATS_API_BASE.replace(/\/$/, "");
+            const from = fromDateEl.value.trim();
+            const to = toDateEl.value.trim();
+            const params = new URLSearchParams();
+            if (from) params.set("from", from);
+            if (to) params.set("to", to);
+            const res = await fetch(`${root}/api/public/modstats?${params.toString()}`);
+            if (!res.ok) {
+                throw new Error(`Modstats API Fehler (${res.status})`);
+            }
+            const data = await res.json();
+            latestChannels = Array.isArray(data.channels) ? data.channels : [];
+
+            const current = channelSelectEl.value;
+            const options = ['<option value="">Alle Streamer</option>']
+                .concat(latestChannels.map((c) => `<option value="${c.broadcasterId}">${escapeHtml(c.broadcasterName)}</option>`));
+            channelSelectEl.innerHTML = options.join("");
+            if (current && latestChannels.some((c) => c.broadcasterId === current)) {
+                channelSelectEl.value = current;
+            }
+
+            modStatsInfoEl.textContent = `Kanäle: ${latestChannels.length} | API: ${MODSTATS_API_BASE}`;
+            renderModStatsView();
+        }
+
         document.getElementById("loginBtn").addEventListener("click", async () => {
             try {
                 clearStatus();
@@ -317,6 +481,16 @@
 
         document.getElementById("logoutBtn").addEventListener("click", async () => {
             await BingoStore.signOut();
+        });
+
+        channelSelectEl.addEventListener("change", renderModStatsView);
+        refreshModStatsBtnEl.addEventListener("click", async () => {
+            try {
+                await loadModStats();
+                showStatus("Modstats aktualisiert.", "success");
+            } catch (err) {
+                showStatus(err.message || "Modstats konnten nicht geladen werden.", "error");
+            }
         });
 
         passwordEl.addEventListener("keydown", (event) => {
@@ -350,6 +524,11 @@
             authCard.classList.add("hidden");
             appCard.classList.remove("hidden");
             await reloadStreams(user);
+            try {
+                await loadModStats();
+            } catch (err) {
+                showStatus(err.message || "Modstats konnten nicht geladen werden.", "error");
+            }
         });
 
         if (!window.firebase) {

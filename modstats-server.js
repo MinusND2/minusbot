@@ -12,6 +12,62 @@ const DATA_FILE = path.join(DATA_DIR, "modstats.json");
 const app = express();
 const seenMessageIds = new Map();
 
+function toDayKey(date) {
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function normalizeDayInput(value) {
+    const raw = (value || "").toString().trim();
+    if (!raw) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return toDayKey(parsed);
+}
+
+function isDayInRange(day, fromDay, toDay) {
+    if (fromDay && day < fromDay) return false;
+    if (toDay && day > toDay) return false;
+    return true;
+}
+
+function filterChannelByDate(channel, fromDay, toDay) {
+    const filtered = {
+        broadcasterId: channel.broadcasterId,
+        broadcasterName: channel.broadcasterName,
+        mods: {},
+        totals: { bans: 0, timeouts: 0 },
+        updatedAt: channel.updatedAt
+    };
+
+    const mods = Object.values(channel.mods || {});
+    for (const mod of mods) {
+        const result = {
+            moderatorId: mod.moderatorId,
+            moderatorName: mod.moderatorName,
+            bans: 0,
+            timeouts: 0,
+            lastActionAt: mod.lastActionAt || null
+        };
+        const byDay = mod.byDay || {};
+        for (const [day, values] of Object.entries(byDay)) {
+            if (!isDayInRange(day, fromDay, toDay)) continue;
+            result.timeouts += Number(values.timeouts || 0);
+            result.bans += Number(values.bans || 0);
+        }
+
+        if (result.timeouts === 0 && result.bans === 0) continue;
+        filtered.mods[mod.moderatorId] = result;
+        filtered.totals.timeouts += result.timeouts;
+        filtered.totals.bans += result.bans;
+    }
+
+    return filtered;
+}
+
 function ensureDataFile() {
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
     if (!fs.existsSync(DATA_FILE)) {
@@ -77,6 +133,7 @@ function incrementModerationCounter(event) {
         broadcasterName,
         mods: {},
         totals: { bans: 0, timeouts: 0 },
+        byDay: {},
         updatedAt: Date.now()
     };
 
@@ -86,19 +143,29 @@ function incrementModerationCounter(event) {
         moderatorName,
         bans: 0,
         timeouts: 0,
+        byDay: {},
         lastActionAt: null
     };
 
     const mod = channel.mods[moderatorId];
     mod.moderatorName = moderatorName;
     mod.lastActionAt = new Date().toISOString();
+    const day = toDayKey(new Date());
+    mod.byDay ||= {};
+    mod.byDay[day] ||= { bans: 0, timeouts: 0 };
+    channel.byDay ||= {};
+    channel.byDay[day] ||= { bans: 0, timeouts: 0 };
 
     if (isTimeout) {
         mod.timeouts += 1;
+        mod.byDay[day].timeouts += 1;
         channel.totals.timeouts += 1;
+        channel.byDay[day].timeouts += 1;
     } else {
         mod.bans += 1;
+        mod.byDay[day].bans += 1;
         channel.totals.bans += 1;
+        channel.byDay[day].bans += 1;
     }
 
     channel.updatedAt = Date.now();
@@ -114,14 +181,24 @@ app.get("/api/public/modstats", (req, res) => {
     setCors(res);
     const db = loadDb();
     const channelId = (req.query.channelId || "").toString().trim();
+    const fromDay = normalizeDayInput(req.query.from);
+    const toDay = normalizeDayInput(req.query.to);
+    const hasRange = !!(fromDay || toDay);
     if (!channelId) {
+        const channels = Object.values(db.channels || {})
+            .map((channel) => (hasRange ? filterChannelByDate(channel, fromDay, toDay) : channel))
+            .filter((channel) => {
+                if (!hasRange) return true;
+                return (channel.totals?.bans || 0) + (channel.totals?.timeouts || 0) > 0;
+            });
         return res.json({
-            channels: Object.values(db.channels),
+            channels,
             updatedAt: db.updatedAt
         });
     }
+    const channel = db.channels[channelId] || null;
     return res.json({
-        channel: db.channels[channelId] || null,
+        channel: !channel ? null : (hasRange ? filterChannelByDate(channel, fromDay, toDay) : channel),
         updatedAt: db.updatedAt
     });
 });
