@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Bingo Overlay</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="bingo-container">
+        <div class="bingo-board" id="board">
+            <!-- Cells will be generated here -->
+        </div>
+    </div>
+
+    <script src="app-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="realtime-store.js"></script>
+    <script>
+        const board = document.getElementById('board');
+        let cells = [];
+
+        function renderBoard(terms) {
+            board.innerHTML = ''; // Clear board
+            cells = [];
+            terms.forEach((term, index) => {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.textContent = term;
+                cell.dataset.index = index;
+                board.appendChild(cell);
+                cells.push(cell);
+            });
+        }
+
+        BingoStore.subscribe((data) => {
+            renderBoard(data.terms);
+            updateBoard(data.state);
+        });
+
+        function updateBoard(state) {
+            if (!state) return;
+            state.forEach((checked, index) => {
+                if (cells[index]) {
+                    if (checked) {
+                        cells[index].classList.add('checked');
+                    } else {
+                        cells[index].classList.remove('checked');
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

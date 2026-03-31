@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scoreboard Admin</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .teams-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin: 20px 0;
+        }
+
+        .team-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h2 { margin-bottom: 5px; }
+        .score-display {
+            font-size: 60px;
+            font-weight: bold;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 24px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            margin: 5px;
+            color: white;
+            transition: opacity 0.2s;
+        }
+
+        button:hover { opacity: 0.9; }
+
+        .btn-plus { background-color: #4CAF50; }
+        .btn-minus { background-color: #f44336; font-size: 20px; padding: 10px 20px; }
+        .btn-reset { background-color: #9e9e9e; font-size: 16px; padding: 10px 20px; margin-top: 30px;}
+
+        .barca { color: #a50044; }
+        .atleti { color: #cb3524; }
+        
+        a {
+            margin-top: 20px;
+            color: #2196F3;
+            text-decoration: none;
+        }
+
+        .style-box {
+            margin-top: 20px;
+            border-top: 1px solid #ddd;
+            padding-top: 16px;
+            text-align: left;
+        }
+
+        .style-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .style-grid label {
+            font-size: 12px;
+            color: #555;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .style-grid input {
+            width: 100%;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Scoreboard Control</h1>
+        
+        <div class="teams-grid">
+            <!-- Home: Barca -->
+            <div class="team-col">
+                <input type="text" id="nameHomeInput" placeholder="Home Team Name" style="font-size: 18px; padding: 5px; text-align: center;">
+                <input type="text" id="logoHomeInput" placeholder="Home Logo URL" style="width: 100%; margin-top: 5px;">
+                <h2 class="barca" id="homeLabel">Home</h2>
+                <div id="scoreHome" class="score-display">0</div>
+                <div>
+                    <button class="btn-plus" onclick="adjustScore('home', 1)">+1</button>
+                    <button class="btn-minus" onclick="adjustScore('home', -1)">-1</button>
+                </div>
+            </div>
+
+            <!-- Away: Atleti -->
+            <div class="team-col">
+                <input type="text" id="nameAwayInput" placeholder="Away Team Name" style="font-size: 18px; padding: 5px; text-align: center;">
+                <input type="text" id="logoAwayInput" placeholder="Away Logo URL" style="width: 100%; margin-top: 5px;">
+                <h2 class="atleti" id="awayLabel">Away</h2>
+                <div id="scoreAway" class="score-display">0</div>
+                <div>
+                    <button class="btn-plus" onclick="adjustScore('away', 1)">+1</button>
+                    <button class="btn-minus" onclick="adjustScore('away', -1)">-1</button>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="updateTeams()" style="background-color: #2196F3; font-size: 18px; margin-bottom: 20px;">Teams & Logos Aktualisieren</button>
+        <br>
+        <button class="btn-reset" onclick="resetScore()">Reset 0:0</button>
+
+        <div class="style-box">
+            <h3>Overlay Style</h3>
+            <div class="style-grid">
+                <div>
+                    <label for="posXInput">Position X</label>
+                    <input id="posXInput" type="number" value="40">
+                </div>
+                <div>
+                    <label for="posYInput">Position Y</label>
+                    <input id="posYInput" type="number" value="40">
+                </div>
+                <div>
+                    <label for="totalWidthInput">Gesamtbreite</label>
+                    <input id="totalWidthInput" type="number" value="460">
+                </div>
+                <div>
+                    <label for="heightInput">Höhe</label>
+                    <input id="heightInput" type="number" value="58">
+                </div>
+                <div>
+                    <label for="teamWidthInput">Team-Breite</label>
+                    <input id="teamWidthInput" type="number" value="185">
+                </div>
+                <div>
+                    <label for="teamFontSizeInput">Team Schrift</label>
+                    <input id="teamFontSizeInput" type="number" value="14">
+                </div>
+                <div>
+                    <label for="scoreFontSizeInput">Score Schrift</label>
+                    <input id="scoreFontSizeInput" type="number" value="22">
+                </div>
+                <div>
+                    <label for="radiusInput">Radius</label>
+                    <input id="radiusInput" type="number" value="14">
+                </div>
+            </div>
+            <button onclick="saveStyle()" style="background-color:#673ab7; margin-top:10px;">Style speichern</button>
+            <button onclick="applyModernDefault()" style="background-color:#111827; margin-top:10px;">Modernes Standard-Design</button>
+        </div>
+        <br>
+        <a id="backToBingoAdmin" href="/protected/admin.html">Zurück zum Bingo Admin</a>
+        <br>
+        <a href="/protected/panel.html">Zur Overlay-Auswahl</a>
+    </div>
+
+    <script src="../public/app-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="../public/realtime-store.js"></script>
+    <script>
+        const streamId = BingoStore.getActiveStreamId();
+        const scoreHomeEl = document.getElementById('scoreHome');
+        const scoreAwayEl = document.getElementById('scoreAway');
+        const backToBingoAdmin = document.getElementById('backToBingoAdmin');
+        
+        const nameHomeInput = document.getElementById('nameHomeInput');
+        const logoHomeInput = document.getElementById('logoHomeInput');
+        const nameAwayInput = document.getElementById('nameAwayInput');
+        const logoAwayInput = document.getElementById('logoAwayInput');
+        const posXInput = document.getElementById('posXInput');
+        const posYInput = document.getElementById('posYInput');
+        const totalWidthInput = document.getElementById('totalWidthInput');
+        const heightInput = document.getElementById('heightInput');
+        const teamWidthInput = document.getElementById('teamWidthInput');
+        const teamFontSizeInput = document.getElementById('teamFontSizeInput');
+        const scoreFontSizeInput = document.getElementById('scoreFontSizeInput');
+        const radiusInput = document.getElementById('radiusInput');
+
+        let currentScore = { home: 0, away: 0 };
+        let currentTeams = {};
+        let currentStyle = {};
+        backToBingoAdmin.href = "/protected/admin.html?stream=" + encodeURIComponent(streamId);
+
+        BingoStore.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = "/protected/panel.html";
+                return;
+            }
+            try {
+                await BingoStore.requireOwner(streamId, user.uid);
+                await BingoStore.ensureInitialized(streamId);
+                BingoStore.subscribe((data) => {
+                    currentScore = data.score;
+                    currentTeams = data.teams;
+                    currentStyle = data.scoreboardStyle || {};
+                    updateDisplay();
+                    updateTeamInputs();
+                    updateStyleInputs();
+                }, streamId);
+            } catch (err) {
+                alert(err.message || "Zugriff verweigert.");
+                window.location.href = "/protected/panel.html";
+            }
+        });
+
+        function updateDisplay() {
+            scoreHomeEl.textContent = currentScore.home;
+            scoreAwayEl.textContent = currentScore.away;
+        }
+
+        function updateTeamInputs() {
+            if(currentTeams.home) {
+                nameHomeInput.value = currentTeams.home.name;
+                logoHomeInput.value = currentTeams.home.logo;
+                document.getElementById('homeLabel').textContent = currentTeams.home.name;
+            }
+            if(currentTeams.away) {
+                nameAwayInput.value = currentTeams.away.name;
+                logoAwayInput.value = currentTeams.away.logo;
+                document.getElementById('awayLabel').textContent = currentTeams.away.name;
+            }
+        }
+
+        function updateStyleInputs() {
+            posXInput.value = currentStyle.posX ?? 40;
+            posYInput.value = currentStyle.posY ?? 40;
+            totalWidthInput.value = currentStyle.totalWidth ?? 460;
+            heightInput.value = currentStyle.height ?? 58;
+            teamWidthInput.value = currentStyle.teamWidth ?? 185;
+            teamFontSizeInput.value = currentStyle.teamFontSize ?? 14;
+            scoreFontSizeInput.value = currentStyle.scoreFontSize ?? 22;
+            radiusInput.value = currentStyle.radius ?? 14;
+        }
+
+        function adjustScore(team, amount) {
+            if (team === 'home') {
+                currentScore.home = Math.max(0, currentScore.home + amount);
+            } else {
+                currentScore.away = Math.max(0, currentScore.away + amount);
+            }
+            BingoStore.setScore(currentScore, streamId);
+        }
+        
+        function updateTeams() {
+            const newTeams = {
+                home: {
+                    name: nameHomeInput.value,
+                    logo: logoHomeInput.value
+                },
+                away: {
+                    name: nameAwayInput.value,
+                    logo: logoAwayInput.value
+                }
+            };
+            BingoStore.setTeams(newTeams, streamId);
+        }
+
+        function resetScore() {
+            if (confirm("Wirklich auf 0:0 zurücksetzen?")) {
+                currentScore = { home: 0, away: 0 };
+                BingoStore.setScore(currentScore, streamId);
+            }
+        }
+
+        function saveStyle() {
+            const style = {
+                posX: Number(posXInput.value),
+                posY: Number(posYInput.value),
+                totalWidth: Number(totalWidthInput.value),
+                height: Number(heightInput.value),
+                teamWidth: Number(teamWidthInput.value),
+                teamFontSize: Number(teamFontSizeInput.value),
+                scoreFontSize: Number(scoreFontSizeInput.value),
+                radius: Number(radiusInput.value)
+            };
+            BingoStore.setScoreboardStyle(style, streamId);
+        }
+
+        function applyModernDefault() {
+            posXInput.value = 40;
+            posYInput.value = 40;
+            totalWidthInput.value = 460;
+            heightInput.value = 58;
+            teamWidthInput.value = 185;
+            teamFontSizeInput.value = 14;
+            scoreFontSizeInput.value = 22;
+            radiusInput.value = 14;
+            saveStyle();
+        }
+    </script>
+</body>
+</html>

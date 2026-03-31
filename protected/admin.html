@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bingo Admin Panel</title>
+    <link rel="stylesheet" href="../public/style.css">
+    <style>
+        body {
+            background-color: #f0f0f0; /* Visible background for admin */
+            flex-direction: column;
+        }
+    </style>
+</head>
+<body class="admin-mode">
+    <h1 id="title">Bingo Admin / Mod Panel</h1>
+    <div class="bingo-container">
+        <div class="bingo-board" id="board">
+            <!-- Cells will be generated here -->
+        </div>
+    </div>
+
+    <div class="admin-controls">
+        <button id="editBtn" style="background-color: #2196F3;">Texte bearbeiten</button>
+        <button id="saveBtn" style="background-color: #4CAF50; display: none;">Speichern</button>
+        <button id="cancelBtn" style="background-color: #f44336; display: none;">Abbrechen</button>
+        <button id="resetBtn">Reset Board</button>
+        <br><br>
+        <a id="scoreboardAdminLink" href="/protected/scoreboard-admin.html" style="text-decoration: none;">
+            <button style="background-color: #9C27B0;">Zum Scoreboard Admin (Tor Overlay)</button>
+        </a>
+        <a href="/protected/panel.html" style="text-decoration: none;">
+            <button style="background-color: #333;">Zur Overlay-Auswahl</button>
+        </a>
+    </div>
+
+    <script src="../public/app-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="../public/realtime-store.js"></script>
+    <script>
+        const streamId = BingoStore.getActiveStreamId();
+        const board = document.getElementById('board');
+        const resetBtn = document.getElementById('resetBtn');
+        const editBtn = document.getElementById('editBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const titleEl = document.getElementById('title');
+        const scoreboardAdminLink = document.getElementById('scoreboardAdminLink');
+
+        let currentTerms = [];
+        let cells = [];
+        let isEditing = false;
+        titleEl.textContent = "Bingo Admin: " + streamId;
+        scoreboardAdminLink.href = "/protected/scoreboard-admin.html?stream=" + encodeURIComponent(streamId);
+
+        function renderBoard(terms) {
+            board.innerHTML = '';
+            cells = [];
+            terms.forEach((term, index) => {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.textContent = term;
+                cell.dataset.index = index;
+                
+                // Click listener
+                cell.addEventListener('click', () => {
+                    if (!isEditing) {
+                        BingoStore.toggleCell(index, streamId);
+                    }
+                });
+
+                board.appendChild(cell);
+                cells.push(cell);
+            });
+        }
+
+        BingoStore.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = "/protected/panel.html";
+                return;
+            }
+            try {
+                await BingoStore.requireOwner(streamId, user.uid);
+                await BingoStore.ensureInitialized(streamId);
+                BingoStore.subscribe((data) => {
+                    currentTerms = data.terms;
+                    renderBoard(currentTerms);
+                    updateBoard(data.state);
+                }, streamId);
+            } catch (err) {
+                alert(err.message || "Zugriff verweigert.");
+                window.location.href = "/protected/panel.html";
+            }
+        });
+
+        function updateBoard(state) {
+            if (!state) return;
+            state.forEach((checked, index) => {
+                if (cells[index]) {
+                    if (checked) {
+                        cells[index].classList.add('checked');
+                    } else {
+                        cells[index].classList.remove('checked');
+                    }
+                }
+            });
+        }
+
+        // Edit Mode Logic
+        editBtn.addEventListener('click', () => {
+            isEditing = true;
+            board.classList.add('editing'); // Add visual cue if needed
+            cells.forEach(cell => {
+                cell.contentEditable = true;
+                cell.style.border = "2px dashed #2196F3";
+                cell.style.backgroundColor = "#fff"; // Reset color to make text readable
+                cell.classList.remove('checked'); // Hide checked state while editing
+            });
+            
+            editBtn.style.display = 'none';
+            resetBtn.style.display = 'none';
+            saveBtn.style.display = 'inline-block';
+            cancelBtn.style.display = 'inline-block';
+        });
+
+        saveBtn.addEventListener('click', () => {
+            const newTerms = [];
+            cells.forEach(cell => {
+                newTerms.push(cell.textContent.trim());
+            });
+
+            if (confirm('Änderungen speichern und an alle senden?')) {
+                BingoStore.setTerms(newTerms, streamId);
+                exitEditMode();
+            }
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            renderBoard(currentTerms); // Re-render to discard changes
+            exitEditMode();
+            location.reload(); // Simplest way to restore state correctly without complex logic
+        });
+
+        function exitEditMode() {
+            isEditing = false;
+            board.classList.remove('editing');
+            cells.forEach(cell => {
+                cell.contentEditable = false;
+                cell.style.border = "";
+                cell.style.backgroundColor = "";
+            });
+            
+            editBtn.style.display = 'inline-block';
+            resetBtn.style.display = 'inline-block';
+            saveBtn.style.display = 'none';
+            cancelBtn.style.display = 'none';
+        }
+
+        resetBtn.addEventListener('click', () => {
+            if(confirm('Wirklich alles zurücksetzen?')) {
+                BingoStore.resetBoard(streamId);
+            }
+        });
+    </script>
+</body>
+</html>

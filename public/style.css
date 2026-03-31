@@ -1,0 +1,79 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: transparent; /* Transparent for OBS overlay */
+}
+
+.bingo-container {
+    background-color: white;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.bingo-board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    width: 600px;
+    height: 600px;
+    border: 2px solid #333;
+    background-color: #fff;
+}
+
+.cell {
+    border: 1px solid #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 5px;
+    font-size: 18px;
+    font-weight: bold;
+    user-select: none;
+    position: relative;
+    word-break: break-word;
+}
+
+/* Checked state */
+.cell.checked {
+    background-color: rgba(0, 255, 0, 0.3); /* Green tint */
+}
+
+.cell.checked::after {
+    content: 'X';
+    position: absolute;
+    font-size: 80px;
+    color: red;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Hover effect for admin only */
+.admin-mode .cell:hover {
+    background-color: #f0f0f0;
+    cursor: pointer;
+}
+
+.admin-controls {
+    margin-top: 20px;
+    text-align: center;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 5px;
+}
+
+button:hover {
+    background-color: #cc0000;
+}

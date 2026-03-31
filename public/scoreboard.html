@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scoreboard Overlay</title>
+    <style>
+        :root {
+            --sb-bg: rgba(8, 14, 28, 0.88);
+            --sb-border: rgba(255, 255, 255, 0.2);
+            --sb-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+            --sb-home-a: #183788;
+            --sb-home-b: #a70053;
+            --sb-away-a: #dc3b2a;
+            --sb-away-b: #1f2a68;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: transparent;
+            font-family: Inter, "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        .scoreboard {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            display: flex;
+            align-items: stretch;
+            height: 58px;
+            width: 500px;
+            border: 1px solid var(--sb-border);
+            box-shadow: var(--sb-shadow);
+            border-radius: 14px;
+            overflow: hidden;
+            color: white;
+            font-weight: bold;
+            background: var(--sb-bg);
+            backdrop-filter: blur(8px);
+        }
+
+        .team {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            font-size: 15px;
+            width: 205px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+            min-width: 0;
+        }
+
+        .home {
+            background: linear-gradient(120deg, var(--sb-home-a) 0%, #2649ac 35%, var(--sb-home-b) 100%);
+            justify-content: flex-start;
+            border-right: 1px solid rgba(255,255,255,0.22);
+        }
+
+        .away {
+            background: linear-gradient(120deg, var(--sb-away-a) 0%, #e24e33 45%, var(--sb-away-b) 100%);
+            justify-content: flex-end;
+            border-left: 1px solid rgba(255,255,255,0.22);
+            text-align: right;
+        }
+
+        .team-logo {
+            height: 34px;
+            width: 34px;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+            flex: 0 0 auto;
+        }
+
+        .team-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: clip;
+            line-height: 1.08;
+            display: block;
+            min-width: 0;
+        }
+        
+        .home .team-logo {
+            margin-right: 10px;
+        }
+
+        .away .team-logo {
+            margin-left: 10px;
+            order: 2;
+        }
+
+        .score-container {
+            background: linear-gradient(180deg, #0d111d, #171d2f);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0 14px;
+            font-size: 22px;
+            font-family: "Inter", "Segoe UI", Arial, sans-serif;
+            min-width: 82px;
+            z-index: 10;
+            border-left: 1px solid rgba(255,255,255,0.15);
+            border-right: 1px solid rgba(255,255,255,0.15);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .score {
+            font-weight: 900;
+            min-width: 16px;
+            text-align: center;
+        }
+
+        .divider {
+            color: #7f8aa8;
+            font-size: 16px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scoreboard">
+        <div class="team home">
+            <img id="logoHome" src="" alt="Home" class="team-logo">
+            <span id="nameHome" class="team-name">HOME</span>
+        </div>
+        
+        <div class="score-container">
+            <span id="scoreHome" class="score">0</span>
+            <span class="divider">-</span>
+            <span id="scoreAway" class="score">0</span>
+        </div>
+
+        <div class="team away">
+            <span id="nameAway" class="team-name">AWAY</span>
+            <img id="logoAway" src="" alt="Away" class="team-logo">
+        </div>
+    </div>
+
+    <script src="app-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="realtime-store.js"></script>
+    <script>
+        const scoreboardEl = document.querySelector('.scoreboard');
+        const homeTeamEl = document.querySelector('.team.home');
+        const awayTeamEl = document.querySelector('.team.away');
+        const scoreContainerEl = document.querySelector('.score-container');
+        const scoreHome = document.getElementById('scoreHome');
+        const scoreAway = document.getElementById('scoreAway');
+        
+        const nameHome = document.getElementById('nameHome');
+        const logoHome = document.getElementById('logoHome');
+        const nameAway = document.getElementById('nameAway');
+        const logoAway = document.getElementById('logoAway');
+
+        BingoStore.subscribe((data) => {
+            updateScore(data.score);
+            updateTeams(data.teams);
+            updateStyle(data.scoreboardStyle);
+        });
+
+        function updateScore(score) {
+            scoreHome.textContent = score.home;
+            scoreAway.textContent = score.away;
+        }
+
+        function updateTeams(teams) {
+            if(teams.home) {
+                nameHome.textContent = teams.home.name;
+                logoHome.src = teams.home.logo;
+            }
+            if(teams.away) {
+                nameAway.textContent = teams.away.name;
+                logoAway.src = teams.away.logo;
+            }
+            requestAnimationFrame(() => {
+                fitTeamName(nameHome, homeTeamEl);
+                fitTeamName(nameAway, awayTeamEl);
+            });
+        }
+
+        function updateStyle(style) {
+            if (!style) return;
+            scoreboardEl.style.left = `${style.posX ?? 40}px`;
+            scoreboardEl.style.top = `${style.posY ?? 40}px`;
+            scoreboardEl.style.width = `${style.totalWidth ?? 460}px`;
+            scoreboardEl.style.height = `${style.height ?? 58}px`;
+            scoreboardEl.style.borderRadius = `${style.radius ?? 14}px`;
+
+            const dynamicTeamWidth = computeTeamWidth(style);
+            homeTeamEl.style.width = `${dynamicTeamWidth}px`;
+            awayTeamEl.style.width = `${dynamicTeamWidth}px`;
+            homeTeamEl.style.fontSize = `${style.teamFontSize ?? 15}px`;
+            awayTeamEl.style.fontSize = `${style.teamFontSize ?? 15}px`;
+            scoreContainerEl.style.fontSize = `${style.scoreFontSize ?? 22}px`;
+            requestAnimationFrame(() => {
+                fitTeamName(nameHome, homeTeamEl);
+                fitTeamName(nameAway, awayTeamEl);
+            });
+        }
+
+        function computeTeamWidth(style) {
+            const total = Number(style?.totalWidth ?? 460);
+            const score = Math.max(78, scoreContainerEl.offsetWidth || 88);
+            const side = Math.floor((total - score) / 2);
+            return Math.max(150, side);
+        }
+
+        function fitTeamName(nameEl, teamEl) {
+            const base = parseFloat(teamEl.style.fontSize || getComputedStyle(teamEl).fontSize || "15");
+            let size = base;
+            nameEl.style.fontSize = `${size}px`;
+            nameEl.style.letterSpacing = "0.4px";
+            nameEl.style.maxHeight = "100%";
+
+            // Keep one line and shrink until full text fits.
+            while (nameEl.scrollWidth > nameEl.clientWidth && size > 8) {
+                size -= 0.5;
+                nameEl.style.fontSize = `${size}px`;
+            }
+        }
+    </script>
+</body>
+</html>
