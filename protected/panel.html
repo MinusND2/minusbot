@@ -8,18 +8,21 @@
         :root {
             --bg: #060b18;
             --bg-soft: #0d1630;
-            --card: rgba(18, 28, 53, 0.75);
+            --card: rgba(18, 28, 53, 0.76);
+            --card-strong: rgba(12, 20, 40, 0.9);
             --card-border: rgba(148, 163, 184, 0.2);
             --text: #e7ecf8;
             --muted: #9aa8c7;
             --primary: #4f7cff;
             --primary-hover: #6d91ff;
             --danger: #ff4d6d;
+            --warning: #ffbf47;
             --success: #22c55e;
             --radius: 16px;
             --shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
         }
         * { box-sizing: border-box; }
+        html, body { height: 100%; }
         body {
             margin: 0;
             min-height: 100vh;
@@ -29,20 +32,11 @@
                 radial-gradient(1200px 700px at -10% -20%, #1f3a8a 0%, transparent 60%),
                 radial-gradient(1000px 600px at 110% 0%, #7c3aed 0%, transparent 55%),
                 linear-gradient(180deg, #060b18 0%, #081022 100%);
-            padding: 30px 18px 50px;
+            padding: 26px 16px 42px;
         }
         .shell {
-            max-width: 1100px;
+            max-width: 1220px;
             margin: 0 auto;
-        }
-        #authCard {
-            max-width: 620px;
-            margin: 10vh auto 0;
-        }
-        #appCard {
-            max-width: 1100px;
-            margin-left: auto;
-            margin-right: auto;
         }
         .card {
             backdrop-filter: blur(14px);
@@ -53,11 +47,20 @@
             padding: 22px;
             margin-bottom: 18px;
         }
-        h1, h2, h3 { margin-top: 0; }
+        #authCard {
+            max-width: 520px;
+            margin: 8vh auto 0;
+        }
+        h1, h2, h3, h4 { margin: 0; }
         h1 {
-            margin-bottom: 8px;
-            font-size: clamp(26px, 4vw, 40px);
+            font-size: clamp(28px, 4vw, 42px);
             letter-spacing: 0.2px;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: var(--muted);
+            margin: 0;
+            line-height: 1.5;
         }
         input, button {
             min-height: 44px;
@@ -106,7 +109,6 @@
             flex-wrap: wrap;
             align-items: center;
         }
-        .row + .row { margin-top: 12px; }
         .space-between { justify-content: space-between; }
         .muted {
             color: var(--muted);
@@ -114,47 +116,20 @@
             line-height: 1.5;
             margin: 0;
         }
-        .grid-2 {
+        .grid-login {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 14px;
+            gap: 12px;
             margin-top: 14px;
         }
-        .stream {
-            border: 1px solid rgba(123, 151, 220, 0.35);
-            border-radius: 14px;
-            padding: 14px;
-            background: rgba(9, 17, 36, 0.85);
-        }
-        .stream h3 {
-            margin-bottom: 6px;
-            font-size: 18px;
-        }
-        .tags {
-            display: inline-flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin: 8px 0 10px;
-        }
-        .tag {
-            border: 1px solid #3d5180;
-            border-radius: 999px;
-            padding: 3px 10px;
-            color: #c5d2f2;
-            font-size: 12px;
-        }
-        .links {
-            margin-top: 8px;
-            display: grid;
-            gap: 8px;
-        }
         .status {
-            margin-top: 10px;
+            margin-top: 12px;
             border-radius: 12px;
             padding: 10px 12px;
             font-size: 14px;
             display: none;
             border: 1px solid transparent;
+            line-height: 1.45;
         }
         .status.show { display: block; }
         .status.success {
@@ -167,19 +142,180 @@
             background: rgba(239, 68, 68, 0.15);
             border-color: rgba(239, 68, 68, 0.35);
         }
-        .auth-note {
-            margin-top: 10px;
-            font-size: 13px;
-            color: #9db0d9;
+        .header {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 12px;
+            align-items: center;
+        }
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .hero {
+            margin-top: 12px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(130px, 1fr));
+            gap: 10px;
+        }
+        .stat-box {
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: var(--card-strong);
+            border-radius: 12px;
+            padding: 10px 12px;
+        }
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: #9fb2dc;
+        }
+        .stat-value {
+            margin-top: 4px;
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .layout {
+            margin-top: 16px;
+            display: grid;
+            gap: 14px;
+            grid-template-columns: 2fr 1fr;
+            align-items: start;
+        }
+        .section-title {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .create-wrap {
+            border: 1px dashed rgba(126, 156, 227, 0.55);
+            border-radius: 14px;
+            padding: 12px;
+            margin-bottom: 12px;
+            background: rgba(12, 24, 49, 0.5);
+        }
+        .create-wrap input {
+            min-width: 280px;
+            flex: 1;
+        }
+        .links {
+            margin-top: 8px;
+            display: grid;
+            gap: 12px;
+        }
+        .stream {
+            border: 1px solid rgba(123, 151, 220, 0.35);
+            border-radius: 14px;
+            padding: 14px;
+            background: rgba(9, 17, 36, 0.85);
+        }
+        .stream-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        .stream h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+        .tags {
+            display: inline-flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 6px 0 10px;
+        }
+        .tag {
+            border: 1px solid #3d5180;
+            border-radius: 999px;
+            padding: 3px 10px;
+            color: #c5d2f2;
+            font-size: 12px;
+        }
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(120px, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .side-card {
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(12, 20, 40, 0.9);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+        .side-card h4 {
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        .todo-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            border-top: 1px solid rgba(148, 163, 184, 0.15);
+            padding-top: 9px;
+            margin-top: 9px;
+        }
+        .todo-item:first-of-type {
+            border-top: none;
+            padding-top: 0;
+            margin-top: 0;
+        }
+        .badge {
+            font-size: 12px;
+            border-radius: 999px;
+            padding: 3px 9px;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            color: #dce5ff;
+            background: rgba(40, 57, 98, 0.5);
+            white-space: nowrap;
+        }
+        .badge.warning {
+            border-color: rgba(255, 191, 71, 0.5);
+            color: #ffd58a;
+            background: rgba(255, 191, 71, 0.12);
+        }
+        .badge.success {
+            border-color: rgba(34, 197, 94, 0.5);
+            color: #b8f7cf;
+            background: rgba(34, 197, 94, 0.12);
         }
         .hidden { display: none; }
+        @media (max-width: 980px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 640px) {
+            .header {
+                grid-template-columns: 1fr;
+            }
+            .header-actions {
+                justify-content: flex-start;
+            }
+            .button-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="shell">
         <div id="authCard" class="card">
-            <h2>Login</h2>
-            <div class="grid-2">
+            <h2>Control Panel Login</h2>
+            <p class="subtitle">Melde dich mit deinem Firebase-Account an, um Overlays zu verwalten.</p>
+            <div class="grid-login">
                 <input id="email" type="email" placeholder="E-Mail">
                 <input id="password" type="password" placeholder="Passwort">
             </div>
@@ -189,17 +325,92 @@
             <div id="globalStatus" class="status"></div>
         </div>
 
-        <div id="appCard" class="card hidden">
-            <div class="row space-between">
-                <h2 style="margin:0;">Meine Overlays</h2>
-                <button id="logoutBtn" class="danger">Logout</button>
+        <div id="appCard" class="hidden">
+            <div class="card">
+                <div class="header">
+                    <div>
+                        <h1>Overlay Hub</h1>
+                        <p class="subtitle">Ein Dashboard fuer mehrere Stream-Projekte, Moderation und Overlay-Links.</p>
+                    </div>
+                    <div class="header-actions">
+                        <button id="logoutBtn" class="danger">Logout</button>
+                    </div>
+                </div>
+                <div class="hero">
+                    <div class="stats">
+                        <div class="stat-box">
+                            <div class="stat-label">Gesamt Overlays</div>
+                            <div id="overlayCount" class="stat-value">0</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Zuletzt erstellt</div>
+                            <div id="lastCreated" class="stat-value">-</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="appStatus" class="status"></div>
             </div>
-            <p class="muted" style="margin-top:8px;">Erzeuge pro Streamer ein eigenes Overlay und teile nur den Overlay-Link.</p>
-            <div class="row" style="margin-top:12px;">
-                <input id="streamName" type="text" placeholder="Neuer Overlay-Name (z. B. Streamer Max)" style="min-width:320px; flex:1;">
-                <button id="createBtn">Overlay erstellen</button>
+
+            <div class="layout">
+                <div class="card">
+                    <div class="section-title">
+                        <h2>Meine Overlays</h2>
+                    </div>
+                    <div class="create-wrap">
+                        <div class="row">
+                            <input id="streamName" type="text" placeholder="Neuer Overlay-Name (z. B. Streamer Max)">
+                            <button id="createBtn">Overlay erstellen</button>
+                        </div>
+                        <p class="muted" style="margin-top:8px;">Nach dem Erstellen kannst du Admin-Ansichten oeffnen oder Overlay-Links kopieren.</p>
+                    </div>
+                    <div id="streams" class="links"></div>
+                </div>
+
+                <div>
+                    <div class="side-card">
+                        <h4>Feature-Module (Aufbau)</h4>
+                        <p class="muted">Hier ist Platz fuer weitere Funktionen. Struktur steht bereits, Inhalte koennen spaeter aktiviert werden.</p>
+                        <div class="todo-item">
+                            <div>
+                                <strong>User & Rollen</strong>
+                                <p class="muted">Team-Accounts, Rechte pro Overlay.</p>
+                            </div>
+                            <span class="badge warning">Next</span>
+                        </div>
+                        <div class="todo-item">
+                            <div>
+                                <strong>Vorlagen</strong>
+                                <p class="muted">Fertige Presets fuer Bingo/Scoreboard.</p>
+                            </div>
+                            <span class="badge">Plan</span>
+                        </div>
+                        <div class="todo-item">
+                            <div>
+                                <strong>Analytics</strong>
+                                <p class="muted">Nutzung und Aktivitaeten pro Stream.</p>
+                            </div>
+                            <span class="badge">Plan</span>
+                        </div>
+                    </div>
+                    <div class="side-card">
+                        <h4>Status</h4>
+                        <div class="todo-item">
+                            <div>
+                                <strong>Firebase Auth</strong>
+                                <p class="muted">E-Mail/Passwort Login aktiv.</p>
+                            </div>
+                            <span class="badge success">Aktiv</span>
+                        </div>
+                        <div class="todo-item">
+                            <div>
+                                <strong>Realtime Store</strong>
+                                <p class="muted">Live-Daten je Stream-ID.</p>
+                            </div>
+                            <span class="badge success">Aktiv</span>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div id="streams" class="links"></div>
         </div>
     </div>
 
@@ -215,16 +426,26 @@
         const passwordEl = document.getElementById("password");
         const streamNameEl = document.getElementById("streamName");
         const streamsEl = document.getElementById("streams");
-        const statusEl = document.getElementById("globalStatus");
+        const loginStatusEl = document.getElementById("globalStatus");
+        const appStatusEl = document.getElementById("appStatus");
+        const overlayCountEl = document.getElementById("overlayCount");
+        const lastCreatedEl = document.getElementById("lastCreated");
+
+        function activeStatusElement() {
+            return appCard.classList.contains("hidden") ? loginStatusEl : appStatusEl;
+        }
 
         function showStatus(text, kind) {
+            const statusEl = activeStatusElement();
             statusEl.textContent = text;
             statusEl.className = "status show " + (kind || "success");
         }
 
         function clearStatus() {
-            statusEl.className = "status";
-            statusEl.textContent = "";
+            [loginStatusEl, appStatusEl].forEach((el) => {
+                el.className = "status";
+                el.textContent = "";
+            });
         }
 
         window.addEventListener("error", (event) => {
@@ -278,29 +499,38 @@
             }
         }
 
+        function updateSummary(items) {
+            overlayCountEl.textContent = String(items.length);
+            lastCreatedEl.textContent = items.length ? items[items.length - 1].name : "-";
+        }
+
         function renderStreams(items) {
             streamsEl.innerHTML = "";
+            updateSummary(items);
+
             if (!items.length) {
-                streamsEl.innerHTML = "<p class='muted'>Noch kein Overlay vorhanden.</p>";
+                streamsEl.innerHTML = "<p class='muted'>Noch kein Overlay vorhanden. Erstelle oben dein erstes Projekt.</p>";
                 return;
             }
+
             items.forEach((item) => {
                 const links = streamLinks(item.id);
                 const div = document.createElement("div");
                 div.className = "stream";
                 div.innerHTML = `
-                    <h3>${item.name}</h3>
-                    <div class="tags">
+                    <div class="stream-head">
+                        <h3>${item.name}</h3>
                         <span class="tag">ID: ${item.id}</span>
                     </div>
-                    <div class="row">
-                        <button type="button" data-url="${links.adminBingo}" data-open="1">Bingo Admin</button>
-                        <button type="button" data-url="${links.adminScore}" data-open="1">Score Admin</button>
-                    </div>
-                    <div class="row">
+                    <p class="muted">Verwalte Bingo und Scoreboard getrennt fuer dieses Overlay.</p>
+                    <div class="button-grid">
+                        <button type="button" data-url="${links.adminBingo}" data-open="1">Bingo Admin oeffnen</button>
+                        <button type="button" data-url="${links.adminScore}" data-open="1">Score Admin oeffnen</button>
                         <button type="button" data-url="${links.overlayBingo}" data-copy="1" class="ghost">Bingo Overlay-Link kopieren</button>
                         <button type="button" data-url="${links.overlayScore}" data-copy="1" class="ghost">Score Overlay-Link kopieren</button>
-                        <button type="button" data-id="${item.id}" data-delete="1" class="danger-ghost">Overlay löschen</button>
+                    </div>
+                    <div class="row" style="margin-top:10px;">
+                        <button type="button" data-id="${item.id}" data-delete="1" class="danger-ghost">Overlay loeschen</button>
                     </div>
                 `;
                 streamsEl.appendChild(div);
@@ -317,15 +547,15 @@
                     const user = firebase.auth().currentUser;
                     if (!user) return;
                     const streamId = btn.dataset.id;
-                    if (!confirm("Overlay wirklich löschen? Dieser Schritt kann nicht rückgängig gemacht werden.")) {
+                    if (!confirm("Overlay wirklich loeschen? Dieser Schritt kann nicht rueckgaengig gemacht werden.")) {
                         return;
                     }
                     try {
                         await BingoStore.deleteStream(streamId, user.uid);
                         await reloadStreams(user);
-                        showStatus("Overlay gelöscht.", "success");
+                        showStatus("Overlay geloescht.", "success");
                     } catch (err) {
-                        showStatus(err.message || "Löschen fehlgeschlagen.", "error");
+                        showStatus(err.message || "Loeschen fehlgeschlagen.", "error");
                     }
                 });
             });
@@ -335,7 +565,6 @@
             const list = await BingoStore.listOwnedStreams(user.uid);
             renderStreams(list);
         }
-
 
         document.getElementById("loginBtn").addEventListener("click", async () => {
             try {
@@ -366,12 +595,14 @@
                 await reloadStreams(user);
                 const links = streamLinks(streamId);
                 await copy(links.overlayBingo);
+                showStatus("Overlay erstellt. Bingo-Link wurde in die Zwischenablage kopiert.", "success");
             } catch (err) {
                 showStatus(err.message || "Overlay konnte nicht erstellt werden.", "error");
             }
         });
 
         BingoStore.onAuthStateChanged(async (user) => {
+            clearStatus();
             if (!user) {
                 authCard.classList.remove("hidden");
                 appCard.classList.add("hidden");
@@ -382,6 +613,7 @@
             authCard.classList.add("hidden");
             appCard.classList.remove("hidden");
             await reloadStreams(user);
+            showStatus("Dashboard bereit.", "success");
         });
 
         if (!window.firebase) {
