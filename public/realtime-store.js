@@ -22,6 +22,13 @@
                     logo: "https://logos-world.net/wp-content/uploads/2020/11/Atletico-Madrid-Logo.png"
                 }
             },
+            bingoStyle: {
+                fontSize: 34,
+                textColor: "#111111",
+                boardBackgroundColor: "#ffffff",
+                cellBackgroundColor: "#ffffff",
+                checkedBackgroundColor: "#bdf7bd"
+            },
             scoreboardStyle: {
                 posX: 40,
                 posY: 40,
@@ -55,6 +62,7 @@
             state,
             score: payload?.score || fallback.score,
             teams: payload?.teams || fallback.teams,
+            bingoStyle: payload?.bingoStyle || fallback.bingoStyle,
             scoreboardStyle: payload?.scoreboardStyle || fallback.scoreboardStyle,
             updatedAt: payload?.updatedAt || Date.now()
         };
@@ -182,6 +190,22 @@
         });
     }
 
+    async function setBingoStyle(style, streamId) {
+        const id = streamId || getActiveStreamId();
+        const baseRef = streamDataRef(id);
+        const safe = {
+            fontSize: Math.max(10, Math.min(64, Number(style?.fontSize) || 34)),
+            textColor: style?.textColor || "#111111",
+            boardBackgroundColor: style?.boardBackgroundColor || "#ffffff",
+            cellBackgroundColor: style?.cellBackgroundColor || "#ffffff",
+            checkedBackgroundColor: style?.checkedBackgroundColor || "#bdf7bd"
+        };
+        await baseRef.update({
+            bingoStyle: safe,
+            updatedAt: Date.now()
+        });
+    }
+
     async function deleteStream(streamId, uid) {
         const id = (streamId || "").trim();
         if (!id) return;
@@ -266,6 +290,7 @@
         setTerms,
         setScore,
         setTeams,
+        setBingoStyle,
         setScoreboardStyle,
         deleteStream,
         onAuthStateChanged,

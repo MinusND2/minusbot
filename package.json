@@ -5,14 +5,15 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "modstats:start": "node modstats-server.js",
-    "modstats:subscribe": "node scripts/twitch-subscribe.js"
+    "modstats:start": "node scripts/modstats-server.js",
+    "modstats:chat": "node scripts/modstats-chat-bot.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "express": "^5.2.1",
-    "socket.io": "^4.8.3"
+    "socket.io": "^4.8.3",
+    "tmi.js": "^1.8.5"
   }
 }

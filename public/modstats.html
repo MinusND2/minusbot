@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Twitch Modstats</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0b1020;
+      color: #ecf1ff;
+      padding: 24px;
+    }
+    .card {
+      max-width: 900px;
+      margin: 0 auto;
+      border: 1px solid #2b3658;
+      border-radius: 12px;
+      background: #121a33;
+      padding: 16px;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    input, button {
+      min-height: 40px;
+      border-radius: 8px;
+      border: 1px solid #3a4770;
+      background: #0f1630;
+      color: #ecf1ff;
+      padding: 8px 10px;
+    }
+    button {
+      background: #3b82f6;
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px;
+      border-bottom: 1px solid #253055;
+    }
+    .muted { color: #9db0de; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2 style="margin-top:0;">Twitch Modstats</h2>
+    <p class="muted">Zeigt Timeouts/Bans pro Moderator. API-Quelle ist der Bot-Server.</p>
+    <div class="row">
+      <input id="apiBase" type="text" placeholder="API Base, z.B. http://87.106.195.67:8787" style="flex: 1 1 260px;">
+      <input id="broadcasterId" type="text" placeholder="Broadcaster ID (optional)" style="flex: 1 1 220px;">
+    </div>
+    <div class="row">
+      <input id="fromInput" type="datetime-local" style="flex: 1 1 220px;">
+      <input id="toInput" type="datetime-local" style="flex: 1 1 220px;">
+      <button id="loadBtn" type="button">Laden</button>
+    </div>
+    <div id="status" class="muted"></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Moderator</th>
+          <th>Timeouts</th>
+          <th>Bans</th>
+          <th>Gesamt</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const apiBaseEl = document.getElementById("apiBase");
+    const broadcasterIdEl = document.getElementById("broadcasterId");
+    const fromInputEl = document.getElementById("fromInput");
+    const toInputEl = document.getElementById("toInput");
+    const loadBtn = document.getElementById("loadBtn");
+    const rowsEl = document.getElementById("rows");
+    const statusEl = document.getElementById("status");
+
+    apiBaseEl.value = localStorage.getItem("modstatsApiBase") || "http://87.106.195.67:8787";
+    broadcasterIdEl.value = localStorage.getItem("modstatsBroadcasterId") || "";
+
+    function fmtNumber(v) {
+      return Number(v || 0).toLocaleString("de-DE");
+    }
+
+    function toIsoOrEmpty(value) {
+      if (!value) return "";
+      const ts = new Date(value).toISOString();
+      return ts;
+    }
+
+    async function loadSummary() {
+      rowsEl.innerHTML = "";
+      statusEl.textContent = "Lade...";
+      const base = apiBaseEl.value.trim().replace(/\/+$/, "");
+      const broadcasterId = broadcasterIdEl.value.trim();
+      localStorage.setItem("modstatsApiBase", base);
+      localStorage.setItem("modstatsBroadcasterId", broadcasterId);
+
+      const params = new URLSearchParams();
+      if (broadcasterId) params.set("broadcaster_id", broadcasterId);
+      if (fromInputEl.value) params.set("from", toIsoOrEmpty(fromInputEl.value));
+      if (toInputEl.value) params.set("to", toIsoOrEmpty(toInputEl.value));
+
+      const url = `${base}/api/modstats/summary?${params.toString()}`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        const items = Array.isArray(data.moderators) ? data.moderators : [];
+        if (!items.length) {
+          statusEl.textContent = "Keine Daten im gewaehlten Zeitraum.";
+          return;
+        }
+        items.forEach((it) => {
+          const tr = document.createElement("tr");
+          const total = Number(it.timeouts || 0) + Number(it.bans || 0);
+          tr.innerHTML = `
+            <td>${it.moderatorName || it.moderatorLogin || it.moderatorId}</td>
+            <td>${fmtNumber(it.timeouts)}</td>
+            <td>${fmtNumber(it.bans)}</td>
+            <td>${fmtNumber(total)}</td>
+          `;
+          rowsEl.appendChild(tr);
+        });
+        statusEl.textContent = `OK: ${items.length} Moderatoren`;
+      } catch (err) {
+        statusEl.textContent = "Fehler beim Laden: " + (err.message || err);
+      }
+    }
+
+    loadBtn.addEventListener("click", loadSummary);
+    loadSummary();
+  </script>
+</body>
+</html>

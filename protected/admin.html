@@ -10,6 +10,36 @@
             background-color: #f0f0f0; /* Visible background for admin */
             flex-direction: column;
         }
+        .style-panel {
+            margin-top: 16px;
+            text-align: left;
+            display: inline-block;
+            background: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 12px;
+            min-width: 460px;
+        }
+        .style-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(200px, 1fr));
+            gap: 10px 16px;
+        }
+        .style-grid label {
+            font-size: 12px;
+            color: #555;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .style-grid input[type="number"],
+        .style-grid input[type="color"] {
+            width: 100%;
+        }
+        #styleSaveStatus {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #444;
+        }
     </style>
 </head>
 <body class="admin-mode">
@@ -32,6 +62,34 @@
         <a href="/protected/panel.html" style="text-decoration: none;">
             <button style="background-color: #333;">Zur Overlay-Auswahl</button>
         </a>
+
+        <div class="style-panel">
+            <h3 style="margin-top:0;">Bingo Design</h3>
+            <div class="style-grid">
+                <div>
+                    <label for="fontSizeInput">Schriftgröße</label>
+                    <input id="fontSizeInput" type="number" min="10" max="64" value="34">
+                </div>
+                <div>
+                    <label for="textColorInput">Schriftfarbe</label>
+                    <input id="textColorInput" type="color" value="#111111">
+                </div>
+                <div>
+                    <label for="boardBgInput">Board Hintergrund</label>
+                    <input id="boardBgInput" type="color" value="#ffffff">
+                </div>
+                <div>
+                    <label for="cellBgInput">Felder Hintergrund</label>
+                    <input id="cellBgInput" type="color" value="#ffffff">
+                </div>
+                <div>
+                    <label for="checkedBgInput">Markiert Hintergrund</label>
+                    <input id="checkedBgInput" type="color" value="#bdf7bd">
+                </div>
+            </div>
+            <button id="saveStyleBtn" style="background-color:#673AB7; margin-top:10px;">Design speichern</button>
+            <div id="styleSaveStatus"></div>
+        </div>
     </div>
 
     <script src="../public/app-config.js"></script>
@@ -48,10 +106,18 @@
         const cancelBtn = document.getElementById('cancelBtn');
         const titleEl = document.getElementById('title');
         const scoreboardAdminLink = document.getElementById('scoreboardAdminLink');
+        const fontSizeInput = document.getElementById('fontSizeInput');
+        const textColorInput = document.getElementById('textColorInput');
+        const boardBgInput = document.getElementById('boardBgInput');
+        const cellBgInput = document.getElementById('cellBgInput');
+        const checkedBgInput = document.getElementById('checkedBgInput');
+        const saveStyleBtn = document.getElementById('saveStyleBtn');
+        const styleSaveStatus = document.getElementById('styleSaveStatus');
 
         let currentTerms = [];
         let cells = [];
         let isEditing = false;
+        let currentBingoStyle = null;
         titleEl.textContent = "Bingo Admin: " + streamId;
         scoreboardAdminLink.href = "/protected/scoreboard-admin.html?stream=" + encodeURIComponent(streamId);
 
@@ -88,7 +154,11 @@
                     currentTerms = data.terms;
                     renderBoard(currentTerms);
                     updateBoard(data.state);
+                    currentBingoStyle = data.bingoStyle || currentBingoStyle;
+                    applyBingoStyle(currentBingoStyle);
+                    syncStyleInputs(currentBingoStyle);
                 }, streamId);
+                bindDirectBingoStyleListener();
             } catch (err) {
                 alert(err.message || "Zugriff verweigert.");
                 window.location.href = "/protected/panel.html";
@@ -163,6 +233,65 @@
                 BingoStore.resetBoard(streamId);
             }
         });
+
+        saveStyleBtn.addEventListener('click', async () => {
+            const nextStyle = readStyleInputs();
+            currentBingoStyle = nextStyle;
+            applyBingoStyle(nextStyle);
+            styleSaveStatus.textContent = 'Speichere...';
+            styleSaveStatus.style.color = '#444';
+            try {
+                // Direct Firebase write so this works even with cached old realtime-store.js.
+                await firebase.database().ref(`streams/${streamId}/data`).update({
+                    bingoStyle: nextStyle,
+                    updatedAt: Date.now()
+                });
+                styleSaveStatus.textContent = 'Design gespeichert.';
+                styleSaveStatus.style.color = '#2e7d32';
+            } catch (err) {
+                styleSaveStatus.textContent = `Speichern fehlgeschlagen: ${err.message || err}`;
+                styleSaveStatus.style.color = '#c62828';
+            }
+        });
+
+        function readStyleInputs() {
+            return {
+                fontSize: Number(fontSizeInput.value) || 34,
+                textColor: textColorInput.value || '#111111',
+                boardBackgroundColor: boardBgInput.value || '#ffffff',
+                cellBackgroundColor: cellBgInput.value || '#ffffff',
+                checkedBackgroundColor: checkedBgInput.value || '#bdf7bd'
+            };
+        }
+
+        function syncStyleInputs(style) {
+            if (!style) return;
+            fontSizeInput.value = style.fontSize ?? 34;
+            textColorInput.value = style.textColor ?? '#111111';
+            boardBgInput.value = style.boardBackgroundColor ?? '#ffffff';
+            cellBgInput.value = style.cellBackgroundColor ?? '#ffffff';
+            checkedBgInput.value = style.checkedBackgroundColor ?? '#bdf7bd';
+        }
+
+        function applyBingoStyle(style) {
+            if (!style) return;
+            const root = document.documentElement;
+            root.style.setProperty('--bingo-font-size', `${style.fontSize ?? 34}px`);
+            root.style.setProperty('--bingo-text-color', style.textColor ?? '#111111');
+            root.style.setProperty('--bingo-board-bg', style.boardBackgroundColor ?? '#ffffff');
+            root.style.setProperty('--bingo-cell-bg', style.cellBackgroundColor ?? '#ffffff');
+            root.style.setProperty('--bingo-checked-bg', style.checkedBackgroundColor ?? '#bdf7bd');
+        }
+
+        function bindDirectBingoStyleListener() {
+            firebase.database().ref(`streams/${streamId}/data/bingoStyle`).on('value', (snap) => {
+                const style = snap.val();
+                if (!style) return;
+                currentBingoStyle = style;
+                applyBingoStyle(style);
+                syncStyleInputs(style);
+            });
+        }
     </script>
 </body>
 </html>

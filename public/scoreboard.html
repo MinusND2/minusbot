@@ -164,7 +164,7 @@
             updateScore(data.score);
             updateTeams(data.teams);
             updateStyle(data.scoreboardStyle);
-        });
+        }, new URLSearchParams(window.location.search).get('stream') || (window.BINGO_CONFIG && window.BINGO_CONFIG.streamId) || 'default-stream');
 
         function updateScore(score) {
             scoreHome.textContent = score.home;

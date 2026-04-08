@@ -1,3 +1,11 @@
+:root {
+    --bingo-font-size: 34px;
+    --bingo-text-color: #111111;
+    --bingo-board-bg: #ffffff;
+    --bingo-cell-bg: #ffffff;
+    --bingo-checked-bg: #bdf7bd;
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     display: flex;
@@ -22,7 +30,7 @@ body {
     width: 600px;
     height: 600px;
     border: 2px solid #333;
-    background-color: #fff;
+    background-color: var(--bingo-board-bg);
 }
 
 .cell {
@@ -32,8 +40,10 @@ body {
     align-items: center;
     text-align: center;
     padding: 5px;
-    font-size: 18px;
+    font-size: var(--bingo-font-size);
     font-weight: bold;
+    color: var(--bingo-text-color);
+    background-color: var(--bingo-cell-bg);
     user-select: none;
     position: relative;
     word-break: break-word;
@@ -41,13 +51,13 @@ body {
 
 /* Checked state */
 .cell.checked {
-    background-color: rgba(0, 255, 0, 0.3); /* Green tint */
+    background-color: var(--bingo-checked-bg);
 }
 
 .cell.checked::after {
     content: 'X';
     position: absolute;
-    font-size: 80px;
+    font-size: 96px;
     color: red;
     opacity: 0.6;
     pointer-events: none;
