@@ -6,89 +6,237 @@
     <title>Bingo Admin Panel</title>
     <link rel="stylesheet" href="../public/style.css">
     <style>
-        body {
-            background-color: #f0f0f0; /* Visible background for admin */
-            flex-direction: column;
+        :root {
+            --panel-bg: #f3f5fb;
+            --card-bg: #ffffff;
+            --card-border: #d8dfef;
+            --text-dark: #111827;
+            --muted: #5f6b87;
+            --primary: #365ef6;
+            --primary-hover: #2a4cd1;
+            --success: #1f9d59;
+            --danger: #e84b63;
+            --shadow: 0 12px 35px rgba(19, 34, 74, 0.12);
+        }
+        body.admin-mode {
+            margin: 0;
+            min-height: 100vh;
+            height: auto;
+            display: block;
+            background: radial-gradient(circle at top right, #dbe4ff 0%, transparent 35%), var(--panel-bg);
+            color: var(--text-dark);
+            font-family: "Segoe UI", Inter, Roboto, Arial, sans-serif;
+            padding: 22px 16px 32px;
+        }
+        .admin-shell {
+            max-width: 1320px;
+            margin: 0 auto;
+        }
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .topbar h1 {
+            margin: 0;
+            font-size: clamp(24px, 3vw, 34px);
+            color: #17213d;
+        }
+        .subtitle {
+            margin: 6px 0 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(540px, 1fr) minmax(340px, 420px);
+            gap: 16px;
+            align-items: start;
+        }
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            padding: 14px;
+        }
+        .board-card {
+            overflow: auto;
+        }
+        .bingo-container {
+            background: transparent;
+            padding: 0;
+            box-shadow: none;
+            border-radius: 0;
+        }
+        .bingo-board {
+            width: min(74vw, 760px);
+            max-width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            margin: 0 auto;
+            border: 2px solid #2f3b5e;
+        }
+        .admin-mode .cell {
+            font-size: min(var(--bingo-font-size), 24px);
+            line-height: 1.1;
+            padding: 6px;
+        }
+        .admin-mode .cell.checked::after {
+            font-size: min(72px, 9vw);
+        }
+        .admin-mode .cell:hover {
+            background-color: #eaf0ff;
+            cursor: pointer;
+        }
+        .admin-controls {
+            margin-top: 0;
+            text-align: left;
+        }
+        .btn-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .btn-row + .btn-row {
+            margin-top: 10px;
+        }
+        .btn-row.single {
+            grid-template-columns: 1fr;
+        }
+        .admin-controls button {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 14px;
+            border-radius: 10px;
+        }
+        .admin-controls a {
+            text-decoration: none;
         }
         .style-panel {
-            margin-top: 16px;
+            margin-top: 14px;
             text-align: left;
-            display: inline-block;
-            background: #ffffff;
-            border: 1px solid #ddd;
-            border-radius: 8px;
+            display: block;
+            background: #f8faff;
+            border: 1px solid #dae3fb;
+            border-radius: 12px;
             padding: 12px;
-            min-width: 460px;
+            min-width: 0;
+        }
+        .style-panel h3 {
+            margin: 0 0 10px;
+            color: #17213d;
         }
         .style-grid {
             display: grid;
-            grid-template-columns: repeat(2, minmax(200px, 1fr));
-            gap: 10px 16px;
+            grid-template-columns: repeat(2, minmax(140px, 1fr));
+            gap: 10px 12px;
         }
         .style-grid label {
             font-size: 12px;
-            color: #555;
+            color: #4f5f85;
             display: block;
             margin-bottom: 4px;
         }
         .style-grid input[type="number"],
         .style-grid input[type="color"] {
             width: 100%;
+            min-height: 38px;
+            border-radius: 8px;
+            border: 1px solid #c9d5f5;
+            background: #fff;
+            padding: 4px 8px;
         }
         #styleSaveStatus {
-            margin-top: 8px;
+            margin-top: 9px;
             font-size: 13px;
-            color: #444;
+            color: #334166;
+        }
+        @media (max-width: 1020px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+            .bingo-board {
+                width: min(92vw, 700px);
+            }
+        }
+        @media (max-width: 680px) {
+            .btn-row {
+                grid-template-columns: 1fr;
+            }
+            .style-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body class="admin-mode">
-    <h1 id="title">Bingo Admin / Mod Panel</h1>
-    <div class="bingo-container">
-        <div class="bingo-board" id="board">
-            <!-- Cells will be generated here -->
+    <div class="admin-shell">
+        <div class="topbar">
+            <div>
+                <h1 id="title">Bingo Admin / Mod Panel</h1>
+                <p class="subtitle">Verwalte Inhalte, Reset und Design zentral fuer dieses Overlay.</p>
+            </div>
         </div>
-    </div>
 
-    <div class="admin-controls">
-        <button id="editBtn" style="background-color: #2196F3;">Texte bearbeiten</button>
-        <button id="saveBtn" style="background-color: #4CAF50; display: none;">Speichern</button>
-        <button id="cancelBtn" style="background-color: #f44336; display: none;">Abbrechen</button>
-        <button id="resetBtn">Reset Board</button>
-        <br><br>
-        <a id="scoreboardAdminLink" href="/protected/scoreboard-admin.html" style="text-decoration: none;">
-            <button style="background-color: #9C27B0;">Zum Scoreboard Admin (Tor Overlay)</button>
-        </a>
-        <a href="/protected/panel.html" style="text-decoration: none;">
-            <button style="background-color: #333;">Zur Overlay-Auswahl</button>
-        </a>
-
-        <div class="style-panel">
-            <h3 style="margin-top:0;">Bingo Design</h3>
-            <div class="style-grid">
-                <div>
-                    <label for="fontSizeInput">Schriftgröße</label>
-                    <input id="fontSizeInput" type="number" min="10" max="64" value="34">
-                </div>
-                <div>
-                    <label for="textColorInput">Schriftfarbe</label>
-                    <input id="textColorInput" type="color" value="#111111">
-                </div>
-                <div>
-                    <label for="boardBgInput">Board Hintergrund</label>
-                    <input id="boardBgInput" type="color" value="#ffffff">
-                </div>
-                <div>
-                    <label for="cellBgInput">Felder Hintergrund</label>
-                    <input id="cellBgInput" type="color" value="#ffffff">
-                </div>
-                <div>
-                    <label for="checkedBgInput">Markiert Hintergrund</label>
-                    <input id="checkedBgInput" type="color" value="#bdf7bd">
+        <div class="layout">
+            <div class="card board-card">
+                <div class="bingo-container">
+                    <div class="bingo-board" id="board">
+                        <!-- Cells will be generated here -->
+                    </div>
                 </div>
             </div>
-            <button id="saveStyleBtn" style="background-color:#673AB7; margin-top:10px;">Design speichern</button>
-            <div id="styleSaveStatus"></div>
+
+            <div class="card">
+                <div class="admin-controls">
+                    <div class="btn-row">
+                        <button id="editBtn" style="background-color: #2196F3;">Texte bearbeiten</button>
+                        <button id="resetBtn">Reset Board</button>
+                    </div>
+                    <div class="btn-row">
+                        <button id="saveBtn" style="background-color: #4CAF50; display: none;">Speichern</button>
+                        <button id="cancelBtn" style="background-color: #f44336; display: none;">Abbrechen</button>
+                    </div>
+                    <div class="btn-row">
+                        <a id="scoreboardAdminLink" href="/protected/scoreboard-admin.html">
+                            <button style="background-color: #9C27B0;">Zum Scoreboard Admin</button>
+                        </a>
+                        <a href="/protected/panel.html">
+                            <button style="background-color: #333;">Zur Overlay-Auswahl</button>
+                        </a>
+                    </div>
+                    <div class="style-panel">
+                        <h3>Bingo Design</h3>
+                        <div class="style-grid">
+                            <div>
+                                <label for="fontSizeInput">Schriftgroesse</label>
+                                <input id="fontSizeInput" type="number" min="10" max="64" value="24">
+                            </div>
+                            <div>
+                                <label for="textColorInput">Schriftfarbe</label>
+                                <input id="textColorInput" type="color" value="#111111">
+                            </div>
+                            <div>
+                                <label for="boardBgInput">Board Hintergrund</label>
+                                <input id="boardBgInput" type="color" value="#ffffff">
+                            </div>
+                            <div>
+                                <label for="cellBgInput">Felder Hintergrund</label>
+                                <input id="cellBgInput" type="color" value="#ffffff">
+                            </div>
+                            <div>
+                                <label for="checkedBgInput">Markiert Hintergrund</label>
+                                <input id="checkedBgInput" type="color" value="#bdf7bd">
+                            </div>
+                        </div>
+                        <button id="saveStyleBtn" style="background-color:#673AB7; margin-top:10px;">Design speichern</button>
+                        <div id="styleSaveStatus"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
