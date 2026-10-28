@@ -13,6 +13,12 @@ Dieses Projekt laeuft als statische Website mit Firebase Realtime Database + Fir
 ```json
 {
   "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
     "streams": {
       ".indexOn": ["meta/ownerUid"],
       ".read": "auth != null",

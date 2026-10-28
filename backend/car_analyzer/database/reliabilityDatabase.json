@@ -1,0 +1,231 @@
+{
+  "engines": {
+    "BMW_B48": {
+      "name": "BMW B48 2.0L Turbo Benzin",
+      "make": "BMW",
+      "fuelType": "Benzin",
+      "displacement": 1998,
+      "reliabilityScore": 88,
+      "subScores": { "motor": 90, "getriebe": 88, "elektronik": 85, "verschleiss": 88 },
+      "knownIssues": [
+        "Kühlmittelflansch / Ausgleichsbehälter Kunststoff spröde bei höherer Laufleistung (>120.000 km)",
+        "Ölfiltergehäuse kann undicht werden"
+      ],
+      "avgRepairCost": "moderat",
+      "recommendation": "Sehr robuster und ausgereifter Motor mit wartungsarmer Steuerkette.",
+      "source": "ADAC Pannenstatistik & TÜV-Mängelreport",
+      "sourceDate": "2025-06"
+    },
+    "BMW_B58": {
+      "name": "BMW B58 3.0L R6 Turbo Benzin",
+      "make": "BMW",
+      "fuelType": "Benzin",
+      "displacement": 2998,
+      "reliabilityScore": 92,
+      "subScores": { "motor": 94, "getriebe": 92, "elektronik": 89, "verschleiss": 91 },
+      "knownIssues": [
+        "Kühlmittelverlust am Deckel/Ausgleichsbehälter",
+        "Ventildeckeldichtung nach ca. 150.000 km"
+      ],
+      "avgRepairCost": "moderat bis gehoben",
+      "recommendation": "Einer der langlebigsten modernen Reihensechszylinder, extrem standfest.",
+      "source": "ADAC Pannenstatistik & Motorinstandsetzer-Statistiken",
+      "sourceDate": "2025-06"
+    },
+    "BMW_N20": {
+      "name": "BMW N20 2.0L Turbo Benzin (2011-2015)",
+      "make": "BMW",
+      "fuelType": "Benzin",
+      "displacement": 1997,
+      "reliabilityScore": 64,
+      "subScores": { "motor": 58, "getriebe": 85, "elektronik": 72, "verschleiss": 70 },
+      "knownIssues": [
+        "Steuerkette und Kunststoff-Gleitschienen neigen zu vorzeitigem Verschleiß / Bruch",
+        "Ölpumpenantriebskette anfällig",
+        "Turbolader-Wastegate-Klappern"
+      ],
+      "avgRepairCost": "hoch (Steuerkettenwechsel ca. 1.800–2.500 €)",
+      "recommendation": "Vor Kauf unbedingt prüfen, ob die Steuerkette und Führungsschienen bereits revidiert wurden.",
+      "source": "TÜV Report & BMW Rückrufaktionen",
+      "sourceDate": "2024-11"
+    },
+    "BMW_B47": {
+      "name": "BMW B47 2.0L Turbo Diesel",
+      "make": "BMW",
+      "fuelType": "Diesel",
+      "displacement": 1995,
+      "reliabilityScore": 84,
+      "subScores": { "motor": 86, "getriebe": 86, "elektronik": 82, "verschleiss": 83 },
+      "knownIssues": [
+        "AGR-Kühler Rückrufaktion (Brandgefahr prüfen)",
+        "DPF Beladung ab 180.000 km",
+        "Drallklappen bei hohem Kurzstreckenanteil"
+      ],
+      "avgRepairCost": "moderat",
+      "recommendation": "Deutlich verbesserte Steuerkettenführung im Vergleich zum Vorgänger N47. Solider Langstreckenmotor.",
+      "source": "KBA Rückrufregister & ADAC",
+      "sourceDate": "2025-03"
+    },
+    "VAG_EA888_GEN3": {
+      "name": "VAG 2.0 TSI/TFSI EA888 Gen 3 (ab ca. 2013)",
+      "make": "Volkswagen",
+      "fuelType": "Benzin",
+      "displacement": 1984,
+      "reliabilityScore": 85,
+      "subScores": { "motor": 86, "getriebe": 84, "elektronik": 84, "verschleiss": 85 },
+      "knownIssues": [
+        "Wasserpumpe / Thermostatgehäuse Undichtigkeit (sehr häufig ab 80.000 km)",
+        "Verkokung der Einlassventile bei reinem Direkteinspritzermodus"
+      ],
+      "avgRepairCost": "moderat (Wasserpumpentausch ca. 700–1.000 €)",
+      "recommendation": "Das Kolbenringproblem der Gen 2 wurde hier behoben. Sehr standfest bei regelmäßigen Ölwechseln.",
+      "source": "TÜV Report & VAG Reparaturdaten",
+      "sourceDate": "2025-05"
+    },
+    "VAG_EA888_GEN2": {
+      "name": "VAG 1.8 / 2.0 TSI/TFSI EA888 Gen 2 (ca. 2008-2012)",
+      "make": "Volkswagen",
+      "fuelType": "Benzin",
+      "displacement": 1984,
+      "reliabilityScore": 54,
+      "subScores": { "motor": 46, "getriebe": 80, "elektronik": 75, "verschleiss": 68 },
+      "knownIssues": [
+        "Exzessiver Ölverbrauch durch zu schmale Ölabstreifringe (Kolbenkipper-Gefahr)",
+        "Steuerkettenspanner defektanfällig (Gefahr von kapitalem Motorschaden)"
+      ],
+      "avgRepairCost": "sehr hoch (Kolbenreparatur / Motorrevision ca. 3.500–5.500 €)",
+      "recommendation": "Nur kaufen, wenn nachweislich bereits modifizierte Kolben/Ringe und neuer Kettenspanner verbaut sind!",
+      "source": "Auto Bild Mängelstatistik & TÜV",
+      "sourceDate": "2024-08"
+    },
+    "VAG_EA288": {
+      "name": "VAG 2.0 TDI EA288 (ab 2012)",
+      "make": "Volkswagen",
+      "fuelType": "Diesel",
+      "displacement": 1968,
+      "reliabilityScore": 86,
+      "subScores": { "motor": 88, "getriebe": 85, "elektronik": 83, "verschleiss": 87 },
+      "knownIssues": [
+        "Wasserpumpe mit Schaltblende kann festgehen (Zahnriemenintervall beachten)",
+        "AGR-Ventil und DPF bei hoher Laufleistung (>200.000 km)",
+        "AdBlue-Dosiereinheit bei winterlichen Temperaturen"
+      ],
+      "avgRepairCost": "moderat",
+      "recommendation": "Extrem ausdauernder Langstreckenmotor mit Zahnriemen (Wechselintervall meist 210.000 km).",
+      "source": "ADAC & TÜV Mängelreport",
+      "sourceDate": "2025-04"
+    },
+    "MERCEDES_OM654": {
+      "name": "Mercedes-Benz 2.0L Diesel OM654 (ab 2016)",
+      "make": "Mercedes-Benz",
+      "fuelType": "Diesel",
+      "displacement": 1950,
+      "reliabilityScore": 87,
+      "subScores": { "motor": 89, "getriebe": 88, "elektronik": 83, "verschleiss": 88 },
+      "knownIssues": [
+        "Schlepphebel / Nockenwellenverschleiß bei manchen frühen Baujahren (2016-2018)",
+        "AdBlue Heizung/Füllstandssensor im Tank",
+        "Kühlmittelumschaltventil"
+      ],
+      "avgRepairCost": "moderat bis gehoben",
+      "recommendation": "Sehr effizienter, leiser Diesel mit hervorragenden Abgaswerten.",
+      "source": "Mercedes Forum & TÜV Report",
+      "sourceDate": "2025-05"
+    },
+    "MERCEDES_M274": {
+      "name": "Mercedes-Benz 1.6/2.0L Turbo M274 (2012-2020)",
+      "make": "Mercedes-Benz",
+      "fuelType": "Benzin",
+      "displacement": 1991,
+      "reliabilityScore": 77,
+      "subScores": { "motor": 78, "getriebe": 84, "elektronik": 79, "verschleiss": 80 },
+      "knownIssues": [
+        "Nockenwellenversteller / Startgeräusche (Steuerkette)",
+        "Kurbelgehäuseentlüftung (Ventil klemmt, Ölverlust)",
+        "Thermostat defekt"
+      ],
+      "avgRepairCost": "gehoben",
+      "recommendation": "Gute Laufkultur, Kaltstartgeräusche der Nockenwellenversteller beim Kauf genau abhorchen.",
+      "source": "TÜV Report & ADAC",
+      "sourceDate": "2024-10"
+    },
+    "TOYOTA_HYBRID_18_20": {
+      "name": "Toyota 1.8 / 2.0 Hybrid Dynamic Force (HSD)",
+      "make": "Toyota",
+      "fuelType": "Hybrid",
+      "displacement": 1798,
+      "reliabilityScore": 95,
+      "subScores": { "motor": 97, "getriebe": 96, "elektronik": 92, "verschleiss": 94 },
+      "knownIssues": [
+        "12V-Hilfsbatterie entlädt sich bei sehr langen Standzeiten",
+        "Inverter-Kühlmittelintervall beachten"
+      ],
+      "avgRepairCost": "sehr niedrig (keine Kupplung, keine Lichtmaschine, kein Anlasser, Bremsen halten extrem lange)",
+      "recommendation": "Statistisch einer der zuverlässigsten und verschleißärmsten Antriebe weltweit.",
+      "source": "ADAC Pannenstatistik (Platz 1) & TÜV Report",
+      "sourceDate": "2025-07"
+    }
+  },
+  "transmissions": {
+    "ZF_8HP": {
+      "name": "ZF 8HP Wandlerautomatik (8-Gang)",
+      "types": ["Automatik"],
+      "reliabilityScore": 93,
+      "notes": "Referenz unter den Wandlerautomatikgetrieben. Extrem weiche und schnelle Schaltvorgänge. Ölwechsel alle 80.000–120.000 km empfohlen.",
+      "riskFactor": 10
+    },
+    "VAG_DSG_DQ250_DQ381_DQ500": {
+      "name": "VAG DSG 6/7-Gang Nasskupplung (DQ250 / DQ381 / DQ500)",
+      "types": ["Automatik", "Doppelkupplung", "DSG"],
+      "reliabilityScore": 84,
+      "notes": "Standfest bei Einhaltung der Ölwechselintervalle (alle 60.000 km). Mechatronik-Defekte vereinzelt möglich.",
+      "riskFactor": 20
+    },
+    "VAG_DSG_DQ200": {
+      "name": "VAG DSG 7-Gang Trockenkupplung (DQ200 bis 250 Nm)",
+      "types": ["Automatik", "Doppelkupplung", "DSG"],
+      "reliabilityScore": 65,
+      "notes": "Trockene Kupplungsscheiben verschleißen im Stop-and-Go-Verkehr deutlich schneller. Ruckeln beim Anfahren, Mechatronik anfälliger.",
+      "riskFactor": 45
+    },
+    "MANUAL_6SPEED": {
+      "name": "Klassisches 6-Gang Schaltgetriebe",
+      "types": ["Schaltgetriebe", "Handschalter"],
+      "reliabilityScore": 90,
+      "notes": "Mechanisch sehr robust. Verschleiß begrenzt sich auf Kupplungsscheibe und Zweimassenschwungrad (ZMS ca. alle 150.000–200.000 km).",
+      "riskFactor": 15
+    },
+    "MERCEDES_9G_TRONIC": {
+      "name": "Mercedes 9G-Tronic Wandlerautomatik",
+      "types": ["Automatik"],
+      "reliabilityScore": 89,
+      "notes": "Sehr komfortables und langlebiges Getriebe mit geringem Kraftstoffverbrauch.",
+      "riskFactor": 12
+    }
+  },
+  "defaultsByMake": {
+    "Toyota": { "reliabilityScore": 91, "confidence": "high", "source": "TÜV & ADAC Dauerläufer" },
+    "Lexus": { "reliabilityScore": 93, "confidence": "high", "source": "J.D. Power & TÜV" },
+    "Mazda": { "reliabilityScore": 86, "confidence": "medium", "source": "ADAC Pannenstatistik" },
+    "Honda": { "reliabilityScore": 87, "confidence": "medium", "source": "TÜV Report" },
+    "BMW": { "reliabilityScore": 80, "confidence": "medium", "source": "TÜV Report" },
+    "Audi": { "reliabilityScore": 79, "confidence": "medium", "source": "TÜV Report" },
+    "Mercedes-Benz": { "reliabilityScore": 81, "confidence": "medium", "source": "TÜV Report" },
+    "Volkswagen": { "reliabilityScore": 78, "confidence": "medium", "source": "TÜV Report" },
+    "Skoda": { "reliabilityScore": 80, "confidence": "medium", "source": "TÜV Report" },
+    "Seat": { "reliabilityScore": 78, "confidence": "medium", "source": "TÜV Report" },
+    "Volvo": { "reliabilityScore": 81, "confidence": "medium", "source": "TÜV Report" },
+    "Ford": { "reliabilityScore": 75, "confidence": "medium", "source": "TÜV Report" },
+    "Opel": { "reliabilityScore": 74, "confidence": "medium", "source": "TÜV Report" },
+    "Renault": { "reliabilityScore": 73, "confidence": "medium", "source": "TÜV Report" },
+    "Peugeot": { "reliabilityScore": 74, "confidence": "medium", "source": "TÜV Report" },
+    "Hyundai": { "reliabilityScore": 82, "confidence": "medium", "source": "TÜV Report" },
+    "Kia": { "reliabilityScore": 82, "confidence": "medium", "source": "TÜV Report" },
+    "Porsche": { "reliabilityScore": 90, "confidence": "high", "source": "TÜV Report Spitzenreiter" }
+  },
+  "benchmarkFallback": {
+    "reliabilityScore": 75,
+    "confidence": "low",
+    "notes": "Geringe Datenbasis – Standard-Benchmarkwert mit erhöhter Unsicherheit angesetzt."
+  }
+}

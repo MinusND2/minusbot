@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Stream Countdown Overlay</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="../app-config.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: transparent !important;
+            overflow: hidden;
+            font-family: 'Outfit', sans-serif;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .countdown-container {
+            text-align: center;
+            background: rgba(10, 18, 15, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 30px 50px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            min-width: 320px;
+            transition: border-color 0.5s ease;
+        }
+
+        .countdown-title {
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: rgba(255, 255, 255, 0.7);
+            margin: 0;
+            transition: color 0.5s ease;
+        }
+
+        .countdown-time {
+            font-size: 72px;
+            font-weight: 900;
+            line-height: 1;
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -2px;
+            margin: 0;
+            text-shadow: 0 0 20px currentColor;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 100%;
+            border-radius: 10px;
+            transition: width 0.2s linear, background-color 0.5s ease, box-shadow 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="countdown-container" id="container">
+        <h1 class="countdown-title" id="title">COUNTDOWN</h1>
+        <div class="countdown-time" id="time">00:00</div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const profileId = urlParams.get('profileId');
+
+        if (!profileId) {
+            document.body.innerHTML = "<div style='color: white; font-size: 20px; font-weight: 600; padding: 20px; background: rgba(0,0,0,0.8); border-radius: 10px;'>Fehlende profileId in der URL.</div>";
+        } else {
+            // Initialize Firebase
+            if (!firebase.apps.length) {
+                firebase.initializeApp(window.BINGO_CONFIG.firebaseConfig);
+            }
+            const db = firebase.database();
+            
+            const titleEl = document.getElementById("title");
+            const timeEl = document.getElementById("time");
+            const progressBarEl = document.getElementById("progressBar");
+            const containerEl = document.getElementById("container");
+
+            let minutes = 10;
+            let baseTime = 0;
+            let accumulatedTime = 0;
+            let isRunning = false;
+            let accentColor = "#22c55e";
+            let mode = "countdown";
+
+            // Listen to countdown configuration
+            db.ref(`general_profiles/${profileId}/countdown`).on('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                
+                titleEl.textContent = (data.title || "COUNTDOWN").toUpperCase();
+                accentColor = data.accentColor || "#22c55e";
+                
+                // Apply dynamic accentColor styling
+                timeEl.style.color = accentColor;
+                progressBarEl.style.backgroundColor = accentColor;
+                progressBarEl.style.boxShadow = `0 0 10px ${accentColor}`;
+                containerEl.style.borderColor = `${accentColor}33`; // 20% opacity border
+                
+                minutes = data.minutes || 10;
+                baseTime = data.baseTime || 0;
+                accumulatedTime = data.accumulatedTime || 0;
+                isRunning = !!data.isRunning;
+                mode = data.mode || "countdown";
+
+                updateDisplay();
+            });
+
+            function updateDisplay() {
+                let totalSeconds = minutes * 60;
+                let displaySeconds = 0;
+
+                if (mode === "countup") {
+                    if (isRunning) {
+                        const elapsed = (Date.now() - baseTime) / 1000;
+                        displaySeconds = totalSeconds + (accumulatedTime / 1000) + elapsed;
+                    } else {
+                        displaySeconds = totalSeconds + (accumulatedTime / 1000);
+                    }
+                } else {
+                    let remaining = totalSeconds;
+                    if (isRunning) {
+                        const elapsed = (Date.now() - baseTime) / 1000;
+                        remaining = totalSeconds - ((accumulatedTime / 1000) + elapsed);
+                    } else {
+                        remaining = totalSeconds - (accumulatedTime / 1000);
+                    }
+                    if (remaining < 0) remaining = 0;
+                    displaySeconds = remaining;
+                }
+
+                const h = Math.floor(displaySeconds / 3600);
+                const m = Math.floor((displaySeconds % 3600) / 60);
+                const s = Math.floor(displaySeconds % 60);
+                
+                if (h > 0) {
+                    timeEl.textContent = h + ":" + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+                } else {
+                    timeEl.textContent = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+                }
+
+                // Update progress bar width
+                if (mode === "countup") {
+                    progressBarEl.style.width = "100%";
+                } else {
+                    const pct = totalSeconds > 0 ? (displaySeconds / totalSeconds) * 100 : 0;
+                    progressBarEl.style.width = pct + "%";
+                }
+            }
+
+            // High frequency update loop for running timer
+            setInterval(() => {
+                if (isRunning) {
+                    updateDisplay();
+                }
+            }, 200);
+        }
+    </script>
+</body>
+</html>

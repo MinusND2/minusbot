@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twitch Chat Word Game Overlay</title>
+    <!-- Google Fonts for premium typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Firebase compatibility libraries (needed for Control Panel Sync mode) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="app-config.js"></script>
+
+    <!-- Twitch tmi.js local library -->
+    <script src="tmi.min.js"></script>
+    <style>
+        :root {
+            --bg-gradient: radial-gradient(circle at 50% 50%, rgba(20, 16, 43, 0.92) 0%, rgba(10, 8, 22, 0.98) 100%);
+            --panel-bg: #0f0c22; /* Solid opaque background, no transparency */
+            --border-glow: rgba(0, 242, 254, 0.35);
+            --neon-blue: #00f2fe;
+            --neon-purple: #9d4edd;
+            --neon-pink: #ff007f;
+            --neon-green: #10b981;
+            --neon-gold: #f59e0b;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: transparent; /* Transparent for OBS Overlay */
+            color: var(--text-main);
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Setup / Configuration Screen */
+        .setup-container {
+            background: var(--bg-gradient);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px; /* Slightly rounded corners */
+            padding: 40px;
+            width: 550px;
+            max-width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(157, 78, 221, 0.15);
+            text-align: center;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            z-index: 100;
+            position: relative;
+        }
+
+        .setup-logo {
+            font-size: 32px;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .setup-subtitle {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        /* Overlay Widget Layout */
+        .game-overlay-container {
+            display: none; /* Controlled by query param */
+            width: 820px;
+            height: 240px;
+            position: relative;
+            background: var(--panel-bg);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px; /* Slightly rounded corners */
+            padding: 24px 30px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 
+                        inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+                        0 0 30px rgba(0, 242, 254, 0.08);
+            overflow: hidden;
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Overlay panels */
+        .overlay-panel {
+            position: absolute;
+            top: 24px;
+            left: 30px;
+            right: 30px;
+            bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            transform: scale(0.95);
+        }
+
+        .overlay-panel.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+
+        /* Game Panel Styles */
+        .panel-header {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding-bottom: 12px;
+        }
+
+        .game-title {
+            font-size: 16px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .game-title span {
+            color: var(--neon-blue);
+            text-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+        }
+
+        .round-badge {
+            position: absolute;
+            right: 0;
+            background: linear-gradient(135deg, rgba(157, 78, 221, 0.2), rgba(0, 242, 254, 0.1));
+            border: 1px solid rgba(0, 242, 254, 0.25);
+            padding: 4px 14px;
+            border-radius: 6px; /* Slightly rounded corners */
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.5px;
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.1);
+        }
+
+        /* Letter Boxes display */
+        .word-display-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            flex-grow: 1;
+            margin: 15px 0;
+        }
+
+        .letter-box {
+            width: 48px;
+            height: 58px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px; /* Slightly rounded corners */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--text-muted);
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        .letter-box.revealed {
+            background: linear-gradient(135deg, rgba(0, 242, 254, 0.15) 0%, rgba(157, 78, 221, 0.15) 100%);
+            border: 1px solid rgba(0, 242, 254, 0.6);
+            color: #fff;
+            text-shadow: 0 0 15px rgba(0, 242, 254, 0.8);
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.25);
+            transform: scale(1.05);
+            animation: letterPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        /* Timer Bar Container */
+        .timer-bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 4px; /* Slightly rounded corners */
+            overflow: hidden;
+            position: relative;
+        }
+
+        .timer-bar-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
+            border-radius: 4px; /* Slightly rounded corners */
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.6);
+            transition: width 1s linear;
+        }
+
+        .timer-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 6px;
+            text-align: center;
+        }
+
+        /* Winner Screen Style */
+        .winner-panel-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center;
+        }
+
+        .winner-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--neon-green);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 5px;
+            text-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+            animation: bounce 0.6s infinite alternate;
+        }
+
+        .winner-name {
+            font-size: 38px;
+            font-weight: 900;
+            color: #fff;
+            margin-bottom: 5px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+        }
+
+        .winner-word {
+            font-size: 16px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        .winner-word strong {
+            color: var(--neon-blue);
+            font-size: 20px;
+            text-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
+        }
+
+        /* Timeout / Unrevealed Panel */
+        .timeout-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--neon-pink);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 5px;
+            text-shadow: 0 0 15px rgba(255, 0, 127, 0.4);
+        }
+
+        /* Leaderboard Panel Styles */
+        .leaderboard-header {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--neon-gold);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            text-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+            text-align: center;
+        }
+
+        .leaderboard-grid {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            flex-grow: 1;
+            padding: 10px 0;
+            gap: 15px;
+        }
+
+        .leaderboard-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 6px; /* Slightly rounded corners */
+            padding: 12px 15px;
+            width: 140px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            transform: translateY(20px);
+            opacity: 0;
+            animation: slideUpIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .leaderboard-card.rank-1 {
+            border-color: rgba(245, 158, 11, 0.5);
+            background: linear-gradient(180deg, rgba(245, 158, 11, 0.1) 0%, rgba(255,255,255,0.02) 100%);
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.15);
+            transform: scale(1.1);
+            z-index: 10;
+            animation-delay: 0.2s;
+        }
+
+        .leaderboard-card.rank-2 {
+            border-color: rgba(156, 163, 175, 0.4);
+            background: linear-gradient(180deg, rgba(156, 163, 175, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+            animation-delay: 0.1s;
+        }
+
+        .leaderboard-card.rank-3 {
+            border-color: rgba(180, 83, 9, 0.4);
+            background: linear-gradient(180deg, rgba(180, 83, 9, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+            animation-delay: 0s;
+        }
+
+        .card-medal {
+            font-size: 24px;
+            margin-bottom: 6px;
+        }
+
+        .card-username {
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            max-width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+        }
+
+        .card-points {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--neon-blue);
+            margin-top: 4px;
+        }
+
+        .empty-leaderboard {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100px;
+            color: var(--text-muted);
+            font-style: italic;
+            font-size: 14px;
+        }
+
+        /* Local Test Mode Panel */
+        .test-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(10, 8, 22, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 16px;
+            width: 320px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            z-index: 200;
+            display: none; /* Toggled by setting parameter or button */
+        }
+
+        .test-header {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--neon-purple);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .test-input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .test-input {
+            flex-grow: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .test-btn {
+            background: var(--neon-purple);
+            border: none;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .test-btn:hover {
+            background: #b565f3;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes letterPop {
+            0% { transform: scale(0.6); opacity: 0.5; }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1.05); opacity: 1; }
+        }
+
+        @keyframes slideUpIn {
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-4px); }
+        }
+
+        /* Canvas Confetti */
+        #confetti-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Canvas for winner confetti -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- SETUP SCREEN / INSTRUCTIONS (Only shown in browser when no parameters are present) -->
+    <div id="setup-view" class="setup-container" style="display: none;">
+        <div class="setup-logo">MinusBot Word Game</div>
+        <div class="setup-subtitle">Twitch Chat Worträtsel-Spiel-Overlay (Deutsch)</div>
+        <div style="font-size: 14px; color: var(--text-main); line-height: 1.6; margin-bottom: 10px; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); text-align: left;">
+            Bitte verwende das <strong>Minusnd.de Dashboard</strong>, um dieses Overlay zu konfigurieren, oder hänge den Twitch-Kanalnamen als Query-Parameter an die URL an, z.B.:<br>
+            <code style="color: var(--neon-blue); display: block; margin-top: 10px; font-family: monospace; font-size: 13px;">?channel=dein_kanalname</code>
+        </div>
+    </div>
+
+    <!-- OVERLAY WIDGET CONTAINER -->
+    <div id="game-overlay" class="game-overlay-container">
+        
+        <!-- 1. GUESSING / WORD PANEL -->
+        <div id="panel-game" class="overlay-panel active">
+            <div class="panel-header">
+                <div class="game-title"><span>Errate das Wort</span></div>
+                <div id="round-badge" class="round-badge">Runde 1/10</div>
+            </div>
+            <div id="word-display" class="word-display-container">
+                <!-- Dynamically generated letter boxes -->
+            </div>
+            <div class="timer-section">
+                <div class="timer-bar-container">
+                    <div id="timer-fill" class="timer-bar-fill"></div>
+                </div>
+                <div id="timer-label" class="timer-label">Nächster Buchstabe in 60s</div>
+            </div>
+        </div>
+
+        <!-- 2. WINNER PANEL -->
+        <div id="panel-winner" class="overlay-panel">
+            <div class="winner-panel-content">
+                <div class="winner-title">Richtig erraten! 🎉</div>
+                <div id="winner-name" class="winner-name">@TwitchUser</div>
+                <div class="winner-word">Das Wort war: <strong id="winner-word-text">BEISPIEL</strong></div>
+            </div>
+        </div>
+
+        <!-- 3. TIMEOUT / UNREVEALED PANEL -->
+        <div id="panel-timeout" class="overlay-panel">
+            <div class="winner-panel-content">
+                <div class="timeout-title">Zeit abgelaufen! ⏰</div>
+                <div class="winner-name" style="font-size: 30px; margin-top: 5px;">Keiner hat es erraten!</div>
+                <div class="winner-word">Gesuchtes Wort war: <strong id="timeout-word-text">BEISPIEL</strong></div>
+            </div>
+        </div>
+
+        <!-- 4. LEADERBOARD PANEL -->
+        <div id="panel-leaderboard" class="overlay-panel">
+            <div id="leaderboard-header" class="leaderboard-header">RANGLISTE (Runde 1/10)</div>
+            <div id="leaderboard-grid" class="leaderboard-grid">
+                <!-- Top 3-5 users rendered dynamically as columns/cards -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- LOCAL TEST SIMULATOR PANEL (Bottom Right) -->
+    <div id="test-simulator" class="test-panel">
+        <div class="test-header">
+            <span>⚙️ Game Simulator / Test-Chat</span>
+            <span style="color: var(--text-muted); cursor: pointer;" onclick="document.getElementById('test-simulator').style.display='none'">✕</span>
+        </div>
+        <div class="test-input-row">
+            <input type="text" id="sim-user" class="test-input" placeholder="Twitch User" value="TestZuschauer">
+        </div>
+        <div class="test-input-row">
+            <input type="text" id="sim-message" class="test-input" placeholder="Wort tippen...">
+            <button id="btn-sim-send" class="test-btn">Senden</button>
+        </div>
+        <div style="font-size: 11px; color: var(--text-muted); line-height: 1.4; margin-top: 8px;">
+            Gib hier die richtige Lösung ein, um das Overlay zu testen! Das gesuchte Wort lautet aktuell: <strong id="sim-cheat-word" style="color: var(--neon-blue);">-</strong>
+        </div>
+        <button id="btn-sim-reveal" class="test-btn" style="width: 100%; margin-top: 10px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);">Nächsten Buchstaben aufdecken</button>
+    </div>
+
+    <script>
+        // Unique Client ID generated on startup to distinguish who updates Firebase transitions
+        const myClientId = Math.random().toString(36).substring(2);
+
+        // --- 1. GERMAN WORDS DICTIONARY (2000 Common Nouns) ---
+        const GERMAN_WORDS = [
+            "Abbrechen", "Abbruch", "Abdeckung", "Abend", "Abendessen", "Abenteuer", "Abfall", "Ablehnen", "Absicht", "Absolvent",
+            "Abstimmung", "Absturz", "Abteilung", "Abtretung", "Achtung", "Acre", "Ader", "Adler", "Affe", "Affäre",
+            "Agenda", "Agent", "Agentur", "Ahnung", "Aids", "Akademie", "Aktion", "Aktivist", "Aktivität", "Albtraum",
+            "Album", "Alkohol", "Allee", "Allianz", "Alltag", "Alpen", "Also", "Alten", "Alter", "Ampel",
+            "Analyse", "Analytiker", "Anbieter", "Anfang", "Anfrage", "Angebot", "Angeln", "Angriff", "Angst", "Anker",
+            "Ankunft", "Anlage", "Anliegen", "Anmerkung", "Anmut", "Annahme", "Anordnung", "Anregung", "Anreiz", "Anruf",
+            "Anteil", "Antrieb", "Antwort", "Antworten", "Anwalt", "Anweisung", "Anwendung", "Anwesen", "Anzeige", "Anzug",
+            "Apfel", "Apotheke", "April", "Arbeit", "Arbeiten", "Arbeiter", "Armband", "Armee", "Armut", "Arsch",
+            "Artikel", "Arzt", "Asche", "Aspekt", "Assistent", "Atem", "Athlet", "Atlas", "Atmosphäre", "Attacke",
+            "Attitüde", "Attribut", "Auch", "Aufgabe", "Auflage", "Auflösung", "Aufsatz", "Aufsehen", "Aufzug", "Auge",
+            "August", "Ausbildung", "Ausdruck", "Ausführung", "Ausgabe", "Ausgaben", "Ausmaß", "Ausnahme", "Ausrede", "Ausrüstung",
+            "Aussicht", "Austausch", "Auswahl", "Auswertung", "Auto", "Autobahn", "Autor", "Außerdem", "Baby", "Bach",
+            "Backofen", "Badewanne", "Bahnhof", "Ball", "Ballon", "Banane", "Band", "Bank", "Barriere", "Bart",
+            "Base", "Baseball", "Basic", "Basis", "Basketball", "Batterie", "Bauch", "Bauer", "Bauernhof", "Baum",
+            "Baustelle", "Becher", "Becken", "Bedeutung", "Beerdigung", "Befehl", "Befragter", "Begleitung", "Begriff", "Behandlung",
+            "Behauptung", "Behörde", "Bein", "Beispiel", "Beitrag", "Beklagte", "Belastung", "Beliebt", "Belohnung", "Benehmen",
+            "Benzin", "Beobachter", "Berater", "Berechnung", "Bereich", "Berg", "Bergwerk", "Beruf", "Besatzung", "Beschwerde",
+            "Besen", "Besitz", "Besondere", "Beste", "Besteck", "Bestimmung", "Bestrafung", "Besuch", "Besucher", "Betonung",
+            "Betrieb", "Betriebs", "Betrug", "Bett", "Beutel", "Bewegung", "Beweis", "Bewertung", "Bewohner", "Beziehung",
+            "Bezirk", "Bibel", "Bibliothek", "Biege", "Biene", "Bier", "Bild", "Bildschirm", "Bildung", "Bindung",
+            "Birne", "Bischof", "Blase", "Blatt", "Blau", "Bleistift", "Blick", "Blitz", "Block", "Blog",
+            "Blume", "Bluse", "Blut", "Bock", "Boden", "Bogen", "Bohne", "Bombe", "Boom", "Boot",
+            "Bord", "Bote", "Botschaft", "Boxer", "Brand", "Bratwurst", "Brauch", "Braun", "Braut", "Bremse",
+            "Brief", "Brille", "Brot", "Bruder", "Brunnen", "Brust", "Brücke", "Buch", "Buchen", "Buchstabe",
+            "Bucht", "Budget", "Busch", "Butter", "Bär", "Börse", "Bücherei", "Bühne", "Bündel", "Bürger",
+            "Büro", "Bürste", "Campus", "Cent", "Center", "Champion", "Chance", "Chancen", "Charakter", "Chef",
+            "Chinesisch", "Chip", "Christian", "Clever", "Clip", "Clown", "Coach", "Code", "Computer", "Couch",
+            "Creme", "Dach", "Dame", "Dampf", "Dank", "Danke", "Darlehen", "Darm", "Darsteller", "Datei",
+            "Daten", "Datenbank", "Datum", "Dauer", "Debatte", "Deck", "Decke", "Deckel", "Defensive", "Definition",
+            "Defizit", "Degen", "Dekade", "Delfin", "Delikt", "Demokrat", "Demokratie", "Denken", "Denker", "Denkmal",
+            "Dennoch", "Depression", "Designer", "Detail", "Detektiv", "Deutsch", "Deutung", "Dezember", "Diagnose", "Diagramm",
+            "Dialog", "Diamant", "Dichter", "Dienen", "Diener", "Dienst", "Dienstag", "Dies", "Digital", "Dinosaurier",
+            "Diplom", "Direkte", "Direktor", "Disko", "Diskurs", "Diskussion", "Disput", "Distanz", "Distel", "Disziplin",
+            "Diversität", "Diät", "Doktor", "Dolch", "Dollar", "Dom", "Domain", "Donner", "Donnerstag", "Dorf",
+            "Dorn", "Dose", "Drache", "Draht", "Drang", "Dreh", "Dreieck", "Druck", "Drücken", "Dschungel",
+            "Duft", "Dumm", "Dummkopf", "Dunkelheit", "Dunst", "Durst", "Dusche", "Dutzend", "Düne", "Echo",
+            "Ecke", "Edelstein", "Editor", "Efeu", "Effizienz", "Ehefrau", "Ehemann", "Ehren", "Eiche", "Eigentum",
+            "Eigentümer", "Eile", "Eimer", "Einatz", "Einblick", "Eindruck", "Eingang", "Einheit", "Einkaufen", "Einkommen",
+            "Einleitung", "Einmal", "Einnahmen", "Einschlag", "Eintrag", "Eintreten", "Eis", "Eisberg", "Eisen", "Elefant",
+            "Element", "Elfenbein", "Elite", "Ellbogen", "Elster", "Elternteil", "Email", "Emission", "Emotion", "Empfang",
+            "Empfehlung", "Empfänger", "Ende", "Energie", "Engagement", "Engel", "Englisch", "Enkel", "Entdeckung", "Ente",
+            "Entität", "Entspannen", "Entwickler", "Entwurf", "Epoche", "Erbe", "Erdbeere", "Erde", "Erfahrung", "Erfolg",
+            "Ergebnis", "Erholung", "Erinnerung", "Erkennung", "Erklärung", "Erkrankung", "Erlaubnis", "Ermittler", "Ernst", "Ernsthaft",
+            "Ernte", "Error", "Erste", "Ertrag", "Erwachsene", "Erwartung", "Erwägen", "Erwägung", "Erzieher", "Erzähler",
+            "Esel", "Essen", "Essig", "Esslöffel", "Etage", "Ethik", "Etikett", "Eule", "Evangelium", "Evolution",
+            "Exekutive", "Existenz", "Experiment", "Experte", "Explosion", "Export", "Exposition", "Fabrik", "Fachmann", "Faden",
+            "Fahrbahn", "Fahrkarte", "Fahrrad", "Fahrstuhl", "Fahrt", "Fahrzeug", "Faktor", "Fakultät", "Falke", "Fall",
+            "Fallschirm", "Falsch", "Familie", "Fang", "Fantasie", "Farbe", "Fasan", "Faser", "Fass", "Faust",
+            "Fazit", "Februar", "Feder", "Fehler", "Feier", "Feige", "Feind", "Felge", "Fels", "Felsen",
+            "Fenster", "Ferien", "Fernglas", "Fernsehen", "Fernseher", "Fessel", "Fest", "Feste", "Festival", "Festnahme",
+            "Fett", "Feuer", "Fichte", "Ficken", "Fieber", "Figur", "Fiktion", "Film", "Filter", "Finale",
+            "Finanzen", "Finger", "Firma", "Fisch", "Flagge", "Flamme", "Flasche", "Fleisch", "Fliege", "Fliese",
+            "Floh", "Floß", "Flucht", "Flug", "Flughafen", "Flugzeug", "Flur", "Fluss", "Flut", "Flöte",
+            "Flüchtling", "Flügel", "Fokus", "Folge", "Folgen", "Folie", "Fonds", "Forelle", "Form", "Format",
+            "Formation", "Formel", "Forscher", "Forschung", "Fortfahren", "Fortschritt", "Forum", "Foto", "Fotograf", "Fracht",
+            "Frage", "Fragen", "Frau", "Freiheit", "Freitag", "Fremder", "Frequenz", "Freude", "Freund", "Friede",
+            "Frieden", "Frosch", "Frost", "Frucht", "Fräulein", "Fröhlich", "Frühling", "Frühstück", "Fuchs", "Fund",
+            "Funke", "Funktion", "Furcht", "Futter", "Fuß", "Fußball", "Fähigkeit", "Fähre", "Führer", "Führung",
+            "Gabel", "Galaxis", "Galerie", "Gang", "Gans", "Garage", "Garantie", "Garten", "Gas", "Gast",
+            "Gastgeber", "Gebet", "Gebiet", "Gebraucht", "Geburt", "Geburtstag", "Gebäude", "Gebühr", "Geck", "Gedicht",
+            "Geduldig", "Gefahr", "Gefallen", "Gefängnis", "Gefühl", "Gegenstand", "Gegenteil", "Gegenwart", "Gegner", "Gehalt",
+            "Geheimnis", "Gehirn", "Gehäuse", "Geist", "Gelb", "Geld", "Gelehrte", "Gemälde", "Gemüse", "Generation",
+            "Genius", "Gentleman", "Gericht", "Geruch", "Gerät", "Gerücht", "Gesamt", "Geschenk", "Geschichte", "Geschlecht",
+            "Geschmack", "Geschäft", "Geselle", "Gesetz", "Gesicht", "Gespräch", "Geste", "Getreide", "Getränk", "Gewalt",
+            "Gewebe", "Gewehr", "Gewicht", "Gewinner", "Gewohnheit", "Gießen", "Gipfel", "Gitarre", "Glas", "Glauben",
+            "Gletscher", "Globus", "Glocke", "Glück", "Glücklich", "Gold", "Golf", "Gondel", "Gott", "Gouverneur",
+            "Grab", "Grad", "Graf", "Gras", "Gremium", "Grenze", "Grippe", "Großartig", "Großvater", "Grund",
+            "Gruppe", "Grusel", "Größe", "Grün", "Gründen", "Gründer", "Gürtel", "Haar", "Hacke", "Hafen",
+            "Hahn", "Haifisch", "Haken", "Halle", "Hallo", "Hals", "Hammer", "Hand", "Handel", "Handlung",
+            "Handschuh", "Handtuch", "Handwerk", "Handy", "Hase", "Hass", "Haube", "Haufen", "Hauptstadt", "Haus",
+            "Haushalt", "Haustier", "Haut", "Hecke", "Hefe", "Heft", "Heide", "Heimat", "Held", "Helm",
+            "Hemd", "Hengst", "Herbst", "Herd", "Herr", "Hersteller", "Herz", "Hexe", "Hier", "Hilfe",
+            "Himmel", "Hingabe", "Hinweis", "Hirsch", "Historiker", "Hitze", "Hobel", "Hochschule", "Hochzeit", "Hof",
+            "Holz", "Honig", "Horizont", "Horn", "Hose", "Hotel", "Huhn", "Hummer", "Humor", "Hund",
+            "Hurrikan", "Hut", "Hypothek", "Hypothese", "Häftling", "Händler", "Höhe", "Höhle", "Hölle", "Hören",
+            "Hüfte", "Hügel", "Hündin", "Hütte", "Ideal", "Idee", "Identität", "Igel", "Ihnen", "Immigrant",
+            "Impfung", "Index", "Industrie", "Infektion", "Inflation", "Inhalt", "Initial", "Initiative", "Innenstadt", "Innerhalb",
+            "Innovation", "Insel", "Institut", "Instrument", "Integrität", "Interesse", "Internet", "Interview", "Investor", "Islam",
+            "Jacke", "Jagd", "Jahr", "Jahreszeit", "Jammer", "Januar", "Jazz", "Journalist", "Jubiläum", "Jugend",
+            "Juli", "Jung", "Junge", "Juni", "Junior", "Jury", "Juwel", "Jäger", "Kabel", "Kabine",
+            "Kabinett", "Kaffee", "Kahn", "Kaiser", "Kakao", "Kaktus", "Kalb", "Kalorie", "Kamel", "Kamera",
+            "Kamin", "Kamm", "Kammer", "Kampagne", "Kampf", "Kanal", "Kandidat", "Kaninchen", "Kanne", "Kante",
+            "Kanu", "Kapazität", "Kapitel", "Kapitän", "Kappe", "Karosserie", "Karotte", "Karte", "Kartoffel", "Karton",
+            "Kasse", "Kastanie", "Kasten", "Kategorie", "Kater", "Katze", "Kauf", "Kaufen", "Kegel", "Kehle",
+            "Keks", "Kelch", "Keller", "Kerl", "Kessel", "Kette", "Kiefern", "Kind", "Kindheit", "Kinn",
+            "Kirche", "Kirsche", "Kissen", "Kiste", "Klage", "Klang", "Klasse", "Klaue", "Klavier", "Klee",
+            "Kleid", "Kleidung", "Kleinkind", "Klient", "Klima", "Klinik", "Klippe", "Klo", "Kloster", "Kluft",
+            "Knie", "Knoblauch", "Knochen", "Knopf", "Knoten", "Koalition", "Koch", "Koffer", "Kohl", "Kohle",
+            "Kollege", "Kollektiv", "Komfort", "Komitee", "Kommandant", "Kommen", "Kommentar", "Kommissar", "Kommission", "Kompass",
+            "Komplett", "Komplex", "Komponente", "Komödie", "Kondition", "Konferenz", "Konflikt", "Kongress", "Konstante", "Kontakt",
+            "Kontext", "Konto", "Kontrast", "Kontrolle", "Konvention", "Konzept", "Konzern", "Konzert", "Kopf", "Kopieren",
+            "Korb", "Korken", "Korps", "Korrekt", "Korruption", "Kosmos", "Kosten", "Krabbe", "Kraft", "Kran",
+            "Krankheit", "Kranz", "Kraut", "Kreatur", "Krebs", "Kredit", "Kreide", "Kreis", "Kreislauf", "Kreuz",
+            "Krieg", "Krieger", "Krise", "Kriterien", "Kritik", "Kritiker", "Krokodil", "Krone", "Krug", "Krähe",
+            "Kuchen", "Kugel", "Kuh", "Kultur", "Kumpel", "Kunde", "Kunst", "Kupfer", "Kurs", "Kurve",
+            "Kuss", "Kutsche", "Käfer", "Kämpfer", "Käse", "Käufer", "König", "Königin", "Körper", "Küche",
+            "Künstler", "Kürbis", "Küste", "Labor", "Lachen", "Lachs", "Laden", "Lage", "Lager", "Lamm",
+            "Lampe", "Land", "Landschaft", "Landung", "Lassen", "Lastwagen", "Latein", "Laterne", "Laub", "Lauf",
+            "Laufen", "Lawine", "Leben", "Lebensstil", "Lebenszeit", "Leder", "Legende", "Lehm", "Lehre", "Lehren",
+            "Lehrer", "Lehrplan", "Leib", "Leiche", "Leine", "Leise", "Leistung", "Leiter", "Lektion", "Lerche",
+            "Lernen", "Leser", "Letztere", "Leutnant", "Liberale", "Licht", "Liebe", "Liebhaber", "Liebling", "Lied",
+            "Lieferung", "Liga", "Lilie", "Linderung", "Linie", "Linse", "Lippe", "Liste", "Literatur", "Live",
+            "Lizenz", "Loch", "Logik", "Lohn", "Lokomotive", "Luft", "Lunge", "Lust", "Lächeln", "Länge",
+            "Lärm", "Löffel", "Löschen", "Lösung", "Löwe", "Lücke", "Lüge", "Macht", "Magen", "Magie",
+            "Mahlzeit", "Mainstream", "Mais", "Maler", "Mama", "Manager", "Mandat", "Mangel", "Mann", "Mantel",
+            "Marder", "Marine", "Marke", "Marketing", "Markieren", "Markt", "Marmor", "Marsch", "Maschine", "Maske",
+            "Masse", "Mast", "Material", "Mathematik", "Mauer", "Maus", "Medien", "Medikament", "Medizin", "Meer",
+            "Mehl", "Meile", "Meinung", "Meise", "Meister", "Melone", "Menge", "Mensch", "Menschen", "Menschheit",
+            "Merkmal", "Messe", "Messer", "Messung", "Metall", "Meter", "Methode", "Mexikaner", "Miete", "Milch",
+            "Milliarde", "Million", "Minderheit", "Minimum", "Minister", "Minute", "Minze", "Mischung", "Missbrauch", "Mission",
+            "Mist", "Mitglied", "Mitte", "Mittwoch", "Mode", "Modell", "Modus", "Mohn", "Moment", "Monat",
+            "Mond", "Monitor", "Montag", "Montage", "Moos", "Mord", "Morgen", "Motivation", "Motor", "Mund",
+            "Muschel", "Museum", "Musical", "Musik", "Musiker", "Muskel", "Muslim", "Muster", "Mutter", "Mythos",
+            "Mädchen", "Mähne", "Möbel", "Möhre", "Mörder", "Mörtel", "Mücke", "Mühe", "Mühle", "Müll",
+            "Münze", "Mütze", "Nachbar", "Nachmittag", "Nacht", "Nacken", "Nadel", "Nagel", "Nahrung", "Name",
+            "Narrativ", "Nase", "Nation", "National", "Natur", "Nebel", "Negativ", "Nein", "Nerv", "Nest",
+            "Netz", "Netzwerk", "Nieder", "Niere", "Noch", "Norden", "Norm", "Notfall", "Notiz", "Notwendig",
+            "November", "Nudel", "Null", "Nummer", "Nuss", "Nutzen", "Nutzer", "Oase", "Oben", "Oberfläche",
+            "Objekt", "Obst", "Ofen", "Offizier", "Ohr", "Oktober", "Oliven", "Onkel", "Oper", "Operation",
+            "Operator", "Opfer", "Opposition", "Orange", "Orgel", "Original", "Ort", "Ozean", "Paar", "Pack",
+            "Paket", "Palast", "Palette", "Palme", "Panel", "Panther", "Panzer", "Papagei", "Papier", "Paradies",
+            "Park", "Parken", "Partikel", "Partner", "Party", "Pass", "Passage", "Passagier", "Patch", "Patent",
+            "Patrone", "Pauke", "Pause", "Pech", "Peer", "Pelz", "Pendel", "Perle", "Person", "Personal",
+            "Pfad", "Pfanne", "Pfau", "Pfeffer", "Pfeife", "Pfeil", "Pferd", "Pfirsich", "Pflanze", "Pflaume",
+            "Pflege", "Pflicht", "Pflug", "Pfote", "Pfund", "Phase", "Phrase", "Physik", "Phänomen", "Pille",
+            "Pilot", "Pilz", "Pinguin", "Pinsel", "Pirat", "Pistole", "Pizza", "Plakat", "Plan", "Planet",
+            "Planung", "Plastik", "Platte", "Plattform", "Platz", "Plauderei", "Plus", "Plätzchen", "Poesie", "Pole",
+            "Politik", "Politiker", "Polizei", "Polizist", "Pony", "Population", "Portal", "Portion", "Porträt", "Pose",
+            "Position", "Post", "Potenzial", "Preis", "Presse", "Priester", "Prinz", "Prinzessin", "Prinzip", "Priorität",
+            "Prisma", "Privileg", "Probe", "Problem", "Produkt", "Produktion", "Professor", "Profi", "Profil", "Programm",
+            "Projekt", "Protein", "Protest", "Prozent", "Prozess", "Präferenz", "Präsident", "Prüfung", "Publikum", "Pullover",
+            "Puls", "Pult", "Pulver", "Pumpe", "Punkt", "Puppe", "Pyramide", "Qualität", "Qualle", "Quark",
+            "Quartal", "Quelle", "Querflöte", "Quittung", "Rabatt", "Rabe", "Rad", "Radikale", "Radio", "Rahmen",
+            "Rain", "Rakete", "Rampe", "Rand", "Rang", "Rappe", "Rasen", "Ratschlag", "Ratte", "Rauch",
+            "Raum", "Raupe", "Reaktion", "Real", "Rebe", "Rechen", "Rechner", "Rechnung", "Recht", "Rechts",
+            "Rede", "Reform", "Regal", "Regel", "Regen", "Regierung", "Regime", "Region", "Reh", "Reich",
+            "Reichtum", "Reifen", "Reihe", "Reim", "Reis", "Reise", "Reisen", "Reisepass", "Rekord", "Rektor",
+            "Religion", "Rennbahn", "Rennen", "Rentner", "Reporter", "Republik", "Ressource", "Rest", "Restaurant", "Rettich",
+            "Revolution", "Rezension", "Rezept", "Rezession", "Richter", "Richtlinie", "Richtung", "Riese", "Rind", "Ring",
+            "Rinne", "Risiko", "Riss", "Ritter", "Robbe", "Roboter", "Rock", "Roggen", "Rohr", "Rolle",
+            "Roman", "Rosa", "Rose", "Rosine", "Rost", "Route", "Routine", "Rucksack", "Ruder", "Ruf",
+            "Ruhe", "Ruhestand", "Ruhm", "Rumpf", "Runde", "Russisch", "Rübe", "Rücken", "Rückkehr", "Rüstung",
+            "Saal", "Saat", "Sache", "Sachen", "Sack", "Saft", "Sage", "Sake", "Salat", "Salz",
+            "Samen", "Sammlung", "Samstag", "Sand", "Sandwich", "Sanft", "Sanktion", "Saphir", "Sarg", "Satellit",
+            "Sattel", "Satz", "Sauce", "Sauerei", "Sauerstoff", "Schacht", "Schaden", "Schaf", "Schaffung", "Schal",
+            "Schale", "Schalter", "Schande", "Scharf", "Schatten", "Schatz", "Schaufel", "Schaum", "Scheibe", "Schein",
+            "Scheisse", "Scheitern", "Scheiße", "Schere", "Scherz", "Scheune", "Schicht", "Schicksal", "Schießen", "Schiff",
+            "Schild", "Schildkröte", "Schinken", "Schirm", "Schlacht", "Schlaf", "Schlag", "Schlange", "Schlauch", "Schlecht",
+            "Schleife", "Schloss", "Schlucht", "Schlüssel", "Schmalz", "Schmerz", "Schmerzen", "Schmuck", "Schmutz", "Schnabel",
+            "Schnecke", "Schnee", "Schneider", "Schnur", "Schock", "Schokolade", "Schrank", "Schraube", "Schrecken", "Schrei",
+            "Schreiben", "Schrift", "Schritt", "Schuh", "Schuld", "Schule", "Schulter", "Schuppe", "Schuss", "Schutz",
+            "Schwamm", "Schwan", "Schwanz", "Schwarz", "Schwein", "Schwert", "Schwester", "Schwimmbad", "Schwäche", "Schönheit",
+            "Schüler", "Schüssel", "See", "Seele", "Segel", "Segment", "Seide", "Seife", "Seil", "Sein",
+            "Seite", "Sekretär", "Sektion", "Sektor", "Sekunde", "Selbstmord", "Selten", "Semmel", "Senat", "Senator",
+            "Senf", "Senior", "September", "Serie", "Server", "Service", "Sessel", "Seufzen", "Shake", "Sheriff",
+            "Shirt", "Show", "Sicherheit", "Sicht", "Sieb", "Sieben", "Siedlung", "Sieg", "Siegel", "Signal",
+            "Silber", "Single", "Sinn", "Sitz", "Sitzung", "Skala", "Skandal", "Sklave", "Skript", "Smaragd",
+            "Socke", "Sofa", "Software", "Sohn", "Soldat", "Sommer", "Sonne", "Sonntag", "Sorge", "Sortieren",
+            "Sozial", "Soße", "Spanisch", "Spannung", "Spaß", "Spezialist", "Spezies", "Spezifisch", "Spiegel", "Spiel",
+            "Spieler", "Spielstart", "Spielzeug", "Spinat", "Spinne", "Spion", "Spitze", "Sport", "Sprache", "Sprecher",
+            "Spur", "Stabilität", "Stadion", "Stadt", "Stahl", "Stall", "Stamm", "Stand", "Standard", "Star",
+            "Start", "Startseite", "Status", "Staub", "Stehen", "Stein", "Stelle", "Stempel", "Stern", "Steuer",
+            "Stiefel", "Stier", "Stift", "Stiftung", "Stil", "Stille", "Stimme", "Stimmung", "Stipendium", "Stirn",
+            "Stock", "Stoff", "Stolz", "Storch", "Strafe", "Strahl", "Strahlung", "Strand", "Strategie", "Strauch",
+            "Straße", "Streifen", "Streik", "Streit", "Strick", "Strom", "Struktur", "Strumpf", "Stube", "Student",
+            "Studio", "Stuhl", "Stunde", "Sturm", "Stute", "Stärke", "Störung", "Stück", "Substanz", "Suche",
+            "Super", "Suppe", "Symbol", "Symptom", "System", "Szenario", "Szene", "Sänger", "Säule", "Säure",
+            "Sünde", "Süss", "Süssigkeit", "Süßigkeit", "Tabak", "Tabelle", "Tafel", "Tag", "Tagebuch", "Taktik",
+            "Tal", "Talent", "Tanne", "Tante", "Tanz", "Tasche", "Tasse", "Tastatur", "Taste", "Tatsache",
+            "Tau", "Taube", "Taucher", "Team", "Technik", "Techniker", "Teelöffel", "Teenager", "Teich", "Teig",
+            "Teil", "Teilen", "Teilnehmer", "Teilt", "Teilung", "Telefon", "Teller", "Temperatur", "Tempo", "Tendenz",
+            "Teppich", "Termin", "Terror", "Terrorist", "Teufel", "Text", "Theater", "Thema", "Theorie", "Therapie",
+            "Thron", "Tiefe", "Tier", "Tierwelt", "Tiger", "Tinte", "Tisch", "Titel", "Tochter", "Tod",
+            "Tomate", "Tonhöhe", "Topf", "Tor", "Torte", "Tour", "Tourist", "Tradition", "Tragödie", "Transfer",
+            "Transport", "Traum", "Treffen", "Treiber", "Treibstoff", "Trend", "Treppe", "Tresor", "Tribüne", "Trichter",
+            "Trick", "Trinkglas", "Triumph", "Trommel", "Trompete", "Tropfen", "Trost", "Trotz", "Truhe", "Trupp",
+            "Träger", "Träne", "Tschüss", "Tulpe", "Tunnel", "Turm", "Turnier", "Täglich", "Tötung", "Tür",
+            "Uhr", "Uhu", "Umfang", "Umfrage", "Umgebung", "Umstand", "Umwelt", "Unbekannt", "Unfall", "Uniform",
+            "Union", "Universität", "Universum", "Unterhose", "Unterricht", "Unterseite", "Urban", "Urlaub", "Ursprung", "Urwald",
+            "Variable", "Variation", "Vase", "Vater", "Vati", "Veilchen", "Ventil", "Verband", "Verbindung", "Verbot",
+            "Verbrauch", "Verbrechen", "Verbündete", "Verdienste", "Verein", "Verfahren", "Verfassung", "Vergleich", "Vergnügen", "Verhalten",
+            "Verhältnis", "Verhütung", "Verkauf", "Verkehr", "Verlag", "Verlangen", "Verlassen", "Verletzung", "Verlust", "Verordnung",
+            "Versagen", "Verstehen", "Verstoß", "Versuch", "Versuchen", "Verteilung", "Vertrag", "Vertrauen", "Vertreter", "Verwaltung",
+            "Verzeihung", "Veteran", "Vetter", "Video", "Viel", "Vielfalt", "Viertel", "Villa", "Virus", "Vision",
+            "Vize", "Vogel", "Volk", "Volumen", "Vorfall", "Vorgehen", "Vorhang", "Vorhersage", "Vorschlag", "Vorsichtig",
+            "Vorteil", "Vortrag", "Waage", "Wabe", "Wachs", "Wachstum", "Waffe", "Wagen", "Wahl", "Wahr",
+            "Wahrheit", "Wald", "Walfisch", "Walnuss", "Walze", "Wand", "Wange", "Wappen", "Warnung", "Warteschlange",
+            "Wartung", "Wasser", "Webseite", "Weide", "Weihnachten", "Wein", "Weise", "Weisheit", "Weizen", "Weiß",
+            "Welle", "Welt", "Wenn", "Werbung", "Werdegang", "Werkstatt", "Werkzeug", "Wert", "Weste", "Westen",
+            "Western", "Wettbewerb", "Wette", "Wetter", "Whoa", "Widerstand", "Wiese", "Wildnis", "Wille", "Wimper",
+            "Wind", "Winkel", "Winter", "Wirbel", "Wirksam", "Wirkung", "Wirtschaft", "Wissen", "Wissenschaft", "Witz",
+            "Woche", "Wochenende", "Wohlfahrt", "Wohnung", "Wolf", "Wolke", "Wolle", "Wort", "Wunde", "Wunder",
+            "Wunsch", "Wurf", "Wurm", "Wurst", "Wurzel", "Wut", "Wählen", "Wähler", "Währung", "Wärme",
+            "Wäsche", "Wüste", "Zahl", "Zahlen", "Zahlung", "Zahn", "Zange", "Zaun", "Zebra", "Zehe",
+            "Zeichen", "Zeichnung", "Zeigefinger", "Zeit", "Zeitplan", "Zeitraum", "Zeitung", "Zelle", "Zelt", "Zement",
+            "Zensur", "Zentimeter", "Zepter", "Zeremonie", "Zerstörung", "Zettel", "Zeuge", "Zeugnis", "Ziege", "Ziegel",
+            "Ziel", "Zigarette", "Zigarre", "Zimmer", "Zimt", "Zink", "Zinn", "Zirkel", "Zirkus", "Zitrone",
+            "Zoll", "Zone", "Zoo", "Zopf", "Zucker", "Zug", "Zugriff", "Zukunft", "Zulassung", "Zunahme",
+            "Zunge", "Zusatz", "Zuschauer", "Zustand", "Zutat", "Zweck", "Zweifel", "Zweig", "Zwiebel", "Zwilling",
+            "Zylinder", "Zähler", "Änderung", "Öffnung", "Ökonom", "Überleben", "Überlegen", "Übernehmen", "Übersetzen", "Übung"
+        ];
+
+        // --- 2. SETUP & QUERY PARAMETERS PARSING ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const streamId = urlParams.get('stream') ? urlParams.get('stream').trim() : null;
+        let channelName = urlParams.get('channel') ? urlParams.get('channel').trim().toLowerCase() : null;
+        
+        // Settings from URL parameters with fallbacks (only used in Standalone Mode)
+        let revealIntervalSec = parseInt(urlParams.get('time')) || 60; // default 60s
+        let totalRoundsMax = parseInt(urlParams.get('rounds')) || 10; // default 10 rounds
+        
+        let isTestMode = urlParams.get('test') === 'true' || (!channelName && !streamId);
+
+        // Domestic setup DOM element binds
+        const setupView = document.getElementById('setup-view');
+        const gameOverlay = document.getElementById('game-overlay');
+        const testSimulator = document.getElementById('test-simulator');
+
+        // --- 3. DUAL-MODE CONTROLLER LOGIC ---
+        let currentWord = "";
+        let currentRound = 1;
+        let revealedIndices = [];
+        let scoreBoard = {}; // { username: points }
+        let tickTimer = null;
+        let secondsRemaining = revealIntervalSec;
+        let isWaitingForNextRound = false;
+        let gameState = null; // cached from firebase
+        let client = null; // tmi chat client
+        let connectedChannel = "";
+
+        // Global variables for Firebase auth bypass
+        let db = null;
+        let cachedGuestToken = null;
+
+        // Fetch the guestToken anonymously to authorize backend updates
+        async function getGuestToken() {
+            if (cachedGuestToken) return cachedGuestToken;
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlToken = urlParams.get('token');
+            if (urlToken) {
+                cachedGuestToken = urlToken;
+                return cachedGuestToken;
+            }
+            try {
+                const snap = await db.ref(`streams/${streamId}/meta/guestToken`).once('value');
+                cachedGuestToken = snap.val();
+            } catch (err) {
+                console.warn("Could not fetch token from Firebase (likely permission denied).");
+            }
+            return cachedGuestToken;
+        }
+
+        // POST proxy database updater
+        async function updateWordGameData(payload) {
+            try {
+                const token = await getGuestToken();
+                if (!token) {
+                    console.error("Guest token not found in meta. Cannot write to Firebase.");
+                    return;
+                }
+                const res = await fetch('/bot/api/scoreboard/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        streamId: streamId,
+                        token: token,
+                        path: 'wordgame',
+                        value: payload
+                    })
+                });
+                return await res.json();
+            } catch (e) {
+                console.error("Failed to call backend update:", e);
+            }
+        }
+
+        // --- MODE B: FIREBASE SYNCHRONIZATION ---
+        function initializeFirebaseSync() {
+            if (!streamId) return;
+
+            // Load Firebase config from window.BINGO_CONFIG
+            if (!firebase.apps.length) {
+                firebase.initializeApp(window.BINGO_CONFIG.firebaseConfig);
+            }
+            db = firebase.database();
+            const gameRef = db.ref(`streams/${streamId}/data/wordgame`);
+
+            // Listen to state changes
+            gameRef.on('value', (snap) => {
+                const state = snap.val();
+                if (!state) {
+                    return;
+                }
+                
+                gameState = state;
+                currentWord = state.currentWord || "";
+                revealedIndices = state.revealedIndices || [];
+                currentRound = state.currentRound || 1;
+                scoreBoard = state.scores || {};
+                revealIntervalSec = state.revealIntervalSec || 60;
+                totalRoundsMax = state.totalRoundsMax || 10;
+
+                // Sync UI immediately
+                renderWordBoxes();
+                document.getElementById('round-badge').textContent = `Runde ${currentRound}/${totalRoundsMax}`;
+
+                // Update Cheat indicator in Simulator UI if open
+                if (document.getElementById('sim-cheat-word')) {
+                    document.getElementById('sim-cheat-word').textContent = currentWord;
+                }
+
+                // Handle panel views based on game status
+                if (state.gameStatus === 'guessing') {
+                    isWaitingForNextRound = false;
+                    showPanel('panel-game');
+                    startFirebaseCountdownTimer();
+                } else if (state.gameStatus === 'winner') {
+                    isWaitingForNextRound = true;
+                    stopTimers();
+                    document.getElementById('winner-name').textContent = state.lastWinner || "";
+                    document.getElementById('winner-word-text').textContent = currentWord.toUpperCase();
+                    showPanel('panel-winner');
+                    startConfetti();
+
+                    // Only the exact client that registered the win processes the transition timeouts
+                    if (state.transitionOwnerId === myClientId) {
+                        setTimeout(async () => {
+                            await updateWordGameData({ gameStatus: "leaderboard" });
+                            setTimeout(async () => {
+                                await startNextRoundFirebase();
+                            }, 5000);
+                        }, 3000);
+                    }
+                } else if (state.gameStatus === 'timeout') {
+                    isWaitingForNextRound = true;
+                    stopTimers();
+                    document.getElementById('timeout-word-text').textContent = currentWord.toUpperCase();
+                    showPanel('panel-timeout');
+
+                    // Only the exact client that registered the timeout processes the transition timeouts
+                    if (state.transitionOwnerId === myClientId) {
+                        setTimeout(async () => {
+                            await updateWordGameData({ gameStatus: "leaderboard" });
+                            setTimeout(async () => {
+                                await startNextRoundFirebase();
+                            }, 5000);
+                        }, 5000);
+                    }
+                } else if (state.gameStatus === 'leaderboard') {
+                    isWaitingForNextRound = true;
+                    stopTimers();
+                    stopConfetti();
+                    renderLeaderboardDOM(`RANGLISTE (Runde ${currentRound}/${totalRoundsMax} beendet)`);
+                    showPanel('panel-leaderboard');
+                }
+
+                // Connect / Reconnect Twitch chat dynamically and toggle layout visibility to prevent leakage
+                const targetChannel = (state.twitchChannel || "").trim().toLowerCase();
+                if (targetChannel) {
+                    gameOverlay.style.display = 'block';
+                    if (targetChannel !== connectedChannel) {
+                        connectedChannel = targetChannel;
+                        connectTwitchChat(connectedChannel);
+                    }
+                } else {
+                    // Hide overlay entirely if Twitch channel name is not configured yet
+                    gameOverlay.style.display = 'none';
+                }
+            });
+        }
+
+        function startFirebaseCountdownTimer() {
+            if (tickTimer) clearInterval(tickTimer);
+
+            if (gameState.paused || gameState.gameStatus !== 'guessing') {
+                updateTimerUIFirebase(gameState.pauseTimeRemaining || gameState.revealIntervalSec || 60);
+                return;
+            }
+
+            const updateSec = () => {
+                const now = Date.now();
+                const diffMs = gameState.nextRevealTime - now;
+                const secs = Math.max(0, Math.ceil(diffMs / 1000));
+                
+                updateTimerUIFirebase(secs);
+                
+                if (secs <= 0 && !gameState.paused && gameState.gameStatus === 'guessing') {
+                    clearInterval(tickTimer);
+                    triggerFirebaseLetterReveal();
+                }
+            };
+
+            updateSec();
+            tickTimer = setInterval(updateSec, 1000);
+        }
+
+        function updateTimerUIFirebase(secs) {
+            const fill = document.getElementById('timer-fill');
+            const label = document.getElementById('timer-label');
+            const pct = (secs / revealIntervalSec) * 100;
+            fill.style.width = `${pct}%`;
+            label.textContent = `Nächster Buchstabe in ${secs}s`;
+        }
+
+        async function triggerFirebaseLetterReveal() {
+            const snap = await db.ref(`streams/${streamId}/data/wordgame`).once('value');
+            const data = snap.val();
+            if (!data || data.paused || data.gameStatus !== 'guessing') return;
+            
+            // local redundancy check to make sure timer actually expired in DB
+            const diffMs = data.nextRevealTime - Date.now();
+            if (diffMs > 500) return;
+
+            const word = data.currentWord || "";
+            const reveals = data.revealedIndices || [];
+            
+            let hiddenIndices = [];
+            for (let i = 0; i < word.length; i++) {
+                if (!reveals.includes(i)) {
+                    hiddenIndices.push(i);
+                }
+            }
+            
+            if (hiddenIndices.length > 1) {
+                const randHiddenIdx = Math.floor(Math.random() * hiddenIndices.length);
+                const revealIdx = hiddenIndices[randHiddenIdx];
+                reveals.push(revealIdx);
+                
+                await updateWordGameData({
+                    revealedIndices: reveals,
+                    nextRevealTime: Date.now() + (revealIntervalSec * 1000)
+                });
+            } else {
+                await updateWordGameData({
+                    gameStatus: "timeout",
+                    paused: true,
+                    transitionOwnerId: myClientId // Claim transition ownership
+                });
+            }
+        }
+
+        async function handleWinnerFirebase(winnerName) {
+            if (isWaitingForNextRound) return;
+            isWaitingForNextRound = true;
+            stopTimers();
+            
+            const formattedWinner = winnerName.startsWith('@') ? winnerName : `@${winnerName}`;
+            
+            // Read fresh scores to prevent race conditions
+            const snap = await db.ref(`streams/${streamId}/data/wordgame`).once('value');
+            const data = snap.val();
+            if (!data || data.gameStatus !== 'guessing') return;
+            
+            const scores = data.scores || {};
+            scores[formattedWinner] = (scores[formattedWinner] || 0) + 1;
+            
+            await updateWordGameData({
+                scores: scores,
+                lastWinner: formattedWinner,
+                gameStatus: "winner",
+                paused: true,
+                transitionOwnerId: myClientId // Claim transition ownership
+            });
+        }
+
+        async function startNextRoundFirebase() {
+            const snap = await db.ref(`streams/${streamId}/data/wordgame`).once('value');
+            const data = snap.val();
+            if (!data) return;
+            
+            let round = (data.currentRound || 1) + 1;
+            let scores = data.scores || {};
+            
+            if (round > (data.totalRoundsMax || 10)) {
+                scores = {};
+                round = 1;
+            }
+            
+            const randomIndex = Math.floor(Math.random() * GERMAN_WORDS.length);
+            const word = GERMAN_WORDS[randomIndex].trim().toUpperCase();
+            
+            const reveals = [0];
+            if (word.length > 1) {
+                const second = Math.floor(Math.random() * (word.length - 1)) + 1;
+                reveals.push(second);
+            }
+            
+            await updateWordGameData({
+                currentWord: word,
+                revealedIndices: reveals,
+                nextRevealTime: Date.now() + (revealIntervalSec * 1000),
+                currentRound: round,
+                paused: false,
+                gameStatus: "guessing",
+                lastGuesses: [],
+                scores: scores
+            });
+        }
+
+        async function pushGuessToFirebase(user, guess) {
+            const logRef = db.ref(`streams/${streamId}/data/wordgame/lastGuesses`);
+            const snap = await logRef.once('value');
+            let list = snap.val() || [];
+            list.push({ user, guess, time: Date.now() });
+            if (list.length > 5) {
+                list.shift(); // limit to 5
+            }
+            await updateWordGameData({
+                lastGuesses: list
+            });
+        }
+
+
+        // --- MODE A: STANDALONE LOCAL MEMORY MODE ---
+        function loadGameState() {
+            try {
+                const savedScores = localStorage.getItem('twitch_wordgame_scores');
+                const savedRound = localStorage.getItem('twitch_wordgame_round');
+                
+                if (savedScores) {
+                    scoreBoard = JSON.parse(savedScores);
+                }
+                if (savedRound) {
+                    currentRound = parseInt(savedRound) || 1;
+                }
+            } catch (e) {
+                console.warn("Could not load game state from localStorage:", e);
+            }
+        }
+
+        function saveGameState() {
+            try {
+                localStorage.setItem('twitch_wordgame_scores', JSON.stringify(scoreBoard));
+                localStorage.setItem('twitch_wordgame_round', currentRound.toString());
+            } catch (e) {
+                console.warn("Could not save game state to localStorage:", e);
+            }
+        }
+
+        function resetSavedGameState() {
+            try {
+                localStorage.removeItem('twitch_wordgame_scores');
+                localStorage.removeItem('twitch_wordgame_round');
+                scoreBoard = {};
+                currentRound = 1;
+            } catch (e) {
+                console.warn("Could not reset localStorage:", e);
+            }
+        }
+
+        function startNewRound() {
+            if (currentRound > totalRoundsMax) {
+                resetSavedGameState();
+                currentRound = 1;
+            }
+
+            isWaitingForNextRound = false;
+            stopTimers();
+            
+            const randomIndex = Math.floor(Math.random() * GERMAN_WORDS.length);
+            currentWord = GERMAN_WORDS[randomIndex].trim();
+            
+            revealedIndices = [0];
+            if (currentWord.length > 1) {
+                let secondIdx = Math.floor(Math.random() * (currentWord.length - 1)) + 1;
+                revealedIndices.push(secondIdx);
+            }
+
+            if (document.getElementById('sim-cheat-word')) {
+                document.getElementById('sim-cheat-word').textContent = currentWord;
+            }
+
+            document.getElementById('round-badge').textContent = `Runde ${currentRound}/${totalRoundsMax}`;
+            renderWordBoxes();
+            
+            showPanel('panel-game');
+
+            secondsRemaining = revealIntervalSec;
+            updateTimerUI();
+            startRevealTimer();
+        }
+
+        function startRevealTimer() {
+            tickTimer = setInterval(() => {
+                secondsRemaining--;
+                updateTimerUI();
+                
+                if (secondsRemaining <= 0) {
+                    revealAnotherLetter();
+                }
+            }, 1000);
+        }
+
+        function revealAnotherLetter() {
+            stopTimers();
+            
+            let hiddenIndices = [];
+            for (let i = 0; i < currentWord.length; i++) {
+                if (!revealedIndices.includes(i)) {
+                    hiddenIndices.push(i);
+                }
+            }
+
+            if (hiddenIndices.length > 1) {
+                const randHiddenIdx = Math.floor(Math.random() * hiddenIndices.length);
+                const revealIdx = hiddenIndices[randHiddenIdx];
+                revealedIndices.push(revealIdx);
+                
+                renderWordBoxes();
+                
+                secondsRemaining = revealIntervalSec;
+                updateTimerUI();
+                startRevealTimer();
+            } else {
+                handleTimeout();
+            }
+        }
+
+        function handleWinner(winnerName) {
+            if (isWaitingForNextRound) return;
+            isWaitingForNextRound = true;
+            stopTimers();
+
+            const formattedWinner = winnerName.startsWith('@') ? winnerName : `@${winnerName}`;
+            scoreBoard[formattedWinner] = (scoreBoard[formattedWinner] || 0) + 1;
+            saveGameState();
+
+            document.getElementById('winner-name').textContent = formattedWinner;
+            document.getElementById('winner-word-text').textContent = currentWord.toUpperCase();
+            
+            showPanel('panel-winner');
+            startConfetti();
+
+            setTimeout(() => {
+                stopConfetti();
+                showLeaderboard();
+            }, 3000);
+        }
+
+        function handleTimeout() {
+            if (isWaitingForNextRound) return;
+            isWaitingForNextRound = true;
+            stopTimers();
+
+            document.getElementById('timeout-word-text').textContent = currentWord.toUpperCase();
+            showPanel('panel-timeout');
+
+            setTimeout(() => {
+                showLeaderboard();
+            }, 5000);
+        }
+
+        function showLeaderboard() {
+            renderLeaderboardDOM(`RANGLISTE (Runde ${currentRound}/${totalRoundsMax} beendet)`);
+            showPanel('panel-leaderboard');
+
+            currentRound++;
+            saveGameState();
+
+            setTimeout(() => {
+                startNewRound();
+            }, 5000);
+        }
+
+        // --- 4. SHARED RENDERING HELPERS ---
+        function showPanel(panelId) {
+            document.querySelectorAll('.overlay-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            document.getElementById(panelId).classList.add('active');
+        }
+
+        function renderWordBoxes() {
+            const container = document.getElementById('word-display');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < currentWord.length; i++) {
+                const box = document.createElement('div');
+                box.className = 'letter-box';
+                
+                const char = currentWord[i];
+                if (revealedIndices.includes(i)) {
+                    box.textContent = char.toUpperCase();
+                    box.classList.add('revealed');
+                } else {
+                    box.textContent = '_';
+                }
+                container.appendChild(box);
+            }
+        }
+
+        // Make sure timers are correctly cleared
+        function stopTimers() {
+            if (tickTimer) {
+                clearInterval(tickTimer);
+                tickTimer = null;
+            }
+        }
+
+        function updateTimerUI() {
+            const fill = document.getElementById('timer-fill');
+            const label = document.getElementById('timer-label');
+            const pct = (secondsRemaining / revealIntervalSec) * 100;
+            fill.style.width = `${pct}%`;
+            label.textContent = `Nächster Buchstabe in ${secondsRemaining}s`;
+        }
+
+        function renderLeaderboardDOM(titleText) {
+            const header = document.getElementById('leaderboard-header');
+            header.textContent = titleText;
+
+            const grid = document.getElementById('leaderboard-grid');
+            grid.innerHTML = '';
+
+            const sortedPlayers = Object.keys(scoreBoard)
+                .map(user => ({ username: user, score: scoreBoard[user] }))
+                .sort((a, b) => b.score - a.score);
+
+            if (sortedPlayers.length === 0) {
+                grid.innerHTML = '<div class="empty-leaderboard">Noch keine Punkte vergeben!</div>';
+            } else {
+                const renderCount = Math.min(3, sortedPlayers.length);
+                let elements = [];
+
+                for (let i = 0; i < renderCount; i++) {
+                    const player = sortedPlayers[i];
+                    const rank = i + 1;
+                    
+                    const card = document.createElement('div');
+                    card.className = `leaderboard-card rank-${rank}`;
+                    
+                    card.innerHTML = `
+                        <div class="card-medal">${rank}.</div>
+                        <div class="card-username" title="${player.username}">${player.username}</div>
+                        <div class="card-points">${player.score} Pt.</div>
+                    `;
+                    elements.push({ rank, element: card });
+                }
+
+                if (elements.length === 1) {
+                    grid.appendChild(elements[0].element);
+                } else if (elements.length === 2) {
+                    const first = elements.find(e => e.rank === 1).element;
+                    const second = elements.find(e => e.rank === 2).element;
+                    grid.appendChild(second);
+                    grid.appendChild(first);
+                } else {
+                    const first = elements.find(e => e.rank === 1).element;
+                    const second = elements.find(e => e.rank === 2).element;
+                    const third = elements.find(e => e.rank === 3).element;
+                    grid.appendChild(second);
+                    grid.appendChild(first);
+                    grid.appendChild(third);
+                }
+            }
+        }
+
+        // --- 5. TWITCH CLIENT ---
+        function connectTwitchChat(channel) {
+            if (client) {
+                client.disconnect();
+                client = null;
+            }
+            if (!channel) return;
+
+            console.log(`Connecting to Twitch Channel: ${channel}`);
+            client = new tmi.Client({
+                connection: { secure: true, reconnect: true },
+                channels: [channel]
+            });
+
+            client.connect().catch(console.error);
+
+            client.on('message', (channel, tags, message, self) => {
+                if (self || isWaitingForNextRound) return;
+                
+                const guess = message.trim().toLowerCase();
+                if (guess === currentWord.toLowerCase()) {
+                    if (streamId) {
+                        handleWinnerFirebase(tags['display-name'] || tags.username);
+                    } else {
+                        handleWinner(tags['display-name'] || tags.username);
+                    }
+                } else {
+                    // Send to Firebase guesses monitor log
+                    if (streamId && gameState && gameState.gameStatus === 'guessing') {
+                        pushGuessToFirebase(tags['display-name'] || tags.username, message.trim());
+                    }
+                }
+            });
+        }
+
+        // --- 6. LOCAL TEST SIMULATOR PANEL ---
+        function setupSimulator() {
+            if (!isTestMode) return;
+            testSimulator.style.display = 'block';
+
+            document.getElementById('btn-sim-send').addEventListener('click', () => {
+                const user = document.getElementById('sim-user').value.trim() || 'Viewer';
+                const msg = document.getElementById('sim-message').value.trim();
+                
+                if (!msg || isWaitingForNextRound) return;
+                document.getElementById('sim-message').value = '';
+
+                const guess = msg.trim().toLowerCase();
+                if (guess === currentWord.toLowerCase()) {
+                    if (streamId) {
+                        handleWinnerFirebase(user);
+                    } else {
+                        handleWinner(user);
+                    }
+                } else {
+                    if (streamId && gameState && gameState.gameStatus === 'guessing') {
+                        pushGuessToFirebase(user, msg.trim());
+                    }
+                }
+            });
+
+            document.getElementById('sim-message').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    document.getElementById('btn-sim-send').click();
+                }
+            });
+
+            document.getElementById('btn-sim-reveal').addEventListener('click', () => {
+                if (!isWaitingForNextRound) {
+                    if (streamId) {
+                        triggerFirebaseLetterReveal();
+                    } else {
+                        revealAnotherLetter();
+                    }
+                }
+            });
+        }
+
+        // --- 7. LIGHTWEIGHT CONFETTI PART SYSTEM ---
+        let confettiActive = false;
+        const canvas = document.getElementById('confetti-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class ConfettiParticle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * -100 - 20;
+                this.size = Math.random() * 8 + 6;
+                this.color = ['#00f2fe', '#9d4edd', '#ff007f', '#10b981', '#f59e0b'][Math.floor(Math.random() * 5)];
+                this.speedX = Math.random() * 4 - 2;
+                this.speedY = Math.random() * 5 + 4;
+                this.rotation = Math.random() * 360;
+                this.rotationSpeed = Math.random() * 10 - 5;
+            }
+
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.rotation += this.rotationSpeed;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate((this.rotation * Math.PI) / 180);
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+                ctx.restore();
+            }
+        }
+
+        function startConfetti() {
+            confettiActive = true;
+            particles = [];
+            for (let i = 0; i < 150; i++) {
+                particles.push(new ConfettiParticle());
+            }
+            requestAnimationFrame(animateConfetti);
+        }
+
+        function stopConfetti() {
+            confettiActive = false;
+        }
+
+        function animateConfetti() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+                
+                if (particles[i].y > canvas.height) {
+                    if (confettiActive) {
+                        particles[i] = new ConfettiParticle();
+                    } else {
+                        particles.splice(i, 1);
+                        i--;
+                    }
+                }
+            }
+
+            if (confettiActive || particles.length > 0) {
+                requestAnimationFrame(animateConfetti);
+            }
+        }
+
+        // --- 8. INITIALIZATION ENTRY POINT ---
+        window.addEventListener('DOMContentLoaded', () => {
+            if (streamId) {
+                // RUNNING IN MODE B: FIREBASE SYNC MODE
+                setupView.style.display = 'none';
+                gameOverlay.style.display = 'block';
+                
+                initializeFirebaseSync();
+                setupSimulator();
+            } else if (channelName) {
+                // RUNNING IN MODE A: STANDALONE LOCAL MEMORY MODE
+                setupView.style.display = 'none';
+                gameOverlay.style.display = 'block';
+                
+                loadGameState();
+                startNewRound();
+                connectTwitchChat(channelName);
+                setupSimulator();
+            } else {
+                // RUNNING IN SETUP MODE
+                setupView.style.display = 'block';
+                gameOverlay.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

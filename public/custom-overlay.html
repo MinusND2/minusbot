@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custom Stream Overlay - OBS Player</title>
+
+  <!-- Google Fonts: Inter, Outfit, Minecraft Pixel, VT323 -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Outfit:wght@600;800;900&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: transparent !important;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 1920x1080 Stage mapped to viewport */
+    .render-stage {
+      width: 1920px;
+      height: 1080px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: top left;
+      pointer-events: none;
+    }
+
+    .overlay-item {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      transition: color 0.2s, background-color 0.2s;
+    }
+
+    .overlay-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="render-stage" id="stage"></div>
+
+  <script>
+    const STORAGE_KEY_PREFIX = 'minus_custom_overlay_';
+    const CHANNEL_NAME = 'minecraft_baustelle_channel';
+    const params = new URLSearchParams(window.location.search);
+    const projectId = params.get('id') || 'default';
+
+    const stage = document.getElementById('stage');
+
+    let project = null;
+    let timerSeconds = 3600;
+    let isRunning = false;
+    let isBreak = false;
+    let timerMode = 'countdown';
+
+    // Responsive Auto-Fit Scaling for OBS
+    function applyStageScale() {
+      const scaleX = window.innerWidth / 1920;
+      const scaleY = window.innerHeight / 1080;
+      const scale = Math.min(scaleX, scaleY);
+      stage.style.transform = `scale(${scale})`;
+    }
+    window.addEventListener('resize', applyStageScale);
+    applyStageScale();
+
+    function formatTime(s) {
+      const sec = Math.max(0, Math.floor(s));
+      const hours = Math.floor(sec / 3600);
+      const minutes = Math.floor((sec % 3600) / 60);
+      const seconds = sec % 60;
+      const pad = (n) => String(n).padStart(2, '0');
+
+      if (hours > 0) return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+      return `${pad(minutes)}:${pad(seconds)}`;
+    }
+
+    function renderOverlay() {
+      if (!project || !project.elements) return;
+      stage.innerHTML = '';
+
+      project.elements.forEach(el => {
+        const item = document.createElement('div');
+        item.className = 'overlay-item';
+        item.style.left = el.x + 'px';
+        item.style.top = el.y + 'px';
+        item.style.width = el.w + 'px';
+        item.style.height = el.h + 'px';
+        item.style.zIndex = el.zIndex || 1;
+        item.style.opacity = (el.opacity || 100) / 100;
+        item.style.backgroundColor = el.bgColor;
+        item.style.borderRadius = (el.borderRadius || 0) + 'px';
+        item.style.border = el.borderWidth ? `${el.borderWidth}px solid ${el.borderColor}` : 'none';
+
+        if (el.type === 'image' && el.imgSrc) {
+          item.innerHTML = `<img src="${el.imgSrc}">`;
+        } else if (el.type === 'progress') {
+          item.innerHTML = `<div style="width:100%; height:100%; background:linear-gradient(90deg, #facc15, #22c55e); border-radius:inherit;"></div>`;
+        } else if (el.type === 'timer') {
+          item.id = 'timer_display_' + el.id;
+          item.textContent = formatTime(timerSeconds);
+          item.style.color = el.textColor;
+          item.style.fontFamily = el.fontFamily;
+          item.style.fontSize = (el.fontSize || 24) + 'px';
+          item.style.textShadow = el.textShadow || 'none';
+        } else {
+          item.textContent = el.text || '';
+          item.style.color = el.textColor;
+          item.style.fontFamily = el.fontFamily;
+          item.style.fontSize = (el.fontSize || 24) + 'px';
+          item.style.textShadow = el.textShadow || 'none';
+        }
+
+        stage.appendChild(item);
+      });
+    }
+
+    function updateTimers() {
+      if (!project || !project.elements) return;
+      project.elements.filter(e => e.type === 'timer').forEach(el => {
+        const dom = document.getElementById('timer_display_' + el.id);
+        if (dom) {
+          dom.textContent = formatTime(timerSeconds);
+        }
+      });
+    }
+
+    // Tick Loop
+    let lastTick = Date.now();
+    setInterval(() => {
+      const now = Date.now();
+      const delta = (now - lastTick) / 1000;
+      lastTick = now;
+
+      if (isRunning) {
+        if (timerMode === 'countdown') {
+          timerSeconds = Math.max(0, timerSeconds - delta);
+        } else {
+          timerSeconds += delta;
+        }
+        updateTimers();
+      }
+    }, 250);
+
+    function loadProject() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_PREFIX + projectId);
+        if (raw) {
+          project = JSON.parse(raw);
+          if (project.timerState) {
+            timerSeconds = project.timerState.seconds || 3600;
+            isRunning = !!project.timerState.isRunning;
+            timerMode = project.timerState.mode || 'countdown';
+          }
+          renderOverlay();
+        }
+      } catch (err) {}
+    }
+
+    // Storage Event Listener (Live Updates from the Editor Studio)
+    window.addEventListener('storage', (e) => {
+      if (e.key === STORAGE_KEY_PREFIX + projectId) {
+        loadProject();
+      }
+    });
+
+    // BroadcastChannel sync
+    if ('BroadcastChannel' in window) {
+      const bc = new BroadcastChannel(CHANNEL_NAME);
+      bc.onmessage = (e) => {
+        if (e.data && e.data.type === 'TIMER_TICK') {
+          timerSeconds = e.data.seconds;
+          isRunning = e.data.isRunning;
+          updateTimers();
+        }
+      };
+    }
+
+    // Initial load
+    loadProject();
+  </script>
+</body>
+</html>

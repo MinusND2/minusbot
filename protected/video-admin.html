@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Overlay Admin</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --bg: #050505;
+            --bg-card: #0c0c0e;
+            --bg-elevated: #121214;
+            --border: rgba(255, 255, 255, 0.05);
+            --border-hover: rgba(255, 255, 255, 0.1);
+            --border-active: rgba(139, 92, 246, 0.2);
+            --text: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --accent: #8b5cf6;
+            --accent-grad: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+            --radius: 12px;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            position: relative;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Ambient Background Orbs */
+        .ambient-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(140px);
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.35;
+        }
+        .orb-purple { width: 400px; height: 400px; background: rgba(139, 92, 246, 0.04); top: -100px; right: -50px; }
+        .orb-cyan { width: 300px; height: 300px; background: rgba(6, 182, 212, 0.02); bottom: -50px; left: 100px; }
+
+        /* Dashboard Layout */
+        .app-wrap {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+            position: relative;
+            z-index: 2;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: #09090b;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 32px 20px;
+            z-index: 10;
+        }
+        .logo { margin-bottom: 40px; padding: 0 8px; display: flex; align-items: center; gap: 12px; }
+        .logo svg { width: 28px; height: auto; filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.4)); color: var(--accent); }
+        .logo-text {
+            font-size: 20px; font-weight: 800; letter-spacing: 2px;
+            text-transform: uppercase;
+            background: var(--accent-grad);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .nav-menu { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        .nav-btn {
+            background: transparent; border: none; color: var(--text-muted);
+            padding: 12px 16px; font-size: 14px; font-weight: 600;
+            text-align: left; border-radius: 8px; cursor: pointer;
+            transition: all 0.2s; font-family: inherit;
+            display: flex; align-items: center; gap: 10px;
+            text-decoration: none;
+        }
+        .nav-btn:hover { color: var(--text); background: var(--bg-elevated); }
+        .nav-btn.active {
+            color: var(--accent);
+            background: rgba(139, 92, 246, 0.06);
+            border: 1px solid var(--border-active);
+        }
+        
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 48px 56px;
+            overflow-y: auto;
+        }
+
+        h1, h2, h3 { margin: 0; font-weight: 600; }
+        h1 {
+            font-size: 32px; font-weight: 800; color: #fff; margin-bottom: 8px;
+            background: linear-gradient(to right, #fff, var(--text-muted));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        h3 { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .subtitle { color: var(--text-muted); margin: 0 0 32px 0; font-size: 15px; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            gap: 32px;
+            align-items: start;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            margin-bottom: 32px;
+        }
+
+        .flex-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .flex-space-between {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Form Inputs */
+        input, select {
+            width: 100%;
+            min-height: 44px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-elevated);
+            color: #fff;
+            padding: 8px 12px;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.2s;
+            margin-bottom: 10px;
+        }
+        input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15); }
+
+        .input-group label {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+        .input-group input { margin-bottom: 0; }
+
+        /* Sliders */
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+        .slider-val {
+            color: var(--text);
+            font-family: monospace;
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            background: var(--bg-elevated);
+            border-radius: 3px;
+            outline: none;
+            padding: 0;
+            margin: 0;
+            border: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Buttons */
+        button {
+            padding: 12px 14px; font-size: 14px; font-weight: 700; font-family: inherit;
+            border-radius: 10px; border: 1px solid transparent; color: #fff; cursor: pointer; transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); width: 100%;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.3); }
+        
+        .btn-primary {
+            background: var(--accent-grad);
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.15);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.25);
+        }
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #ff8080;
+        }
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #fff;
+        }
+        .btn-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #a7f3d0;
+        }
+        .btn-success:hover {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: rgba(16, 185, 129, 0.4);
+            color: #fff;
+        }
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            box-shadow: none;
+        }
+        .btn-ghost:hover {
+            color: #fff;
+            background: var(--bg-elevated);
+            border-color: var(--border-hover);
+        }
+
+        /* Source Selection Tabs */
+        .type-tabs {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .type-tab {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-muted);
+            padding: 10px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .type-tab:hover {
+            color: #fff;
+            border-color: var(--border-hover);
+        }
+        .type-tab.active {
+            background: rgba(139, 92, 246, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Presets list */
+        .preset-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding-right: 4px;
+        }
+        .preset-item {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s;
+        }
+        .preset-item:hover {
+            border-color: var(--border-hover);
+        }
+        .preset-info {
+            flex: 1;
+            cursor: pointer;
+        }
+        .preset-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #fff;
+        }
+        .preset-type {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+        .preset-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-mini-delete {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            color: #ff8080;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-mini-delete:hover {
+            background: rgba(239, 68, 68, 0.25);
+            color: #fff;
+            transform: scale(1.05);
+        }
+
+        /* Large Toggle Switch Button */
+        .big-toggle {
+            height: 60px;
+            font-size: 16px;
+            border-radius: var(--radius);
+        }
+
+        /* Layout Grid */
+        .layout-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 1024px) {
+            .app-wrap { flex-direction: column; }
+            .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); padding: 20px; flex-direction: row; align-items: center; justify-content: space-between; }
+            .logo { margin-bottom: 0; }
+            .nav-menu { flex-direction: row; gap: 12px; margin-left: 20px; }
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-orb orb-purple"></div>
+    <div class="ambient-orb orb-cyan"></div>
+
+    <div class="app-wrap">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                <span class="logo-text">MinusBot</span>
+            </div>
+            
+            <div class="nav-menu">
+                <a href="/protected/panel.html" class="nav-btn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+                    Dashboard
+                </a>
+                <a href="#" id="bingoAdminLink" class="nav-btn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg>
+                    Bingo Admin
+                </a>
+                <a href="#" id="scoreAdminLink" class="nav-btn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Scoreboard
+                </a>
+                <a href="#" class="nav-btn active">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                    Video Overlay
+                </a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <h1 id="title">Video Overlay Steuerung</h1>
+            <p class="subtitle">Verwalte Videos, Twitch-Streams und Layout des Overlays in Echtzeit.</p>
+            
+            <div class="dashboard-grid">
+                <!-- Links: Live Control & Position -->
+                <div>
+                    <!-- Status & Live Playback Control -->
+                    <div class="card">
+                        <h3>Live-Steuerung</h3>
+                        <div class="control-group">
+                            <button id="toggleVisibilityBtn" class="big-toggle btn-danger">
+                                Overlay geladen
+                            </button>
+
+                            <div class="flex-row">
+                                <button id="playBtn" class="btn-success" style="flex: 1;">▶ Abspielen</button>
+                                <button id="pauseBtn" class="btn-primary" style="background: #f59e0b; flex: 1;">⏸ Pausieren</button>
+                                <button id="muteBtn" class="btn-ghost" style="flex: 1;">🔊 Stumm</button>
+                            </div>
+
+                            <div class="slider-container">
+                                <div class="slider-header">
+                                    <span>Lautstärke</span>
+                                    <span id="volumeVal" class="slider-val">50%</span>
+                                </div>
+                                <input type="range" id="volumeSlider" min="0" max="100" value="50">
+                            </div>
+
+                            <div class="slider-container" id="seekSection">
+                                <div class="slider-header">
+                                    <span>Video spulen (Sekunden)</span>
+                                    <span id="seekVal" class="slider-val">0s</span>
+                                </div>
+                                <div class="flex-row">
+                                    <input type="number" id="seekInput" min="0" placeholder="z.B. 30" style="margin-bottom: 0; flex: 1;">
+                                    <button id="applySeekBtn" class="btn-primary" style="width: auto; padding: 10px 18px;">Spulen</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Layout & Positioning Card -->
+                    <div class="card">
+                        <h3>Layout & Positionierung (OBS Canvas)</h3>
+                        <div class="control-group">
+                            <div class="layout-grid">
+                                <div class="slider-container">
+                                    <div class="slider-header">
+                                        <span>Position X</span>
+                                        <span id="posXVal" class="slider-val">0px</span>
+                                    </div>
+                                    <input type="range" id="posXSlider" min="0" max="1920" value="0">
+                                </div>
+
+                                <div class="slider-container">
+                                    <div class="slider-header">
+                                        <span>Position Y</span>
+                                        <span id="posYVal" class="slider-val">0px</span>
+                                    </div>
+                                    <input type="range" id="posYSlider" min="0" max="1080" value="0">
+                                </div>
+                            </div>
+
+                            <div class="layout-grid">
+                                <div class="slider-container">
+                                    <div class="slider-header">
+                                        <span>Breite</span>
+                                        <span id="widthVal" class="slider-val">100%</span>
+                                    </div>
+                                    <input type="range" id="widthSlider" min="10" max="100" value="100">
+                                </div>
+
+                                <div class="slider-container">
+                                    <div class="slider-header">
+                                        <span>Höhe</span>
+                                        <span id="heightVal" class="slider-val">100%</span>
+                                    </div>
+                                    <input type="range" id="heightSlider" min="10" max="100" value="100">
+                                </div>
+                            </div>
+
+                            <div class="layout-grid">
+                                <div class="slider-container">
+                                    <div class="slider-header">
+                                        <span>Skalierung (Scale)</span>
+                                        <span id="scaleVal" class="slider-val">1.0x</span>
+                                    </div>
+                                    <input type="range" id="scaleSlider" min="0.1" max="3" step="0.05" value="1.0">
+                                </div>
+
+                                <div class="slider-container">
+                                    <div class="slider-header">
+                                        <span>Deckkraft (Opacity)</span>
+                                        <span id="opacityVal" class="slider-val">1.0</span>
+                                    </div>
+                                    <input type="range" id="opacitySlider" min="0" max="1" step="0.05" value="1">
+                                </div>
+                            </div>
+
+                            <div class="slider-container">
+                                <div class="slider-header">
+                                    <span>Ecken abrunden (Border Radius)</span>
+                                    <span id="borderRadiusVal" class="slider-val">0px</span>
+                                </div>
+                                <input type="range" id="borderRadiusSlider" min="0" max="100" value="0">
+                            </div>
+
+                            <button id="resetLayoutBtn" class="btn-ghost">Layout zurücksetzen (Full Screen)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rechts: Source Setup & Playlists/Presets -->
+                <div>
+                    <!-- Active Source Config -->
+                    <div class="card">
+                        <h3>Quelle auswählen</h3>
+                        <div class="type-tabs">
+                            <div class="type-tab active" data-type="youtube">YouTube</div>
+                            <div class="type-tab" data-type="twitch">Twitch</div>
+                            <div class="type-tab" data-type="raw">Direktes Video</div>
+                        </div>
+
+                        <div class="input-group" style="margin-bottom: 20px;">
+                            <label id="sourceLabel">YouTube Link oder ID</label>
+                            <input type="text" id="sourceInput" placeholder="z.B. dQw4w9WgXcQ">
+                        </div>
+
+                        <div class="flex-row" style="margin-bottom: 12px;">
+                            <label class="flex-row" style="cursor: pointer; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text-muted);">
+                                <input type="checkbox" id="loopCheckbox" style="width: auto; min-height: auto; margin: 0;"> Video wiederholen (Loop)
+                            </label>
+                        </div>
+
+                        <button id="applySourceBtn" class="btn-primary">Quelle übernehmen</button>
+                    </div>
+
+                    <!-- Presets & Favorites -->
+                    <div class="card">
+                        <h3>Schnellauswahl & Favoriten</h3>
+                        <div class="preset-list" id="presetList">
+                            <div style="color:var(--text-muted); font-size: 13px;">Keine Favoriten gespeichert.</div>
+                        </div>
+
+                        <h3>Favorit hinzufügen</h3>
+                        <div class="control-group" style="gap: 12px;">
+                            <div class="input-group">
+                                <label>Name</label>
+                                <input type="text" id="presetNameInput" placeholder="z.B. Rohat Live">
+                            </div>
+                            <div class="input-group">
+                                <label>Quellen-Typ</label>
+                                <select id="presetTypeSelect">
+                                    <option value="youtube">YouTube</option>
+                                    <option value="twitch">Twitch Stream</option>
+                                    <option value="raw">Direktes Video (MP4/HLS)</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>Link / ID</label>
+                                <input type="text" id="presetSourceInput" placeholder="z.B. rohat">
+                            </div>
+                            <button id="addPresetBtn" class="btn-success">Speichern</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../public/app-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="../public/realtime-store.js"></script>
+
+    <script>
+        const streamId = BingoStore.getActiveStreamId();
+        
+        // Navigation links setup
+        document.getElementById("bingoAdminLink").href = "/protected/admin.html?stream=" + encodeURIComponent(streamId);
+        document.getElementById("scoreAdminLink").href = "/protected/scoreboard-admin.html?stream=" + encodeURIComponent(streamId);
+        document.getElementById("title").textContent = "Video Overlay: " + streamId;
+
+        // UI Element References
+        const toggleVisibilityBtn = document.getElementById("toggleVisibilityBtn");
+        const playBtn = document.getElementById("playBtn");
+        const pauseBtn = document.getElementById("pauseBtn");
+        const muteBtn = document.getElementById("muteBtn");
+        
+        const volumeSlider = document.getElementById("volumeSlider");
+        const volumeVal = document.getElementById("volumeVal");
+        
+        const seekInput = document.getElementById("seekInput");
+        const seekVal = document.getElementById("seekVal");
+        const applySeekBtn = document.getElementById("applySeekBtn");
+        const seekSection = document.getElementById("seekSection");
+
+        const posXSlider = document.getElementById("posXSlider");
+        const posXVal = document.getElementById("posXVal");
+        const posYSlider = document.getElementById("posYSlider");
+        const posYVal = document.getElementById("posYVal");
+        const widthSlider = document.getElementById("widthSlider");
+        const widthVal = document.getElementById("widthVal");
+        const heightSlider = document.getElementById("heightSlider");
+        const heightVal = document.getElementById("heightVal");
+        const scaleSlider = document.getElementById("scaleSlider");
+        const scaleVal = document.getElementById("scaleVal");
+        const opacitySlider = document.getElementById("opacitySlider");
+        const opacityVal = document.getElementById("opacityVal");
+        const borderRadiusSlider = document.getElementById("borderRadiusSlider");
+        const borderRadiusVal = document.getElementById("borderRadiusVal");
+        const resetLayoutBtn = document.getElementById("resetLayoutBtn");
+
+        const sourceInput = document.getElementById("sourceInput");
+        const sourceLabel = document.getElementById("sourceLabel");
+        const loopCheckbox = document.getElementById("loopCheckbox");
+        const applySourceBtn = document.getElementById("applySourceBtn");
+
+        const presetListEl = document.getElementById("presetList");
+        const presetNameInput = document.getElementById("presetNameInput");
+        const presetTypeSelect = document.getElementById("presetTypeSelect");
+        const presetSourceInput = document.getElementById("presetSourceInput");
+        const addPresetBtn = document.getElementById("addPresetBtn");
+
+        let activeSourceType = "youtube";
+        let currentOverlayState = null;
+        let currentUser = null;
+
+        // Source Type Tabs Click Events
+        document.querySelectorAll(".type-tab").forEach(tab => {
+            tab.addEventListener("click", () => {
+                document.querySelectorAll(".type-tab").forEach(t => t.classList.remove("active"));
+                tab.classList.add("active");
+                activeSourceType = tab.dataset.type;
+                updateSourcePlaceholder();
+            });
+        });
+
+        function updateSourcePlaceholder() {
+            if (activeSourceType === "youtube") {
+                sourceLabel.textContent = "YouTube Link oder ID";
+                sourceInput.placeholder = "z.B. dQw4w9WgXcQ";
+                seekSection.style.display = "block";
+            } else if (activeSourceType === "twitch") {
+                sourceLabel.textContent = "Twitch Kanal-Name oder Link";
+                sourceInput.placeholder = "z.B. rohat";
+                seekSection.style.display = "none"; // Live stream cannot seek
+            } else if (activeSourceType === "raw") {
+                sourceLabel.textContent = "Direkte Video-URL (MP4 / WebM / M3U8)";
+                sourceInput.placeholder = "z.B. https://example.com/video.mp4";
+                seekSection.style.display = "block";
+            }
+        }
+
+        // Firebase Auth initialization
+        BingoStore.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = "/public/index.html";
+                return;
+            }
+            currentUser = user;
+            try {
+                await BingoStore.requireOwner(streamId, user.uid);
+                await BingoStore.ensureInitialized(streamId);
+                
+                // Subscribe to overlay state
+                BingoStore.subscribe((data) => {
+                    currentOverlayState = data.videoOverlay || createDefaultOverlayState();
+                    syncUIWithDatabase(currentOverlayState);
+                }, streamId);
+
+                // Listen to Presets
+                firebase.database().ref(`streams/${streamId}/data/videoOverlay/presets`).on("value", (snap) => {
+                    renderPresets(snap.val());
+                });
+
+            } catch (e) {
+                alert("Kein Zugriff auf dieses Overlay: " + e.message);
+                window.location.href = "/protected/panel.html";
+            }
+        });
+
+        function createDefaultOverlayState() {
+            return {
+                active: false,
+                type: "youtube",
+                source: "",
+                playing: false,
+                volume: 50,
+                muted: false,
+                loop: false,
+                seekTo: 0,
+                style: { posX: 0, posY: 0, width: 100, height: 100, scale: 1.0, opacity: 1, borderRadius: 0 }
+            };
+        }
+
+        function syncUIWithDatabase(vo) {
+            // Visibility State
+            if (vo.active) {
+                toggleVisibilityBtn.textContent = "Overlay sichtbar (Aktiv)";
+                toggleVisibilityBtn.className = "big-toggle btn-success";
+            } else {
+                toggleVisibilityBtn.textContent = "Overlay unsichtbar (Inaktiv)";
+                toggleVisibilityBtn.className = "big-toggle btn-danger";
+            }
+
+            // Playback controls
+            if (vo.playing) {
+                playBtn.style.boxShadow = "inset 0 0 10px rgba(0,0,0,0.6)";
+                pauseBtn.style.boxShadow = "none";
+            } else {
+                playBtn.style.boxShadow = "none";
+                pauseBtn.style.boxShadow = "inset 0 0 10px rgba(0,0,0,0.6)";
+            }
+
+            // Mute controls
+            if (vo.muted) {
+                muteBtn.textContent = "🔇 Stummgeschaltet";
+                muteBtn.style.borderColor = "var(--danger)";
+                muteBtn.style.color = "#ff8080";
+            } else {
+                muteBtn.textContent = "🔊 Ton an";
+                muteBtn.style.borderColor = "var(--border)";
+                muteBtn.style.color = "var(--text-muted)";
+            }
+
+            // Volume
+            volumeSlider.value = vo.volume ?? 50;
+            volumeVal.textContent = (vo.volume ?? 50) + "%";
+
+            // Loop checkbox
+            loopCheckbox.checked = vo.loop || false;
+
+            // Seek seconds info
+            seekVal.textContent = (vo.seekTo ?? 0) + "s";
+
+            // Source elements sync
+            if (!sourceInput.matches(":focus")) {
+                sourceInput.value = vo.source || "";
+            }
+
+            // Tabs sync
+            if (vo.type && vo.type !== activeSourceType) {
+                activeSourceType = vo.type;
+                document.querySelectorAll(".type-tab").forEach(t => {
+                    t.classList.toggle("active", t.dataset.type === activeSourceType);
+                });
+                updateSourcePlaceholder();
+            }
+
+            // Layout
+            const style = vo.style || {};
+            posXSlider.value = style.posX ?? 0;
+            posXVal.textContent = (style.posX ?? 0) + "px";
+
+            posYSlider.value = style.posY ?? 0;
+            posYVal.textContent = (style.posY ?? 0) + "px";
+
+            widthSlider.value = style.width ?? 100;
+            widthVal.textContent = (style.width ?? 100) + "%";
+
+            heightSlider.value = style.height ?? 100;
+            heightVal.textContent = (style.height ?? 100) + "%";
+
+            scaleSlider.value = style.scale ?? 1.0;
+            scaleVal.textContent = (style.scale ?? 1.0).toFixed(2) + "x";
+
+            opacitySlider.value = style.opacity ?? 1.0;
+            opacityVal.textContent = (style.opacity ?? 1.0).toFixed(2);
+
+            borderRadiusSlider.value = style.borderRadius ?? 0;
+            borderRadiusVal.textContent = (style.borderRadius ?? 0) + "px";
+        }
+
+        // --- Event Handlers & Writes to Firebase ---
+
+        toggleVisibilityBtn.addEventListener("click", () => {
+            const nextActive = !currentOverlayState.active;
+            BingoStore.setVideoOverlay({ active: nextActive }, streamId);
+        });
+
+        playBtn.addEventListener("click", () => {
+            BingoStore.setVideoOverlay({ playing: true }, streamId);
+        });
+
+        pauseBtn.addEventListener("click", () => {
+            BingoStore.setVideoOverlay({ playing: false }, streamId);
+        });
+
+        muteBtn.addEventListener("click", () => {
+            const nextMuted = !currentOverlayState.muted;
+            BingoStore.setVideoOverlay({ muted: nextMuted }, streamId);
+        });
+
+        volumeSlider.addEventListener("input", (e) => {
+            const vol = parseInt(e.target.value, 10);
+            volumeVal.textContent = vol + "%";
+        });
+        volumeSlider.addEventListener("change", (e) => {
+            const vol = parseInt(e.target.value, 10);
+            BingoStore.setVideoOverlay({ volume: vol }, streamId);
+        });
+
+        applySeekBtn.addEventListener("click", () => {
+            const val = parseInt(seekInput.value, 10);
+            if (isNaN(val) || val < 0) return;
+            BingoStore.setVideoOverlay({ seekTo: val }, streamId);
+            seekInput.value = "";
+        });
+
+        // Apply Source Configuration
+        applySourceBtn.addEventListener("click", () => {
+            const src = sourceInput.value.trim();
+            if (!src) return;
+
+            BingoStore.setVideoOverlay({
+                type: activeSourceType,
+                source: src,
+                loop: loopCheckbox.checked,
+                playing: true, // Auto-play when changing source
+                seekTo: 0      // Reset seek
+            }, streamId);
+        });
+
+        // Layout controls event listeners helper
+        function setupLayoutListener(slider, fieldName, isFloat = false) {
+            slider.addEventListener("input", (e) => {
+                const val = isFloat ? parseFloat(e.target.value) : parseInt(e.target.value, 10);
+                const valDisplay = document.getElementById(slider.id.replace("Slider", "Val"));
+                if (valDisplay) {
+                    if (slider.id.includes("posX") || slider.id.includes("posY") || slider.id.includes("borderRadius")) {
+                        valDisplay.textContent = val + "px";
+                    } else if (slider.id.includes("width") || slider.id.includes("height")) {
+                        valDisplay.textContent = val + "%";
+                    } else if (slider.id.includes("scale")) {
+                        valDisplay.textContent = val.toFixed(2) + "x";
+                    } else {
+                        valDisplay.textContent = val.toFixed(2);
+                    }
+                }
+            });
+
+            slider.addEventListener("change", (e) => {
+                const val = isFloat ? parseFloat(e.target.value) : parseInt(e.target.value, 10);
+                const updatedStyle = {};
+                updatedStyle[fieldName] = val;
+                BingoStore.setVideoOverlay({ style: Object.assign({}, currentOverlayState.style || {}, updatedStyle) }, streamId);
+            });
+        }
+
+        setupLayoutListener(posXSlider, "posX");
+        setupLayoutListener(posYSlider, "posY");
+        setupLayoutListener(widthSlider, "width");
+        setupLayoutListener(heightSlider, "height");
+        setupLayoutListener(scaleSlider, "scale", true);
+        setupLayoutListener(opacitySlider, "opacity", true);
+        setupLayoutListener(borderRadiusSlider, "borderRadius");
+
+        resetLayoutBtn.addEventListener("click", () => {
+            const defaultStyle = { posX: 0, posY: 0, width: 100, height: 100, scale: 1.0, opacity: 1.0, borderRadius: 0 };
+            BingoStore.setVideoOverlay({ style: defaultStyle }, streamId);
+        });
+
+        // --- PRESETS / PLAYLIST LOGIC ---
+
+        addPresetBtn.addEventListener("click", async () => {
+            const name = presetNameInput.value.trim();
+            const type = presetTypeSelect.value;
+            const src = presetSourceInput.value.trim();
+
+            if (!name || !src) {
+                alert("Bitte Namen und Quelle ausfüllen!");
+                return;
+            }
+
+            try {
+                const presetRef = firebase.database().ref(`streams/${streamId}/data/videoOverlay/presets`);
+                await presetRef.push({
+                    name: name,
+                    type: type,
+                    source: src,
+                    createdAt: Date.now()
+                });
+
+                presetNameInput.value = "";
+                presetSourceInput.value = "";
+            } catch (e) {
+                alert("Fehler beim Speichern: " + e.message);
+            }
+        });
+
+        function renderPresets(presetsObj) {
+            presetListEl.innerHTML = "";
+            if (!presetsObj) {
+                presetListEl.innerHTML = `<div style="color:var(--text-muted); font-size: 13px;">Keine Favoriten gespeichert.</div>`;
+                return;
+            }
+
+            Object.entries(presetsObj).forEach(([key, preset]) => {
+                const div = document.createElement("div");
+                div.className = "preset-item";
+                div.innerHTML = `
+                    <div class="preset-info">
+                        <div class="preset-name">${escapeHTML(preset.name)}</div>
+                        <div class="preset-type">${preset.type === 'raw' ? 'Direkt Video' : preset.type}</div>
+                    </div>
+                    <div class="preset-actions">
+                        <button class="btn-mini-delete" title="Löschen" data-key="${key}">✖</button>
+                    </div>
+                `;
+
+                // Click preset to trigger playback
+                div.querySelector(".preset-info").addEventListener("click", () => {
+                    BingoStore.setVideoOverlay({
+                        type: preset.type,
+                        source: preset.source,
+                        playing: true,
+                        active: true,
+                        seekTo: 0
+                    }, streamId);
+                });
+
+                // Click delete
+                div.querySelector(".btn-mini-delete").addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    if (confirm(`Favorit "${preset.name}" wirklich löschen?`)) {
+                        firebase.database().ref(`streams/${streamId}/data/videoOverlay/presets/${key}`).remove();
+                    }
+                });
+
+                presetListEl.appendChild(div);
+            });
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>

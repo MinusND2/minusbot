@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Glücksrad - Anzeige</title>
+  <link rel="stylesheet" href="wheel.css">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+  <div class="wheel-container">
+    <div class="wheel-wrapper">
+      <div class="wheel-pointer" id="pointer">
+        <div class="pointer-arrow"></div>
+      </div>
+      <canvas id="wheel-canvas" width="600" height="600"></canvas>
+    </div>
+    <div class="winner-banner" id="winner-banner">Gewinner: 100</div>
+  </div>
+
+  <script>
+    // Config and State
+    let options = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    let winnerIndex = null; // null means random, or set by control
+    let isSpinning = false;
+    let soundEnabled = true;
+    
+    // Animation variables
+    let currentAngle = 0;
+    let startAngle = 0;
+    let targetAngle = 0;
+    let spinDuration = 5000; // ms
+    let spinStartTime = null;
+    let lastTickIndex = -1;
+    let needleOffsetAngle = 0; // For pointer wobble
+
+    // Colors
+    const colorPalette = [
+      '#ff007f', // Neon Pink
+      '#7b2cbf', // Purple
+      '#00f5d4', // Neon Cyan
+      '#ffbe0b', // Amber/Yellow
+      '#ff006e', // Magenta
+      '#3a86ff', // Bright Blue
+      '#fb5607', // Orange
+      '#8338ec'  // Violet
+    ];
+
+    // Audio Setup
+    let audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playTickSound() {
+      if (!soundEnabled) return;
+      try {
+        initAudio();
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(450, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.04);
+        
+        gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+        
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.05);
+      } catch (e) {
+        console.warn("AudioContext error: ", e);
+      }
+    }
+
+    function playWinSound() {
+      if (!soundEnabled) return;
+      try {
+        initAudio();
+        const now = audioCtx.currentTime;
+        
+        // Short fanfare
+        const notes = [261.63, 329.63, 392.00, 523.25]; // C4, E4, G4, C5
+        notes.forEach((freq, index) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          
+          gain.gain.setValueAtTime(0.15, now + index * 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + index * 0.1 + 0.3);
+          
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          
+          osc.start(now + index * 0.1);
+          osc.stop(now + index * 0.1 + 0.35);
+        });
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+
+    // Canvas setup
+    const canvas = document.getElementById('wheel-canvas');
+    const ctx = canvas.getContext('2d');
+    const pointer = document.getElementById('pointer');
+    const banner = document.getElementById('winner-banner');
+
+    // Draw the Wheel
+    function drawWheel() {
+      const size = canvas.width;
+      const center = size / 2;
+      const radius = center - 15;
+      const numSlices = options.length;
+      const sliceAngle = (2 * Math.PI) / numSlices;
+
+      ctx.clearRect(0, 0, size, size);
+
+      // Save context to apply rotation
+      ctx.save();
+      ctx.translate(center, center);
+      ctx.rotate(currentAngle);
+
+      for (let i = 0; i < numSlices; i++) {
+        const start = i * sliceAngle;
+        const end = start + sliceAngle;
+
+        // Draw Wedge
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, radius, start, end);
+        ctx.closePath();
+
+        // Wedge style
+        ctx.fillStyle = colorPalette[i % colorPalette.length];
+        ctx.fill();
+
+        // Wedge inner border (neon separation line)
+        ctx.strokeStyle = 'rgba(10, 10, 15, 0.4)';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Draw Text
+        ctx.save();
+        ctx.rotate(start + sliceAngle / 2);
+        
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        
+        // Dynamic font size depending on number of items and length of text
+        let fontSize = Math.max(16, Math.min(32, 280 / numSlices));
+        ctx.font = `800 ${fontSize}px 'Outfit', sans-serif`;
+        
+        // Contrast color for text: make sure it pops
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+        ctx.shadowBlur = 6;
+        ctx.shadowOffsetX = 1;
+        ctx.shadowOffsetY = 1;
+
+        ctx.fillText(options[i], radius - 45, 0);
+        ctx.restore();
+      }
+
+      ctx.restore();
+
+      // Draw Center Hub (Glossy circle overlay)
+      ctx.beginPath();
+      ctx.arc(center, center, 45, 0, 2 * Math.PI);
+      ctx.fillStyle = '#0a0a0f';
+      ctx.shadowColor = '#000';
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Hub inner neon circle
+      ctx.beginPath();
+      ctx.arc(center, center, 20, 0, 2 * Math.PI);
+      ctx.fillStyle = 'rgba(123, 44, 191, 0.4)';
+      ctx.fill();
+      ctx.strokeStyle = '#00f5d4';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // Easing functions
+    function easeOutBack(t) {
+      const c1 = 1.30158; // Back overshoot control (less overshoot for smooth feel)
+      const c3 = c1 + 1;
+      return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+    }
+
+    // Animation Loop
+    function updatePhysics(timestamp) {
+      if (!isSpinning) return;
+
+      if (!spinStartTime) spinStartTime = timestamp;
+      const elapsed = timestamp - spinStartTime;
+      const progress = Math.min(elapsed / spinDuration, 1);
+
+      // Current rotation angle using elastic easeOutBack
+      const easedProgress = easeOutBack(progress);
+      currentAngle = startAngle + (targetAngle - startAngle) * easedProgress;
+
+      // Pointer physics & sound ticking
+      const numSlices = options.length;
+      const sliceAngle = (2 * Math.PI) / numSlices;
+      
+      // Calculate which divider is crossing the top. The pointer is at 12 o'clock, which is -Math.PI / 2 (or 3 * Math.PI / 2).
+      // Angle shifts clockwise, so the local angle of the point under the ticker is (3*PI/2 - currentAngle)
+      const tickerPos = (1.5 * Math.PI - currentAngle) % (2 * Math.PI);
+      const normalizedTickerPos = tickerPos < 0 ? tickerPos + 2 * Math.PI : tickerPos;
+      const currentTickIndex = Math.floor(normalizedTickerPos / sliceAngle);
+
+      if (currentTickIndex !== lastTickIndex && progress < 0.96) {
+        lastTickIndex = currentTickIndex;
+        playTickSound();
+        needleOffsetAngle = -22; // Flick the needle leftwards when hitting a peg
+      }
+
+      // Decay needle offset back to 0
+      needleOffsetAngle *= 0.85; 
+      pointer.style.transform = `translateX(-50%) rotate(${needleOffsetAngle}deg)`;
+
+      drawWheel();
+
+      if (progress < 1) {
+        requestAnimationFrame(updatePhysics);
+      } else {
+        // Spin finished
+        isSpinning = false;
+        pointer.style.transform = 'translateX(-50%) rotate(0deg)';
+        
+        // Find winner
+        const winningSectorIndex = Math.floor(normalizedTickerPos / sliceAngle) % numSlices;
+        const winner = options[winningSectorIndex];
+
+        // Notify control panel of result
+        bc.postMessage({
+          type: 'spin_ended',
+          winner: winner,
+          winnerIndex: winningSectorIndex
+        });
+
+        // Visual fanfare
+        banner.innerText = `Gewinner: ${winner}`;
+        banner.classList.add('show');
+        playWinSound();
+
+        // Confetti explosion!
+        confetti({
+          particleCount: 150,
+          spread: 80,
+          origin: { y: 0.6 }
+        });
+      }
+    }
+
+    // Spin trigger
+    function startSpin(data) {
+      if (isSpinning) return;
+
+      banner.classList.remove('show');
+      options = data.options;
+      soundEnabled = data.soundEnabled;
+      
+      const forcedIndex = data.winnerIndex; // Predetermined index, or null
+      const numSlices = options.length;
+      const sliceAngle = (2 * Math.PI) / numSlices;
+
+      // Choose a random angle inside the winning sector (but not too close to the borders)
+      const randomOffsetFactor = 0.25 + Math.random() * 0.5; // Offset between 0.25 and 0.75 of slice width
+      
+      let finalWinnerIndex = forcedIndex;
+      if (finalWinnerIndex === null || finalWinnerIndex < 0 || finalWinnerIndex >= numSlices) {
+        // Fallback to random if not set
+        finalWinnerIndex = Math.floor(Math.random() * numSlices);
+      }
+
+      // The slice starts at local angle index * sliceAngle and ends at (index+1) * sliceAngle
+      const localCenter = (finalWinnerIndex + randomOffsetFactor) * sliceAngle;
+
+      // We want localCenter + finalAngle = 1.5 * Math.PI (at the 12 o'clock pointer)
+      // Thus, targetAngle = 1.5 * Math.PI - localCenter. 
+      // We add 5-7 full spins to make it look great
+      const extraSpins = 5 + Math.floor(Math.random() * 3);
+      
+      // Ensure startAngle is in a clean range
+      startAngle = currentAngle % (2 * Math.PI);
+      currentAngle = startAngle;
+
+      // Calculate relative target angle (must be larger than startAngle)
+      let relativeTarget = (1.5 * Math.PI - localCenter);
+      while (relativeTarget <= startAngle) {
+        relativeTarget += 2 * Math.PI;
+      }
+      
+      targetAngle = relativeTarget + (extraSpins * 2 * Math.PI);
+      
+      // Setup animation
+      spinStartTime = null;
+      isSpinning = true;
+      lastTickIndex = -1;
+
+      // Trigger animation
+      requestAnimationFrame(updatePhysics);
+    }
+
+    // Broadcast Channel for communications
+    const bc = new BroadcastChannel('wheel_channel');
+    bc.onmessage = (event) => {
+      const msg = event.data;
+      if (msg.type === 'spin') {
+        startSpin(msg.data);
+      } else if (msg.type === 'update') {
+        options = msg.data.options;
+        soundEnabled = msg.data.soundEnabled;
+        banner.classList.remove('show');
+        drawWheel();
+      } else if (msg.type === 'reset') {
+        options = msg.data.options;
+        soundEnabled = msg.data.soundEnabled;
+        currentAngle = 0;
+        isSpinning = false;
+        banner.classList.remove('show');
+        drawWheel();
+      }
+    };
+
+    // Initial render
+    drawWheel();
+
+    // Resize canvas dynamically to support OBS window resizing
+    window.addEventListener('resize', () => {
+      drawWheel();
+    });
+
+  </script>
+</body>
+</html>

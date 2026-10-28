@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Overlay</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: transparent;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #player-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            display: none;
+            box-sizing: border-box;
+            background: transparent;
+            transition: opacity 0.3s ease, border-radius 0.3s ease;
+        }
+
+        .player-element {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: none;
+            background: transparent;
+        }
+
+        /* Loading indicator styling if needed */
+        .loading-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: #8b5cf6;
+            animation: spin 1s ease-in-out infinite;
+            display: none;
+            z-index: 100;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="player-container">
+        <div id="loading" class="loading-spinner"></div>
+        <div id="yt-player" class="player-element"></div>
+        <div id="twitch-player" class="player-element"></div>
+        <video id="raw-player" class="player-element" playsinline></video>
+    </div>
+
+    <!-- Scripts -->
+    <script src="app-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="realtime-store.js"></script>
+
+    <!-- HLS.js for raw HTTP streaming -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+    <script>
+        const container = document.getElementById('player-container');
+        const loadingEl = document.getElementById('loading');
+        const ytDiv = document.getElementById('yt-player');
+        const twitchDiv = document.getElementById('twitch-player');
+        const rawVideo = document.getElementById('raw-player');
+
+        let activeType = null;
+        let currentSource = null;
+        let lastSeekTo = -1;
+
+        // Players instances
+        let ytPlayer = null;
+        let twitchPlayer = null;
+        let hlsInstance = null;
+        let ytApiReady = false;
+        let twitchApiReady = false;
+
+        // Load YouTube Iframe API
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        window.onYouTubeIframeAPIReady = function() {
+            ytApiReady = true;
+            checkAndInitPlayers();
+        };
+
+        // Load Twitch SDK script
+        const twitchTag = document.createElement('script');
+        twitchTag.src = "https://player.twitch.tv/js/embed/v1.js";
+        twitchTag.onload = function() {
+            twitchApiReady = true;
+            checkAndInitPlayers();
+        };
+        document.head.appendChild(twitchTag);
+
+        let latestData = null;
+
+        function checkAndInitPlayers() {
+            if (latestData) {
+                updateOverlay(latestData);
+            }
+        }
+
+        // Extract YouTube video ID
+        function getYouTubeId(urlOrId) {
+            if (!urlOrId) return '';
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = urlOrId.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : urlOrId;
+        }
+
+        // Extract Twitch Channel
+        function getTwitchChannel(urlOrName) {
+            if (!urlOrName) return '';
+            try {
+                if (urlOrName.includes('twitch.tv/')) {
+                    const parts = urlOrName.split('twitch.tv/');
+                    return parts[1].split('/')[0].split('?')[0].trim();
+                }
+            } catch(e) {}
+            return urlOrName.trim();
+        }
+
+        // Subscribe to Store
+        const streamParam = new URLSearchParams(window.location.search).get('stream') || (window.BINGO_CONFIG && window.BINGO_CONFIG.streamId) || 'default-stream';
+        BingoStore.subscribe((data) => {
+            latestData = data;
+            updateOverlay(data);
+        }, streamParam);
+
+        function updateOverlay(data) {
+            const vo = data.videoOverlay;
+            if (!vo) return;
+
+            // Apply visibility
+            if (!vo.active || !vo.source) {
+                container.style.display = 'none';
+                stopAllPlayers();
+                return;
+            }
+
+            container.style.display = 'block';
+            applyStyle(vo.style);
+
+            const source = vo.source;
+            const type = vo.type || 'youtube';
+
+            // If player type changed, stop other players
+            if (activeType !== type) {
+                stopAllPlayers();
+                activeType = type;
+            }
+
+            if (type === 'youtube') {
+                playYouTube(source, vo);
+            } else if (type === 'twitch') {
+                playTwitch(source, vo);
+            } else if (type === 'raw') {
+                playRawVideo(source, vo);
+            }
+        }
+
+        function applyStyle(style) {
+            if (!style) return;
+            container.style.left = `${style.posX ?? 0}px`;
+            container.style.top = `${style.posY ?? 0}px`;
+            
+            // Width/height can be percent or px
+            const w = style.width ?? 100;
+            container.style.width = typeof w === 'number' ? `${w}%` : w;
+            const h = style.height ?? 100;
+            container.style.height = typeof h === 'number' ? `${h}%` : h;
+
+            const scale = style.scale ?? 1;
+            container.style.transform = `scale(${scale})`;
+            container.style.transformOrigin = 'top left';
+
+            container.style.opacity = style.opacity ?? 1;
+            container.style.borderRadius = `${style.borderRadius ?? 0}px`;
+        }
+
+        // Stop all media playing
+        function stopAllPlayers() {
+            // Hide all divs
+            ytDiv.style.display = 'none';
+            twitchDiv.style.display = 'none';
+            rawVideo.style.display = 'none';
+
+            // Pause YouTube
+            if (ytPlayer && ytPlayer.pauseVideo) {
+                try { ytPlayer.pauseVideo(); } catch(e) {}
+            }
+
+            // Pause Twitch
+            if (twitchPlayer && twitchPlayer.pause) {
+                try { twitchPlayer.pause(); } catch(e) {}
+            }
+
+            // Stop Raw HTML5 Video
+            try {
+                rawVideo.pause();
+                rawVideo.src = '';
+                rawVideo.load();
+                if (hlsInstance) {
+                    hlsInstance.destroy();
+                    hlsInstance = null;
+                }
+            } catch(e) {}
+
+            currentSource = null;
+            activeType = null;
+        }
+
+        // YOUTUBE PLAYBACK
+        function playYouTube(source, config) {
+            if (!ytApiReady) return;
+            ytDiv.style.display = 'block';
+
+            const videoId = getYouTubeId(source);
+
+            if (!ytPlayer) {
+                // Initialize YT Player
+                ytPlayer = new YT.Player('yt-player', {
+                    height: '100%',
+                    width: '100%',
+                    videoId: videoId,
+                    playerVars: {
+                        autoplay: config.playing ? 1 : 0,
+                        controls: 0,
+                        disablekb: 1,
+                        fs: 0,
+                        modestbranding: 1,
+                        rel: 0,
+                        showinfo: 0,
+                        iv_load_policy: 3
+                    },
+                    events: {
+                        onReady: (e) => {
+                            applyYouTubeControls(config);
+                        },
+                        onStateChange: (e) => {
+                            // If video ended and loop is active, replay
+                            if (e.data === YT.PlayerState.ENDED && latestData && latestData.videoOverlay.loop) {
+                                ytPlayer.playVideo();
+                            }
+                        }
+                    }
+                });
+                currentSource = source;
+                return;
+            }
+
+            if (currentSource !== source) {
+                currentSource = source;
+                ytPlayer.cueVideoById(videoId);
+                // Seek reset
+                lastSeekTo = -1;
+            }
+
+            if (ytPlayer.getPlayerState) {
+                applyYouTubeControls(config);
+            }
+        }
+
+        function applyYouTubeControls(config) {
+            // Volume
+            if (config.muted) {
+                ytPlayer.mute();
+            } else {
+                ytPlayer.unMute();
+                ytPlayer.setVolume(config.volume ?? 50);
+            }
+
+            // Play / Pause
+            const state = ytPlayer.getPlayerState();
+            if (config.playing) {
+                if (state !== YT.PlayerState.PLAYING && state !== YT.PlayerState.BUFFERING) {
+                    ytPlayer.playVideo();
+                }
+            } else {
+                if (state === YT.PlayerState.PLAYING) {
+                    ytPlayer.pauseVideo();
+                }
+            }
+
+            // Seek
+            if (config.seekTo !== undefined && config.seekTo !== lastSeekTo && config.seekTo > 0) {
+                lastSeekTo = config.seekTo;
+                ytPlayer.seekTo(config.seekTo, true);
+            }
+        }
+
+        // TWITCH PLAYBACK
+        function playTwitch(source, config) {
+            if (!twitchApiReady) return;
+            twitchDiv.style.display = 'block';
+
+            const channel = getTwitchChannel(source);
+
+            if (!twitchPlayer) {
+                const parentDomain = window.location.hostname || 'localhost';
+                twitchPlayer = new Twitch.Player('twitch-player', {
+                    channel: channel,
+                    width: '100%',
+                    height: '100%',
+                    autoplay: config.playing,
+                    muted: config.muted,
+                    parent: [parentDomain]
+                });
+                twitchPlayer.addEventListener(Twitch.Player.READY, () => {
+                    applyTwitchControls(config);
+                });
+                currentSource = source;
+                return;
+            }
+
+            if (currentSource !== source) {
+                currentSource = source;
+                twitchPlayer.setChannel(channel);
+            }
+
+            applyTwitchControls(config);
+        }
+
+        function applyTwitchControls(config) {
+            if (!twitchPlayer) return;
+
+            // Volume & Mute
+            if (config.muted) {
+                twitchPlayer.setMuted(true);
+            } else {
+                twitchPlayer.setMuted(false);
+                twitchPlayer.setVolume((config.volume ?? 50) / 100);
+            }
+
+            // Play / Pause
+            if (config.playing) {
+                if (twitchPlayer.isPaused()) {
+                    twitchPlayer.play();
+                }
+            } else {
+                if (!twitchPlayer.isPaused()) {
+                    twitchPlayer.pause();
+                }
+            }
+        }
+
+        // RAW VIDEO PLAYBACK (MP4 / HLS)
+        function playRawVideo(source, config) {
+            rawVideo.style.display = 'block';
+
+            if (currentSource !== source) {
+                currentSource = source;
+                lastSeekTo = -1;
+
+                if (hlsInstance) {
+                    hlsInstance.destroy();
+                    hlsInstance = null;
+                }
+
+                if (source.includes('.m3u8')) {
+                    if (Hls.isSupported()) {
+                        hlsInstance = new Hls();
+                        hlsInstance.loadSource(source);
+                        hlsInstance.attachMedia(rawVideo);
+                    } else if (rawVideo.canPlayType('application/vnd.apple.mpegurl')) {
+                        rawVideo.src = source;
+                    }
+                } else {
+                    rawVideo.src = source;
+                }
+                rawVideo.load();
+            }
+
+            // Volume & Mute
+            rawVideo.muted = config.muted;
+            rawVideo.volume = (config.volume ?? 50) / 100;
+
+            // Play / Pause
+            if (config.playing) {
+                if (rawVideo.paused) {
+                    rawVideo.play().catch(e => console.log("Video Play Error: ", e));
+                }
+            } else {
+                if (!rawVideo.paused) {
+                    rawVideo.pause();
+                }
+            }
+
+            // Loop
+            rawVideo.loop = config.loop || false;
+
+            // Seek
+            if (config.seekTo !== undefined && config.seekTo !== lastSeekTo && config.seekTo > 0) {
+                lastSeekTo = config.seekTo;
+                rawVideo.currentTime = config.seekTo;
+            }
+        }
+    </script>
+</body>
+</html>

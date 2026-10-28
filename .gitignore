@@ -2,3 +2,55 @@
 .env
 .env.*
 npm-debug.log*
+
+# Deal-Finder Daten (erfasste Inserate)
+backend/car_analyzer/data/
+
+# Geheimnisse / Zugangsdaten
+serviceAccountKey.json
+*serviceAccount*.json
+*.pem
+*.key
+minus-watchtime/config.json
+
+# Browser-Sessions und Cookies (YouTube, TikTok, ...)
+*_sessions/
+*_session_*/
+*cookie*.json
+*cookie*.txt
+*cookies*.json
+*cookies*.txt
+Cookies
+Cookies-journal
+
+# Debug-Screenshots und DOM-Dumps
+*debug*.png
+qr_test_*.png
+tiktok_posts_list.png
+*dom_dump*.html
+test_frame.jpg
+
+# Backups
+*.bak
+*_backup.*
+*_backup_*
+*backup*.html
+
+# Temporäre Arbeitsdateien / generierte Inhalte
+scratch/
+scratch_*.js
+scratch_*.py
+temp_asar/
+public/clips/
+backend/buffers/
+backend/pm2_logs_dump.txt
+*/uploads/
+
+# Lokale Entwürfe / Notizen (nicht ins Repo)
+protected/overview_*.txt
+protected/clipper_proposed.html
+protected/_clipper_js_only*.html
+protected/missing_code_block.js
+new_editor.html
+patch.py
+test_gql_raw.js

@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scoreboard WM Neu Overlay</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: transparent;
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .scoreboard-wrapper {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            height: 56px;
+            filter: drop-shadow(0 8px 20px rgba(0,0,0,0.6));
+        }
+
+        /* Main Scoreboard: Gold/Yellow border, dark background */
+        .scoreboard-main {
+            display: flex;
+            align-items: center;
+            background: #040907; /* very dark green-black */
+            border: 2px solid #f2b32b; /* golden border from image */
+            border-radius: 12px;
+            height: 100%;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        /* Team block */
+        .team {
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            height: 100%;
+            gap: 10px;
+        }
+
+        .team.home {
+            justify-content: flex-end;
+        }
+
+        .team.away {
+            justify-content: flex-start;
+        }
+
+        .team-name {
+            font-size: 22px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        /* Flag / Logo container */
+        .flag-container {
+            width: 34px;
+            height: 22px;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            display: none; /* Shown only if logo is present */
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            flex-shrink: 0;
+        }
+
+        .team-logo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Color accent lines next to scores */
+        .accent-line {
+            width: 4px;
+            height: 100%;
+            flex-shrink: 0;
+        }
+        
+        .accent-line.home {
+            background-color: #00aa5f; /* green line from image */
+        }
+        
+        .accent-line.away {
+            background-color: #f2b32b; /* yellow/gold line from image */
+        }
+
+        /* Score Boxes: Gold background, dark text */
+        .score-box {
+            background-color: #f2b32b;
+            color: #040907;
+            width: 48px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 900;
+            font-variant-numeric: tabular-nums;
+            flex-shrink: 0;
+        }
+
+        /* Score Divider: dark vertical line */
+        .score-divider {
+            width: 3px;
+            height: 100%;
+            background-color: #040907;
+            flex-shrink: 0;
+        }
+
+        /* Timer Capsule */
+        .timer-capsule {
+            background-color: #000000;
+            color: #ffffff;
+            border: 2px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 16px;
+            font-size: 24px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            box-sizing: border-box;
+            min-width: 90px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scoreboard-wrapper" id="scoreboardWrapper">
+        <div class="scoreboard-main" id="scoreboardMain">
+            <!-- Home Team -->
+            <div class="team home" id="homeTeamEl">
+                <div class="flag-container" id="flagHomeContainer">
+                    <img id="logoHome" class="team-logo" src="">
+                </div>
+                <span id="nameHome" class="team-name">MEX</span>
+            </div>
+
+            <!-- Green Accent Line (Home) -->
+            <div class="accent-line home"></div>
+
+            <!-- Home Score -->
+            <div class="score-box" id="scoreHome">0</div>
+
+            <!-- Divider -->
+            <div class="score-divider"></div>
+
+            <!-- Away Score -->
+            <div class="score-box" id="scoreAway">0</div>
+
+            <!-- Yellow Accent Line (Away) -->
+            <div class="accent-line away"></div>
+
+            <!-- Away Team -->
+            <div class="team away" id="awayTeamEl">
+                <span id="nameAway" class="team-name">RSA</span>
+                <div class="flag-container" id="flagAwayContainer">
+                    <img id="logoAway" class="team-logo" src="">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Timer -->
+        <div class="timer-capsule" id="clockDisplay">00:00</div>
+    </div>
+
+    <script src="app-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="realtime-store.js"></script>
+    <script>
+        const scoreboardWrapper = document.getElementById('scoreboardWrapper');
+        const scoreboardMain = document.getElementById('scoreboardMain');
+        const clockDisplay = document.getElementById('clockDisplay');
+        
+        const scoreHome = document.getElementById('scoreHome');
+        const scoreAway = document.getElementById('scoreAway');
+        const nameHome = document.getElementById('nameHome');
+        const logoHome = document.getElementById('logoHome');
+        const nameAway = document.getElementById('nameAway');
+        const logoAway = document.getElementById('logoAway');
+        const flagHomeContainer = document.getElementById('flagHomeContainer');
+        const flagAwayContainer = document.getElementById('flagAwayContainer');
+
+
+
+        let currentTimer = { isRunning: false, baseTime: Date.now(), accumulatedTime: 0 };
+
+        BingoStore.subscribe((data) => {
+            updateScore(data.score);
+            updateTeams(data.teams);
+            updateStyle(data.scoreboardStyle);
+            
+            if (data.timer) {
+                currentTimer = data.timer;
+            }
+        }, new URLSearchParams(window.location.search).get('stream') || (window.BINGO_CONFIG && window.BINGO_CONFIG.streamId) || 'default-stream');
+
+        // Render-Loop for the timer (smooth animation)
+        function renderTimer() {
+            let totalMs = currentTimer.accumulatedTime;
+            if (currentTimer.isRunning) {
+                totalMs += (Date.now() - currentTimer.baseTime);
+            }
+            
+            const totalSeconds = Math.floor(totalMs / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            
+            const mm = minutes.toString().padStart(2, '0');
+            const ss = seconds.toString().padStart(2, '0');
+            
+            if (currentTimer.isVisible === false) {
+                clockDisplay.style.display = 'none';
+            } else {
+                clockDisplay.style.display = 'flex';
+            }
+            
+            if (clockDisplay.textContent !== `${mm}:${ss}`) {
+                clockDisplay.textContent = `${mm}:${ss}`;
+            }
+            
+            requestAnimationFrame(renderTimer);
+        }
+        requestAnimationFrame(renderTimer);
+
+        function updateScore(score) {
+            scoreHome.textContent = score.home;
+            scoreAway.textContent = score.away;
+        }
+
+        function updateTeams(teams) {
+            if(teams.home) {
+                nameHome.textContent = teams.home.name.substring(0, 3).toUpperCase();
+                if (teams.home.logo) {
+                    logoHome.src = teams.home.logo;
+                    const showFlagHome = () => {
+                        if (logoHome.naturalWidth > 0) {
+                            flagHomeContainer.style.display = 'flex';
+                        } else {
+                            flagHomeContainer.style.display = 'none';
+                        }
+                    };
+                    if (logoHome.complete) {
+                        showFlagHome();
+                    } else {
+                        logoHome.onload = showFlagHome;
+                        logoHome.onerror = () => {
+                            flagHomeContainer.style.display = 'none';
+                        };
+                    }
+                } else {
+                    flagHomeContainer.style.display = 'none';
+                }
+            }
+            if(teams.away) {
+                nameAway.textContent = teams.away.name.substring(0, 3).toUpperCase();
+                if (teams.away.logo) {
+                    logoAway.src = teams.away.logo;
+                    const showFlagAway = () => {
+                        if (logoAway.naturalWidth > 0) {
+                            flagAwayContainer.style.display = 'flex';
+                        } else {
+                            flagAwayContainer.style.display = 'none';
+                        }
+                    };
+                    if (logoAway.complete) {
+                        showFlagAway();
+                    } else {
+                        logoAway.onload = showFlagAway;
+                        logoAway.onerror = () => {
+                            flagAwayContainer.style.display = 'none';
+                        };
+                    }
+                } else {
+                    flagAwayContainer.style.display = 'none';
+                }
+            }
+        }
+
+        function updateStyle(style) {
+            if (!style) return;
+            scoreboardWrapper.style.left = `${style.posX ?? 40}px`;
+            scoreboardWrapper.style.top = `${style.posY ?? 40}px`;
+            
+            // Adjust height dynamically
+            if (style.height) {
+                scoreboardWrapper.style.height = `${style.height}px`;
+            }
+            
+            // Adjust total width
+            if (style.totalWidth) {
+                scoreboardMain.style.width = `${style.totalWidth}px`;
+            }
+            
+            // Adjust team font size
+            if (style.teamFontSize) {
+                nameHome.style.fontSize = `${style.teamFontSize}px`;
+                nameAway.style.fontSize = `${style.teamFontSize}px`;
+            }
+            
+            // Adjust score font size
+            if (style.scoreFontSize) {
+                scoreHome.style.fontSize = `${style.scoreFontSize}px`;
+                scoreAway.style.fontSize = `${style.scoreFontSize}px`;
+            }
+            
+            // Adjust border radius
+            if (style.radius) {
+                scoreboardMain.style.borderRadius = `${style.radius}px`;
+                clockDisplay.style.borderRadius = `${style.radius}px`;
+            }
+
+            const scale = style.scale ?? 1;
+            scoreboardWrapper.style.transform = `scale(${scale})`;
+            scoreboardWrapper.style.transformOrigin = 'top left';
+        }
+    </script>
+</body>
+</html>

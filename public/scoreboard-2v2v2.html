@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2v2v2 Leaderboard Overlay</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: transparent;
+            font-family: 'Montserrat', sans-serif;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+            user-select: none;
+        }
+
+        /* ── Wrapper ── */
+        .leaderboard-wrapper {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            filter: drop-shadow(0 8px 32px rgba(0, 0, 0, 0.5));
+            transform-origin: top left;
+        }
+
+        /* ── Header Title ── */
+        .leaderboard-header {
+            background: rgba(15, 23, 20, 0.85);
+            color: #ffffff;
+            font-family: 'Outfit', sans-serif;
+            font-size: 15px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 6px 20px;
+            border-radius: 10px 10px 0 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            margin-left: 16px;
+            white-space: nowrap;
+            position: relative;
+            z-index: 2;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+
+        /* ── Cards Container ── */
+        .leaderboard-container {
+            position: relative;
+            width: var(--leaderboard-width, 440px);
+            height: 216px; /* 3 cards * 64px + 2 gaps * 12px = 192 + 24 = 216px */
+            z-index: 1;
+        }
+
+        /* ── Team Card ── */
+        .team-card {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 64px;
+            background: rgba(18, 22, 20, var(--bg-opacity, 0.75));
+            border: 1.5px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Dynamic colors from CSS variables */
+        .team-card { border-left: 5px solid rgb(var(--team-color-rgb)); }
+        .team-card.first { box-shadow: 0 0 20px rgba(var(--team-color-rgb), 0.15); border-color: rgba(var(--team-color-rgb), 0.3); }
+        .score-bubble {
+            color: rgb(var(--team-color-rgb));
+            border-color: rgba(var(--team-color-rgb), 0.3);
+            background: rgba(var(--team-color-rgb), 0.05);
+            text-shadow: 0 0 8px rgba(var(--team-color-rgb), 0.4);
+        }
+
+        /* Left Side: Rank and Name */
+        .card-left {
+            display: flex;
+            align-items: center;
+            gap: var(--card-left-gap, 16px);
+            min-width: 0;
+            flex: 1;
+            margin-right: 12px;
+        }
+
+        .rank-badge {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* Gold highlight for 1st place badge */
+        .team-card.first .rank-badge {
+            background: #FFD700;
+            color: #000000;
+            font-weight: 900;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+        }
+
+        .team-name {
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Right Side: Score Bubble */
+        .score-bubble {
+            min-width: 52px;
+            height: 38px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Outfit', sans-serif;
+            font-size: 22px;
+            font-weight: 900;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        /* Pulse Animation */
+        .score-bubble.pulse {
+            animation: scorePulse 0.5s ease-out;
+        }
+
+        @keyframes scorePulse {
+            0% { transform: scale(1); }
+            50% { 
+                transform: scale(1.25); 
+                box-shadow: 0 0 25px currentColor;
+                background: currentColor;
+                color: #000000;
+            }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="leaderboard-wrapper" id="leaderboardWrapper" style="display: none;">
+        <!-- Header / title of the match -->
+        <div class="leaderboard-header" id="headerTitle">2V2V2 MATCH</div>
+
+        <!-- Leaderboard list with absolute cards -->
+        <div class="leaderboard-container" id="leaderboardContainer">
+            <!-- Cards will be generated dynamically -->
+        </div>
+    </div>
+
+    <script src="app-config.js?v=1.1"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="realtime-store.js?v=1.1"></script>
+    <script>
+        const leaderboardWrapper = document.getElementById('leaderboardWrapper');
+        const headerTitle = document.getElementById('headerTitle');
+        const streamId = new URLSearchParams(window.location.search).get('stream') || (window.BINGO_CONFIG && window.BINGO_CONFIG.streamId) || 'default-stream';
+
+        // Keep track of scores to trigger pulse animation
+        let scoresCache = {
+            team1: -1,
+            team2: -1,
+            team3: -1
+        };
+
+        BingoStore.subscribe((data) => {
+            console.log('[2v2v2 Leaderboard] Data received:', data);
+
+            const container = document.getElementById('leaderboardContainer');
+
+            // Fetch positioning and scale from style node
+            const style = data.game2v2v2?.style || data.scoreboardStyle || {};
+            leaderboardWrapper.style.left = (style.posX ?? 40) + 'px';
+            leaderboardWrapper.style.top = (style.posY ?? 40) + 'px';
+            const scale = style.scale ?? 1;
+            leaderboardWrapper.style.transform = `scale(${scale})`;
+            leaderboardWrapper.style.transformOrigin = 'top left';
+            
+            const opacity = style.opacity ?? 0.75;
+            document.documentElement.style.setProperty('--bg-opacity', opacity);
+
+            const width = style.width ?? 440;
+            document.documentElement.style.setProperty('--leaderboard-width', width + 'px');
+
+            const gapRankName = style.gapRankName ?? 16;
+            document.documentElement.style.setProperty('--card-left-gap', gapRankName + 'px');
+
+            // Extract game data
+            const gameData = data.game2v2v2 || {};
+            headerTitle.textContent = gameData.title || "2V2V2 GAME";
+
+            // Extract team details
+            const teams = gameData.teams || [
+                { id: "team1", name: "Ali & Jussef", score: 0, color: '#00E5FF' },
+                { id: "team2", name: "Ayman & Eli", score: 0, color: '#E040FB' },
+                { id: "team3", name: "Coach & Rohat", score: 0, color: '#FF9100' }
+            ];
+
+            const visibleTeams = teams.filter(t => t.visible !== false);
+            
+            // Adjust container height based on number of visible teams
+            const numVisible = visibleTeams.length;
+            container.style.height = (numVisible * 64 + Math.max(0, numVisible - 1) * 12) + 'px';
+
+            function hexToRgb(hex) {
+                var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '255, 255, 255';
+            }
+
+            const existingIds = new Set();
+
+            // Render details and trigger pulses on changes
+            teams.forEach(t => {
+                existingIds.add(t.id);
+                let card = document.getElementById(`card_${t.id}`);
+                
+                if (!card) {
+                    card = document.createElement('div');
+                    card.id = `card_${t.id}`;
+                    card.className = 'team-card';
+                    card.innerHTML = `
+                        <div class="card-left">
+                            <div class="rank-badge" id="badge_${t.id}"></div>
+                            <span class="team-name" id="name_${t.id}"></span>
+                        </div>
+                        <div class="score-bubble" id="score_${t.id}">0</div>
+                    `;
+                    container.appendChild(card);
+                }
+
+                // Apply dynamic color
+                const rgb = hexToRgb(t.color || '#ffffff');
+                card.style.setProperty('--team-color-rgb', rgb);
+
+                const scoreEl = document.getElementById(`score_${t.id}`);
+                const nameEl = document.getElementById(`name_${t.id}`);
+                
+                if (scoreEl && nameEl && card) {
+                    if (t.visible === false) {
+                        card.style.display = 'none';
+                    } else {
+                        card.style.display = 'flex';
+                    }
+                    
+                    nameEl.textContent = t.name || t.id.toUpperCase();
+                    
+                    const oldScore = scoresCache[t.id];
+                    const newScore = t.score ?? 0;
+                    scoreEl.textContent = newScore;
+
+                    // Trigger pulse if score increased
+                    if (oldScore !== -1 && newScore > oldScore) {
+                        scoreEl.classList.remove('pulse');
+                        scoreEl.offsetHeight; // Force reflow
+                        scoreEl.classList.add('pulse');
+                    }
+                    scoresCache[t.id] = newScore;
+                }
+            });
+
+            // Remove deleted teams
+            Array.from(container.children).forEach(child => {
+                const id = child.id.replace('card_', '');
+                if (!existingIds.has(id)) {
+                    child.remove();
+                    delete scoresCache[id];
+                }
+            });
+
+            // Calculate ranks and sort position translation offsets
+            const sorted = visibleTeams.map((t, idx) => ({ id: t.id, score: t.score ?? 0, originalIndex: idx }))
+                               .sort((a, b) => {
+                                   if (b.score !== a.score) {
+                                       return b.score - a.score; // Higher score first
+                                   }
+                                   return a.originalIndex - b.originalIndex; // Stable sorting based on initial list order
+                               });
+
+            // Assign position and rank badges
+            sorted.forEach((item, sortedIdx) => {
+                const card = document.getElementById(`card_${item.id}`);
+                const badge = document.getElementById(`badge_${item.id}`);
+                if (card && badge) {
+                    // Position: sortedIndex * (64px card height + 12px gap) = sortedIndex * 76px
+                    const translateY = sortedIdx * 76;
+                    card.style.transform = `translateY(${translateY}px)`;
+
+                    // Rank badge text
+                    const rankNum = sortedIdx + 1;
+                    badge.textContent = rankNum;
+
+                    // Apply first-place class for special styling (gold badge + glow)
+                    if (sortedIdx === 0) {
+                        card.classList.add('first');
+                    } else {
+                        card.classList.remove('first');
+                    }
+                }
+            });
+
+            // Show leaderboard wrapper once loaded
+            leaderboardWrapper.style.display = 'flex';
+        }, streamId);
+    </script>
+</body>
+</html>

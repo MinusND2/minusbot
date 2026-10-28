@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minus TikTok Auto-Uploader</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0a0714 0%, #030107 100%);
+            --primary: #fe2c55; /* TikTok Brand Red */
+            --primary-hover: #e02447;
+            --primary-glow: rgba(254, 44, 85, 0.35);
+            --secondary: #25f4ee; /* TikTok Brand Teal */
+            --secondary-glow: rgba(37, 244, 238, 0.25);
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.16);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --font: 'Outfit', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Ambient glowing background blobs */
+        .ambient-glow-1 {
+            position: absolute;
+            top: -10%;
+            left: -10%;
+            width: 50vw;
+            height: 50vw;
+            background: radial-gradient(circle, rgba(254, 44, 85, 0.08) 0%, transparent 70%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .ambient-glow-2 {
+            position: absolute;
+            bottom: -10%;
+            right: -10%;
+            width: 50vw;
+            height: 50vw;
+            background: radial-gradient(circle, rgba(37, 244, 238, 0.06) 0%, transparent 70%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        header {
+            position: relative;
+            z-index: 10;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-symbol {
+            font-size: 26px;
+            font-weight: 800;
+            background: linear-gradient(90deg, var(--secondary) 0%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 2px 8px var(--primary-glow));
+        }
+
+        .logo-text {
+            font-size: 19px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 4px;
+            gap: 4px;
+        }
+
+        .nav-tab {
+            padding: 8px 16px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-tab:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .nav-tab.active {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        main {
+            position: relative;
+            z-index: 10;
+            flex: 1;
+            max-width: 1300px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 40px;
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 32px;
+        }
+
+        @media (max-width: 1024px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 32px;
+            backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-hover);
+        }
+
+        h2 {
+            font-size: 19px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #fff;
+        }
+
+        h2 svg {
+            color: var(--primary);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+        }
+
+        /* Inputs */
+        input[type="text"], input[type="password"], textarea {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            color: #fff;
+            font-family: var(--font);
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        input[type="text"]:focus, input[type="password"]:focus, textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 16px var(--primary-glow);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        /* Config row styling */
+        .config-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .session-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .session-status span.status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--danger);
+            display: inline-block;
+        }
+
+        .session-status.active span.status-dot {
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        /* Guide / Alert */
+        .guide-box {
+            background: rgba(37, 244, 238, 0.02);
+            border: 1px solid rgba(37, 244, 238, 0.15);
+            border-radius: 16px;
+            padding: 16px 20px;
+            font-size: 13px;
+            color: #b1e9e7;
+            line-height: 1.6;
+        }
+
+        .guide-box ol {
+            padding-left: 20px;
+            margin-top: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        /* Hashtags section */
+        .hashtag-input-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .hashtag-input-wrapper {
+            position: relative;
+            flex: 1;
+        }
+
+        .hashtag-input-prefix {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+
+        .hashtag-input-wrapper input {
+            padding-left: 32px;
+        }
+
+        .btn-action {
+            height: 52px;
+            padding: 0 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .btn-action:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--border-hover);
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 38px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 14px;
+            border: 1px solid var(--border);
+        }
+
+        .tag-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(37, 244, 238, 0.1);
+            border: 1px solid rgba(37, 244, 238, 0.3);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--secondary);
+        }
+
+        .tag-remove {
+            cursor: pointer;
+            font-weight: 800;
+            color: var(--text-muted);
+            transition: color 0.2s ease;
+        }
+
+        .tag-remove:hover {
+            color: var(--danger);
+        }
+
+        .preset-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .preset-tag {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .preset-tag:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--border-hover);
+            color: #fff;
+        }
+
+        /* Toggle switch component */
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+        }
+
+        .toggle-details {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .toggle-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .toggle-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .3s;
+            border-radius: 34px;
+            border: 1px solid var(--border);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #fff;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
+
+        /* Big action buttons */
+        .btn-primary {
+            width: 100%;
+            height: 54px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 20px var(--primary-glow);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px var(--primary-glow);
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-primary:disabled {
+            background: #4b5563;
+            box-shadow: none;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        /* Drag and Drop Zone */
+        .dropzone {
+            border: 2px dashed var(--border);
+            border-radius: 24px;
+            padding: 40px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            min-height: 240px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .dropzone.dragover {
+            border-color: var(--secondary);
+            background: rgba(37, 244, 238, 0.03);
+            box-shadow: inset 0 0 20px var(--secondary-glow);
+        }
+
+        .dropzone-icon {
+            font-size: 48px;
+            color: var(--primary);
+            transition: transform 0.3s ease;
+        }
+
+        .dropzone:hover .dropzone-icon {
+            transform: translateY(-5px);
+        }
+
+        .dropzone-text {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .dropzone-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .dropzone-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* File Preview styling */
+        .preview-container {
+            display: none;
+            width: 100%;
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #000;
+            border: 1px solid var(--border);
+            aspect-ratio: 16 / 9;
+        }
+
+        .preview-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .preview-remove-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--border);
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: 700;
+            transition: background 0.2s ease, transform 0.2s ease;
+            backdrop-filter: blur(8px);
+        }
+
+        .preview-remove-btn:hover {
+            background: var(--danger);
+            transform: scale(1.1);
+        }
+
+        .file-info {
+            display: none;
+            font-size: 13px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            padding: 10px 16px;
+            border-radius: 12px;
+            width: 100%;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Console Logs styling */
+        .console-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.3);
+            min-height: 220px;
+        }
+
+        .console-header {
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .console-body {
+            flex: 1;
+            padding: 16px 20px;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-y: auto;
+            max-height: 260px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .log-line {
+            color: #d1d5db;
+        }
+
+        .log-line.text-muted {
+            color: var(--text-muted);
+        }
+
+        .log-line.log-success {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .log-line.log-error {
+            color: var(--danger);
+            font-weight: 600;
+        }
+
+        .log-line.log-warning {
+            color: var(--warning);
+            font-weight: 600;
+        }
+
+        .pulse-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .pulse-badge.status-idle {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+        }
+
+        .pulse-badge.status-active {
+            background: rgba(254, 44, 85, 0.1);
+            color: var(--primary);
+            animation: pulse-red 2s infinite;
+        }
+
+        .pulse-badge.status-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .pulse-badge.status-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(254, 44, 85, 0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(254, 44, 85, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(254, 44, 85, 0); }
+        }
+
+        /* Iframe mode overrides for seamless integration */
+        body.in-iframe {
+            background: transparent !important;
+            padding: 0 !important;
+            min-height: auto !important;
+        }
+        body.in-iframe .ambient-glow-1,
+        body.in-iframe .ambient-glow-2 {
+            display: none !important;
+        }
+        body.in-iframe header {
+            display: none !important;
+        }
+        body.in-iframe main {
+            padding: 0 !important;
+            gap: 20px !important;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="ambient-glow-1"></div>
+    <div class="ambient-glow-2"></div>
+
+    <header>
+        <div class="logo-container">
+            <span class="logo-symbol">Minus</span>
+            <span class="logo-text">TikTok Uploader</span>
+        </div>
+        <div class="nav-tabs">
+            <a href="index.html" class="nav-tab">Twitch Watchtime</a>
+            <a href="tiktok.html" class="nav-tab active">TikTok Uploader</a>
+        </div>
+    </header>
+
+    <main>
+        <!-- Left Column: Settings & Input -->
+        <div class="card">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                TikTok Verbindung
+            </h2>
+
+            <div class="form-group" style="margin-bottom: 12px;">
+                <label for="tiktokAccountSelect">Aktives TikTok-Konto</label>
+                <div class="hashtag-input-row" style="display: flex; gap: 8px;">
+                    <div style="flex: 1; display: flex; gap: 8px; align-items: center;">
+                        <select id="tiktokAccountSelect" style="flex: 1; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: #fff; font-family: var(--font); font-size: 14px; outline: none; cursor: pointer; height: 46px;">
+                            <option value="default">Standard-Konto (default)</option>
+                        </select>
+                        <input type="text" id="newAccountInput" placeholder="Konto-Name (z.B. account2)" style="display: none; padding: 12px; font-size: 14px; border-radius: 12px; flex: 1; height: 46px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border); color: #fff; outline: none;">
+                    </div>
+                    <button type="button" id="btnToggleNewAccount" class="btn-action" style="height: 46px; border-radius: 12px; font-size: 13px; padding: 0 16px; min-width: 60px;">+ Neu</button>
+                    <button type="button" id="btnDeleteAccount" class="btn-action" style="height: 46px; border-radius: 12px; font-size: 13px; padding: 0 16px; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: var(--danger); min-width: 70px;">Löschen</button>
+                </div>
+            </div>
+
+            <div class="toggle-row" style="background: rgba(255,255,255,0.01); border-color: rgba(255,255,255,0.05); padding: 14px 20px;">
+                <div class="toggle-details">
+                    <span class="toggle-title" style="font-size: 13px;">Status der Verbindung</span>
+                    <span class="toggle-desc">Zeigt an, ob dein TikTok-Konto verbunden ist.</span>
+                </div>
+                <div class="session-status" id="sessionStatus">
+                    <span class="status-dot"></span>
+                    <span id="sessionStatusText">Prüfe Sitzung...</span>
+                </div>
+            </div>
+
+            <!-- Option 1: QR-Code Anmeldung (Empfohlen) -->
+            <div class="connection-option" style="background: rgba(254, 44, 85, 0.02); border: 1px solid rgba(254, 44, 85, 0.15); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="background: var(--primary); color: #fff; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;">1</span>
+                    <strong style="color: #fff; font-size: 14px;">1-Klick QR-Code Login (Super Einfach)</strong>
+                </div>
+                <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0;">
+                    Generiere einen QR-Code und scanne ihn mit deiner TikTok-App auf dem Smartphone ein, um dich direkt zu verbinden.
+                </p>
+                
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; margin: 8px 0;">
+                    <!-- QR Display Area -->
+                    <div id="qrContainer" style="display: none; flex-direction: column; align-items: center; gap: 10px; background: rgba(0,0,0,0.2); padding: 16px; border-radius: 12px; border: 1px solid var(--border);">
+                        <div id="qrCodeSpinner" class="spinner" style="width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--secondary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <img id="qrImage" src="" style="display: none; border: 6px solid white; border-radius: 12px; background: white; padding: 8px; width: 160px; height: 160px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+                        <span id="qrStatusLabel" style="font-size: 12px; color: var(--text-muted); text-align: center;">Erstelle Login-Sitzung...</span>
+                        <button type="button" id="btnDebugQr" style="background: transparent; border: none; color: var(--text-muted); text-decoration: underline; font-size: 11px; cursor: pointer; margin-top: 5px; opacity: 0.7;">Server-Bild anzeigen (Debug)</button>
+                        <div id="debugQrImgContainer" style="display: none; flex-direction: column; align-items: center; margin-top: 10px; max-width: 320px; border: 1px solid var(--border); border-radius: 8px; padding: 5px; background: rgba(0,0,0,0.3);">
+                            <img id="debugQrImage" src="" style="max-width: 100%; border-radius: 6px;">
+                        </div>
+                    </div>
+
+                    <button type="button" id="btnLoadQr" class="btn-primary" style="display: inline-flex; width: auto; height: 42px; font-size: 13px; background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%); border-radius: 10px; padding: 0 24px; box-shadow: 0 4px 12px rgba(254,44,85,0.25);">
+                        <span id="btnLoadQrText">QR-Code zum Login laden</span>
+                    </button>
+                </div>
+
+                <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5; background: rgba(0,0,0,0.15); padding: 12px; border-radius: 10px;">
+                    <strong>So einfach geht's:</strong>
+                    <ol style="margin-left: 18px; margin-top: 4px; display: flex; flex-direction: column; gap: 4px;">
+                        <li>Klicke auf <strong>QR-Code zum Login laden</strong>.</li>
+                        <li>Öffne die <strong>TikTok App</strong> auf deinem Handy.</li>
+                        <li>Gehe auf <strong>Profil</strong> -> Menü oben rechts -> <strong>Mein QR-Code</strong> -> Scan-Symbol oben rechts.</li>
+                        <li>Scanne den QR-Code ein und bestätige die Anmeldung auf deinem Handy. <strong>Fertig!</strong></li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Option 2: Manuelle Eingabe (Erweitert) -->
+            <details style="border: 1px solid var(--border); border-radius: 16px; padding: 14px 20px;">
+                <summary style="font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; user-select: none; outline: none;">Alternative: Manuelle Eingabe (Cookie)</summary>
+                <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 14px;">
+                    <div class="form-group">
+                        <label for="tiktokSessionId" style="font-size: 11px;">TikTok SessionID (Cookie)</label>
+                        <div class="config-row">
+                            <input type="password" id="tiktokSessionId" placeholder="Füge deinen sessionid Cookie ein..." autocomplete="off" style="padding: 12px; font-size: 14px; border-radius: 10px;">
+                            <button type="button" id="btnSaveSession" class="btn-action" style="height: 44px; border-radius: 10px; font-size: 13px;">Speichern</button>
+                        </div>
+                    </div>
+                    <div class="guide-box" style="padding: 12px 16px; font-size: 12px; border-radius: 10px;">
+                        <strong>Anleitung (F12):</strong>
+                        <ol style="padding-left: 16px; margin-top: 4px; display: flex; flex-direction: column; gap: 2px;">
+                            <li>Logge dich auf <strong>tiktok.com</strong> ein.</li>
+                            <li>Drücke <strong>F12</strong> -> <strong>Anwendung</strong> -> <strong>Cookies</strong> -> <strong>tiktok.com</strong>.</li>
+                            <li>Kopiere den Wert des Cookies namens <code>sessionid</code> und füge ihn oben ein.</li>
+                        </ol>
+                    </div>
+                </div>
+            </details>
+
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 8px 0;">
+
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                Post Details
+            </h2>
+
+            <div class="form-group">
+                <label for="caption">Beschreibung / Caption</label>
+                <textarea id="caption" placeholder="Schreibe etwas Cooles für dein Video... (Dateiname wird beim Upload gelöscht)"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Hashtags</label>
+                <div class="hashtag-input-row">
+                    <div class="hashtag-input-wrapper">
+                        <span class="hashtag-input-prefix">#</span>
+                        <input type="text" id="hashtagInput" placeholder="fyp" autocomplete="off">
+                    </div>
+                    <button type="button" id="btnAddTag" class="btn-action">Hinzufügen</button>
+                </div>
+                <div class="tags-container" id="tagsContainer">
+                    <!-- Dynamic tag badges -->
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Beliebte Presets</label>
+                <div class="preset-tags" id="presetTags">
+                    <span class="preset-tag">#fyp</span>
+                    <span class="preset-tag">#viral</span>
+                    <span class="preset-tag">#twitch</span>
+                    <span class="preset-tag">#gaming</span>
+                    <span class="preset-tag">#funny</span>
+                    <span class="preset-tag">#highlight</span>
+                    <span class="preset-tag">#rohat</span>
+                </div>
+            </div>
+
+            <div class="toggle-row">
+                <div class="toggle-details">
+                    <span class="toggle-title">Sofort Veröffentlichen</span>
+                    <span class="toggle-desc">Video direkt posten statt als Entwurf speichern</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="autoPublish" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <button id="btnUpload" class="btn-primary" disabled>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Upload auf TikTok starten
+            </button>
+        </div>
+
+        <!-- Right Column: Video Drag-Drop & Logs -->
+        <div class="card" style="gap: 20px;">
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 8 6 4-6 4Z"/></svg>
+                Video-Datei & Upload-Status
+            </h2>
+
+            <!-- Dropzone -->
+            <div class="dropzone" id="dropzone">
+                <input type="file" id="fileInput" accept="video/mp4,video/quicktime" style="display: none;">
+                <div class="dropzone-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><polyline points="11 3 11 11 14 11 14 3"/></svg>
+                </div>
+                <div class="dropzone-text">
+                    <span class="dropzone-title">Video hierhin ziehen oder klicken</span>
+                    <span class="dropzone-desc">Unterstützt .mp4 und .mov</span>
+                </div>
+            </div>
+
+            <!-- Preview -->
+            <div class="preview-container" id="previewContainer">
+                <button class="preview-remove-btn" id="btnRemovePreview">×</button>
+                <video class="preview-video" id="previewVideo" controls muted></video>
+            </div>
+
+            <!-- File info -->
+            <div class="file-info" id="fileInfo">
+                <span id="fileName" style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 75%;">video.mp4</span>
+                <span id="fileSize" style="color: var(--text-muted); font-size: 12px;">0.0 MB</span>
+            </div>
+
+            <!-- Console Log -->
+            <div class="console-container">
+                <div class="console-header">
+                    <span>Aktivitäts-Log</span>
+                    <span class="pulse-badge status-idle" id="statusBadge">Bereit</span>
+                </div>
+                <div class="console-body" id="consoleLogs">
+                    <div class="log-line text-muted">[Info] Ziehe ein Video rein und klicke auf Upload...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        if (window.self !== window.top) {
+            document.body.classList.add('in-iframe');
+        }
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewVideo = document.getElementById('previewVideo');
+        const btnRemovePreview = document.getElementById('btnRemovePreview');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        
+        const tiktokSessionId = document.getElementById('tiktokSessionId');
+        const btnSaveSession = document.getElementById('btnSaveSession');
+        const sessionStatus = document.getElementById('sessionStatus');
+        const sessionStatusText = document.getElementById('sessionStatusText');
+
+        const caption = document.getElementById('caption');
+        const hashtagInput = document.getElementById('hashtagInput');
+        const btnAddTag = document.getElementById('btnAddTag');
+        const tagsContainer = document.getElementById('tagsContainer');
+        const presetTags = document.getElementById('presetTags');
+        const autoPublish = document.getElementById('autoPublish');
+        const btnUpload = document.getElementById('btnUpload');
+        
+        const statusBadge = document.getElementById('statusBadge');
+        const consoleLogs = document.getElementById('consoleLogs');
+
+        // QR elements
+        const btnLoadQr = document.getElementById('btnLoadQr');
+        const btnLoadQrText = document.getElementById('btnLoadQrText');
+        const qrContainer = document.getElementById('qrContainer');
+        const qrImage = document.getElementById('qrImage');
+        const qrCodeSpinner = document.getElementById('qrCodeSpinner');
+        const qrStatusLabel = document.getElementById('qrStatusLabel');
+        const btnDebugQr = document.getElementById('btnDebugQr');
+        const debugQrImgContainer = document.getElementById('debugQrImgContainer');
+        const debugQrImage = document.getElementById('debugQrImage');
+        let qrStatusInterval = null;
+
+        let selectedFile = null;
+        let hashtags = [];
+        let pollingInterval = null;
+
+        const tiktokAccountSelect = document.getElementById('tiktokAccountSelect');
+        const newAccountInput = document.getElementById('newAccountInput');
+        const btnToggleNewAccount = document.getElementById('btnToggleNewAccount');
+        const btnDeleteAccount = document.getElementById('btnDeleteAccount');
+
+        // Load connected accounts
+        async function loadAccountsList(selectedName = null) {
+            try {
+                const res = await fetch('api/tiktok/accounts');
+                const data = await res.json();
+                if (data.success && data.accounts) {
+                    const currentVal = selectedName || tiktokAccountSelect.value || 'default';
+                    tiktokAccountSelect.innerHTML = '';
+                    data.accounts.forEach(acc => {
+                        const opt = document.createElement('option');
+                        opt.value = acc;
+                        opt.textContent = acc === 'default' ? 'Standard-Konto (default)' : acc;
+                        tiktokAccountSelect.appendChild(opt);
+                    });
+                    
+                    // Add standard option if missing
+                    if (!data.accounts.includes('default')) {
+                        const opt = document.createElement('option');
+                        opt.value = 'default';
+                        opt.textContent = 'Standard-Konto (default)';
+                        tiktokAccountSelect.appendChild(opt);
+                    }
+                    
+                    tiktokAccountSelect.value = currentVal;
+                }
+            } catch (err) {
+                console.error('Failed to load accounts list', err);
+            }
+        }
+
+        btnToggleNewAccount.addEventListener('click', () => {
+            if (newAccountInput.style.display === 'none') {
+                newAccountInput.style.display = 'block';
+                tiktokAccountSelect.style.display = 'none';
+                btnToggleNewAccount.textContent = 'Abbrechen';
+                newAccountInput.focus();
+            } else {
+                newAccountInput.style.display = 'none';
+                tiktokAccountSelect.style.display = 'block';
+                btnToggleNewAccount.textContent = '+ Neu';
+                newAccountInput.value = '';
+            }
+        });
+
+        function getActiveAccount() {
+            if (newAccountInput.style.display !== 'none' && newAccountInput.value.trim()) {
+                return newAccountInput.value.trim().replace(/[^a-zA-Z0-9_]/g, '') || 'default';
+            }
+            return tiktokAccountSelect.value || 'default';
+        }
+
+        tiktokAccountSelect.addEventListener('change', () => {
+            checkSessionStatus();
+        });
+
+        btnDeleteAccount.addEventListener('click', async () => {
+            const account = getActiveAccount();
+            if (!confirm(`TikTok-Verbindung für "${account}" wirklich trennen?`)) return;
+            
+            try {
+                const res = await fetch('api/tiktok/disconnect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ account })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert(`TikTok-Verbindung für "${account}" wurde getrennt.`);
+                    // reset new account input if visible
+                    newAccountInput.style.display = 'none';
+                    tiktokAccountSelect.style.display = 'block';
+                    btnToggleNewAccount.textContent = '+ Neu';
+                    newAccountInput.value = '';
+                    
+                    await loadAccountsList('default');
+                    checkSessionStatus();
+                }
+            } catch (err) {
+                alert('Fehler beim Trennen: ' + err.message);
+            }
+        });
+
+        // Load Session ID Config status
+        async function checkSessionStatus() {
+            const account = getActiveAccount();
+            try {
+                const res = await fetch(`api/tiktok/config?account=${account}`);
+                const data = await res.json();
+                if (data.hasSession) {
+                    sessionStatus.classList.add('active');
+                    sessionStatusText.textContent = 'Sitzung Aktiviert 🟢';
+                    tiktokSessionId.placeholder = data.tiktokSessionId;
+                } else {
+                    sessionStatus.classList.remove('active');
+                    sessionStatusText.textContent = 'Keine aktive Sitzung 🔴';
+                    tiktokSessionId.placeholder = 'sessionid-Wert einfügen';
+                }
+            } catch (err) {
+                console.error('Failed to load session status', err);
+            }
+        }
+
+        // Save session id
+        btnSaveSession.addEventListener('click', async () => {
+            const val = tiktokSessionId.value.trim();
+            if (!val) return;
+            const account = getActiveAccount();
+            try {
+                const res = await fetch('api/tiktok/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tiktokSessionId: val, account })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert(`TikTok SessionID für "${account}" erfolgreich gespeichert!`);
+                    tiktokSessionId.value = '';
+                    
+                    // reset new account input if visible
+                    newAccountInput.style.display = 'none';
+                    tiktokAccountSelect.style.display = 'block';
+                    btnToggleNewAccount.textContent = '+ Neu';
+                    newAccountInput.value = '';
+
+                    await loadAccountsList(account);
+                    checkSessionStatus();
+                }
+            } catch (err) {
+                alert('Fehler beim Speichern: ' + err.message);
+            }
+        });
+
+        // QR Code Login Action
+        btnLoadQr.addEventListener('click', async () => {
+            const account = getActiveAccount();
+            btnLoadQr.disabled = true;
+            btnLoadQrText.textContent = 'Verbinde mit TikTok...';
+            qrContainer.style.display = 'flex';
+            qrImage.style.display = 'none';
+            qrCodeSpinner.style.display = 'block';
+            qrStatusLabel.textContent = 'Erstelle Login-Sitzung...';
+            debugQrImgContainer.style.display = 'none';
+            debugQrImage.src = '';
+
+            if (qrStatusInterval) {
+                clearInterval(qrStatusInterval);
+                qrStatusInterval = null;
+            }
+
+            try {
+                const res = await fetch(`api/tiktok/qr/start?account=${account}`, { method: 'POST' });
+                const data = await res.json();
+                
+                if (data.success && data.qrCode) {
+                    qrImage.src = data.qrCode;
+                    qrImage.style.display = 'block';
+                    qrCodeSpinner.style.display = 'none';
+                    qrStatusLabel.innerHTML = `Bitte scanne den QR-Code jetzt mit deinem Handy ein für <strong>${account}</strong>. <br><span style="color: var(--secondary);">Warte auf Bestätigung...</span>`;
+                    btnLoadQrText.textContent = 'QR-Code neu laden';
+                    btnLoadQr.disabled = false;
+
+                    // Start polling status
+                    qrStatusInterval = setInterval(async () => {
+                        try {
+                            const statusRes = await fetch(`api/tiktok/qr/status?account=${account}`);
+                            const statusData = await statusRes.json();
+                            
+                            if (statusData.status === 'logged_in') {
+                                clearInterval(qrStatusInterval);
+                                qrStatusInterval = null;
+                                qrContainer.style.display = 'none';
+                                alert(`Erfolgreich eingeloggt! TikTok-Konto "${account}" wurde verbunden.`);
+                                
+                                // reset new account input if visible
+                                newAccountInput.style.display = 'none';
+                                tiktokAccountSelect.style.display = 'block';
+                                btnToggleNewAccount.textContent = '+ Neu';
+                                newAccountInput.value = '';
+
+                                await loadAccountsList(account);
+                                checkSessionStatus();
+                            } else if (statusData.status === 'inactive') {
+                                clearInterval(qrStatusInterval);
+                                qrStatusInterval = null;
+                                qrContainer.style.display = 'none';
+                                qrStatusLabel.textContent = 'Sitzung abgelaufen.';
+                                btnLoadQrText.textContent = 'QR-Code laden';
+                            }
+                        } catch (e) {
+                            console.error('Failed to poll status', e);
+                        }
+                    }, 2000);
+
+                } else {
+                    throw new Error(data.error || 'Fehler beim Laden des QR-Codes');
+                }
+            } catch (err) {
+                alert('Fehler beim Starten des QR-Logins: ' + err.message);
+                qrContainer.style.display = 'none';
+                btnLoadQrText.textContent = 'QR-Code laden';
+                btnLoadQr.disabled = false;
+            }
+        });
+
+        // Debug Show Screen action
+        btnDebugQr.addEventListener('click', async () => {
+            const account = getActiveAccount();
+            try {
+                btnDebugQr.textContent = 'Lade Server-Screenshot...';
+                const res = await fetch(`api/tiktok/qr/screenshot?account=${account}`);
+                const data = await res.json();
+                if (data.success && data.image) {
+                    debugQrImage.src = data.image;
+                    debugQrImgContainer.style.display = 'flex';
+                    btnDebugQr.textContent = 'Server-Bild aktualisieren (Debug)';
+                } else {
+                    alert('Fehler: ' + (data.error || 'Konnte Bild nicht laden'));
+                    btnDebugQr.textContent = 'Server-Bild anzeigen (Debug)';
+                }
+            } catch (err) {
+                alert('Fehler beim Abrufen des Debug-Screenshots: ' + err.message);
+                btnDebugQr.textContent = 'Server-Bild anzeigen (Debug)';
+            }
+        });
+
+        // Custom tags handling
+        function renderTags() {
+            tagsContainer.innerHTML = '';
+            if (hashtags.length === 0) {
+                tagsContainer.innerHTML = '<span style="color: var(--text-muted); font-size: 13px; font-style: italic;">Keine Hashtags hinzugefügt</span>';
+                return;
+            }
+            hashtags.forEach((tag, idx) => {
+                const badge = document.createElement('span');
+                badge.className = 'tag-badge';
+                badge.innerHTML = `
+                    #${tag}
+                    <span class="tag-remove" onclick="removeTag(${idx})">×</span>
+                `;
+                tagsContainer.appendChild(badge);
+            });
+        }
+
+        window.removeTag = function(idx) {
+            hashtags.splice(idx, 1);
+            renderTags();
+        };
+
+        function addHashtag(tag) {
+            const clean = tag.replace(/#/g, '').trim().toLowerCase();
+            if (clean && !hashtags.includes(clean)) {
+                hashtags.push(clean);
+                renderTags();
+            }
+            hashtagInput.value = '';
+        }
+
+        btnAddTag.addEventListener('click', () => addHashtag(hashtagInput.value));
+        hashtagInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addHashtag(hashtagInput.value);
+        });
+        presetTags.addEventListener('click', (e) => {
+            if (e.target.classList.contains('preset-tag')) {
+                addHashtag(e.target.textContent);
+            }
+        });
+
+        renderTags();
+
+        // Dropzone interactions
+        dropzone.addEventListener('click', () => fileInput.click());
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                handleFileSelect(fileInput.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            if (!file.type.startsWith('video/')) {
+                alert('Bitte wähle nur Videodateien (.mp4 oder .mov) aus.');
+                return;
+            }
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+
+            const url = URL.createObjectURL(file);
+            previewVideo.src = url;
+            
+            dropzone.style.display = 'none';
+            previewContainer.style.display = 'block';
+            fileInfo.style.display = 'flex';
+            btnUpload.disabled = false;
+        }
+
+        btnRemovePreview.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectedFile = null;
+            previewVideo.removeAttribute('src');
+            previewVideo.load();
+            
+            dropzone.style.display = 'flex';
+            previewContainer.style.display = 'none';
+            fileInfo.style.display = 'none';
+            btnUpload.disabled = true;
+        });
+
+        function addLog(msg, type = 'info') {
+            const time = new Date().toLocaleTimeString('de-DE');
+            const logLine = document.createElement('div');
+            let classname = 'log-line';
+            let prefix = '[Info]';
+            if (type === 'error') {
+                classname += ' log-error';
+                prefix = '[Fehler]';
+            } else if (type === 'success') {
+                classname += ' log-success';
+                prefix = '[Erfolg]';
+            } else if (type === 'warning') {
+                classname += ' log-warning';
+                prefix = '[Warnung]';
+            } else {
+                classname += ' text-muted';
+            }
+            logLine.className = classname;
+            logLine.textContent = `[${time}] ${prefix} ${msg}`;
+            consoleLogs.appendChild(logLine);
+            consoleLogs.scrollTop = consoleLogs.scrollHeight;
+        }
+
+        // Trigger Upload
+        btnUpload.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            const account = tiktokAccountSelect.value || 'default';
+            const formData = new FormData();
+            formData.append('video', selectedFile);
+            formData.append('caption', caption.value.trim());
+            formData.append('hashtags', JSON.stringify(hashtags));
+            formData.append('autoPublish', autoPublish.checked);
+            formData.append('tiktokAccount', account);
+
+            btnUpload.disabled = true;
+            consoleLogs.innerHTML = '';
+            addLog(`Übertrage Videodatei an den Server für Account "${account}" (das kann je nach Dateigröße kurz dauern)...`);
+            
+            statusBadge.textContent = 'Läuft';
+            statusBadge.className = 'pulse-badge status-active';
+
+            try {
+                const response = await fetch('api/tiktok/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const resData = await response.json();
+                if (!response.ok) {
+                    throw new Error(resData.error || 'Serverfehler beim Initialisieren.');
+                }
+                addLog('Video erfolgreich an Server übertragen. Starte Automatisierungs-Skript...');
+                startStatusPolling();
+            } catch (err) {
+                addLog(err.message, 'error');
+                statusBadge.textContent = 'Fehler';
+                statusBadge.className = 'pulse-badge status-error';
+                btnUpload.disabled = false;
+            }
+        });
+
+        function startStatusPolling() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            let lastState = '';
+            pollingInterval = setInterval(async () => {
+                try {
+                    const res = await fetch('api/tiktok/status');
+                    const status = await res.json();
+                    if (status.state !== lastState) {
+                        lastState = status.state;
+                        let logType = 'info';
+                        if (status.state === 'error') logType = 'error';
+                        if (status.state === 'done') logType = 'success';
+                        addLog(status.message, logType);
+                    }
+                    if (status.state === 'done') {
+                        statusBadge.textContent = 'Erfolg';
+                        statusBadge.className = 'pulse-badge status-success';
+                        clearInterval(pollingInterval);
+                        btnUpload.disabled = false;
+                    } else if (status.state === 'error') {
+                        statusBadge.textContent = 'Fehler';
+                        statusBadge.className = 'pulse-badge status-error';
+                        clearInterval(pollingInterval);
+                        btnUpload.disabled = false;
+                    }
+                } catch (err) {
+                    console.error('Polling error:', err);
+                }
+            }, 1000);
+        }
+
+        // Initial setup
+        loadAccountsList().then(() => {
+            checkSessionStatus();
+        });
+        setInterval(checkSessionStatus, 5000);
+    </script>
+</body>
+</html>

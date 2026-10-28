@@ -1,0 +1,1672 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <title>Clipper Team Manager - Control Panel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDKs & App Store -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+    <script src="../public/app-config.js"></script>
+    <script src="../public/realtime-store.js?v=9"></script>
+
+    <style>
+        :root {
+            --bg: #06070a;
+            --bg-card: rgba(13, 15, 23, 0.85);
+            --bg-elevated: #141724;
+            --bg-glass: rgba(20, 23, 36, 0.65);
+            --border: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(255, 255, 255, 0.14);
+            --text: #f0f0f2;
+            --text-muted: #7c8db5;
+            --accent: #f5c518;
+            --accent-hover: #ffd84d;
+            --accent-cyan: #22d3ee;
+            --accent-purple: #a78bfa;
+            --accent-green: #34d399;
+            --accent-red: #f87171;
+            --accent-grad: linear-gradient(135deg, #f5c518 0%, #ff9900 100%);
+            --glow-gold: rgba(245, 197, 24, 0.15);
+            --glow-cyan: rgba(34, 211, 238, 0.12);
+            --glow-purple: rgba(167, 139, 250, 0.12);
+            --glow-green: rgba(52, 211, 153, 0.12);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 28px;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -120px; right: -120px;
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(245, 197, 24, 0.06) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -150px; left: -100px;
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(34, 211, 238, 0.05) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .title-group h1 {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            display: flex; align-items: center; gap: 10px;
+            background: linear-gradient(135deg, #fff 0%, #c8ccd8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title-group p {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-top: 4px;
+            font-weight: 400;
+        }
+
+        .top-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .btn {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 9px 16px;
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-1px);
+            background: rgba(20, 23, 36, 0.95);
+        }
+
+        .btn:active { transform: translateY(0); }
+
+        .btn-primary {
+            background: var(--accent-grad);
+            color: #000;
+            border: none;
+            box-shadow: 0 4px 15px var(--glow-gold);
+            font-weight: 700;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 6px 24px rgba(245, 197, 24, 0.35);
+            filter: brightness(1.05);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-danger {
+            background: rgba(248, 113, 113, 0.1);
+            color: var(--accent-red);
+            border: 1px solid rgba(248, 113, 113, 0.2);
+        }
+        .btn-danger:hover { background: rgba(248, 113, 113, 0.18); }
+
+        .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 22px 24px;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(12px);
+            transition: var(--transition);
+        }
+
+        .kpi-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; bottom: 0;
+            width: 3px;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .kpi-card::after {
+            content: '';
+            position: absolute;
+            top: -30px; right: -30px;
+            width: 100px; height: 100px;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .kpi-card:hover::after { opacity: 1; }
+
+        .kpi-accent::before { background: var(--accent); }
+        .kpi-accent::after { background: var(--glow-gold); }
+        .kpi-cyan::before { background: var(--accent-cyan); }
+        .kpi-cyan::after { background: var(--glow-cyan); }
+        .kpi-purple::before { background: var(--accent-purple); }
+        .kpi-purple::after { background: var(--glow-purple); }
+        .kpi-green::before { background: var(--accent-green); }
+        .kpi-green::after { background: var(--glow-green); }
+
+        .kpi-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 800;
+            color: #fff;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .kpi-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            font-weight: 400;
+        }
+
+        .subtabs {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-elevated);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+        }
+
+        .subtab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px 18px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: var(--transition);
+            flex: 1;
+            text-align: center;
+        }
+
+        .subtab-btn:hover { color: #fff; background: rgba(255,255,255,0.04); }
+
+        .subtab-btn.active {
+            color: #000;
+            background: var(--accent-grad);
+            box-shadow: 0 2px 8px var(--glow-gold);
+            font-weight: 700;
+        }
+
+        .tab-section { display: none; animation: fadeUp 0.3s ease; }
+        .tab-section.active { display: block; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .panel-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(12px);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .panel-header h2 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .table-wrap { overflow-x: auto; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        th {
+            color: var(--text-muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.8px;
+            white-space: nowrap;
+        }
+
+        tr { transition: background 0.15s ease; }
+        tr:hover td { background: rgba(255,255,255,0.015); }
+        tr:last-child td { border-bottom: none; }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-active {
+            background: rgba(52, 211, 153, 0.12);
+            color: var(--accent-green);
+        }
+        .status-active::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-green); }
+
+        .status-inactive {
+            background: rgba(124, 141, 181, 0.12);
+            color: var(--text-muted);
+        }
+        .status-inactive::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); }
+
+        .actions-cell { display: flex; gap: 6px; flex-wrap: nowrap; }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: var(--text-muted);
+        }
+        .empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+        .empty-state p { font-size: 14px; max-width: 360px; margin: 0 auto; line-height: 1.6; }
+
+        /* Leaderboard Preview */
+        .lb-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            transition: var(--transition);
+        }
+        .lb-card:hover { border-color: var(--border-hover); transform: translateX(4px); }
+
+        .lb-rank {
+            font-size: 24px;
+            font-weight: 900;
+            min-width: 44px;
+            text-align: center;
+        }
+        .lb-rank.gold { color: var(--accent); text-shadow: 0 0 12px var(--glow-gold); }
+        .lb-rank.silver { color: #c0c0c0; }
+        .lb-rank.bronze { color: #cd7f32; }
+
+        .lb-info { flex: 1; }
+        .lb-name { font-weight: 700; font-size: 15px; color: #fff; }
+        .lb-handle { font-size: 12px; color: var(--text-muted); }
+
+        .lb-stats { display: flex; gap: 20px; align-items: center; }
+
+        .lb-stat-item { text-align: right; }
+        .lb-stat-value { font-size: 16px; font-weight: 700; color: #fff; }
+        .lb-stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .quota-bar {
+            height: 4px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 4px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        .quota-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: var(--accent-grad);
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .quota-bar-fill.complete { background: linear-gradient(135deg, var(--accent-green), #10b981); }
+
+        .lb-timeframe-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+        .lb-tf-btn {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .lb-tf-btn:hover { color: #fff; border-color: var(--border-hover); }
+        .lb-tf-btn.active {
+            background: var(--accent-grad);
+            color: #000;
+            border-color: transparent;
+            font-weight: 700;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+
+        .modal-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-hover);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 480px;
+            padding: 32px;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.7);
+            transform: scale(0.95) translateY(10px);
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(20px);
+        }
+
+        .modal-overlay.active .modal-card {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-card h2 {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        .form-group { margin-bottom: 18px; }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-control {
+            width: 100%;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 11px 14px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--glow-gold);
+        }
+
+        select.form-control {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%237c8db5' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 36px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-hover);
+            border-radius: 12px;
+            padding: 14px 20px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 2000;
+            display: flex; align-items: center; gap: 10px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Loading Spinner */
+        .loading-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            gap: 16px;
+        }
+
+        .spinner {
+            width: 32px; height: 32px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ─── Avatars ─── */
+        .avatar {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--border);
+            flex-shrink: 0;
+            background: var(--bg-elevated);
+        }
+
+        .avatar-fallback {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            background: var(--accent-grad);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 16px; color: #000;
+            flex-shrink: 0;
+            border: 2px solid rgba(245, 197, 24, 0.3);
+        }
+
+        .clipper-cell {
+            display: flex; align-items: center; gap: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .clipper-cell:hover { opacity: 0.8; }
+        .clipper-cell .clipper-name { font-weight: 700; color: #fff; }
+        .clipper-cell .clipper-handle-sub { font-size: 11px; color: var(--text-muted); }
+
+        /* ─── Clipper Detail Modal ─── */
+        .detail-modal {
+            position: fixed;
+            top: 0; right: 0; bottom: 0;
+            width: min(520px, 100vw);
+            background: var(--bg-card);
+            border-left: 1px solid var(--border);
+            backdrop-filter: blur(24px);
+            z-index: 1100;
+            transform: translateX(100%);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            box-shadow: -16px 0 48px rgba(0,0,0,0.5);
+        }
+        .detail-modal.open { transform: translateX(0); }
+
+        .detail-backdrop {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1099;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .detail-backdrop.open { opacity: 1; pointer-events: auto; }
+
+        .detail-header {
+            padding: 28px 24px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 16px;
+            position: sticky; top: 0;
+            background: var(--bg-card);
+            backdrop-filter: blur(24px);
+            z-index: 2;
+        }
+
+        .detail-avatar {
+            width: 64px; height: 64px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--accent);
+            box-shadow: 0 0 20px var(--glow-gold);
+        }
+        .detail-avatar-fallback {
+            width: 64px; height: 64px;
+            border-radius: 50%;
+            background: var(--accent-grad);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 900; font-size: 28px; color: #000;
+            border: 3px solid rgba(245, 197, 24, 0.4);
+            box-shadow: 0 0 20px var(--glow-gold);
+        }
+
+        .detail-info { flex: 1; }
+        .detail-name { font-size: 20px; font-weight: 800; color: #fff; }
+        .detail-handle { font-size: 13px; color: var(--accent-cyan); }
+        .detail-handle a { color: inherit; text-decoration: none; }
+        .detail-handle a:hover { text-decoration: underline; }
+
+        .detail-close {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex; align-items: center; justify-content: center;
+            transition: var(--transition);
+        }
+        .detail-close:hover { color: #fff; border-color: var(--border-hover); }
+
+        .detail-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .detail-stat {
+            text-align: center;
+            padding: 14px 8px;
+            background: var(--bg-elevated);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        .detail-stat-value { font-size: 22px; font-weight: 800; color: #fff; }
+        .detail-stat-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+        .detail-section {
+            padding: 20px 24px;
+        }
+        .detail-section h3 {
+            font-size: 14px; font-weight: 700; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.8px;
+            margin-bottom: 14px;
+        }
+
+        .detail-video-card {
+            display: flex; align-items: center; gap: 14px;
+            padding: 14px 16px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            transition: var(--transition);
+        }
+        .detail-video-card:hover { border-color: var(--border-hover); transform: translateX(3px); }
+
+        .dv-icon {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            background: rgba(34, 211, 238, 0.1);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .dv-info { flex: 1; min-width: 0; }
+        .dv-title { font-weight: 600; font-size: 13px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .dv-date { font-size: 11px; color: var(--text-muted); }
+
+        .dv-views { text-align: right; flex-shrink: 0; }
+        .dv-views-value { font-size: 15px; font-weight: 700; color: #fff; }
+        .dv-views-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
+
+        .dv-link {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            font-size: 16px;
+            flex-shrink: 0;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        .dv-link:hover { opacity: 1; }
+
+        .detail-tiktok-btn {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #25f4ee 0%, #fe2c55 100%);
+            color: #fff;
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 14px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-bottom: 16px;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+        .detail-tiktok-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+        .lb-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); flex-shrink: 0; }
+        .lb-avatar-fallback { width: 38px; height: 38px; border-radius: 50%; background: var(--accent-grad); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; color: #000; flex-shrink: 0; }
+
+        @media (max-width: 768px) {
+            body { padding: 16px; }
+            .top-bar { flex-direction: column; gap: 14px; align-items: flex-start; }
+            .subtabs { flex-wrap: wrap; }
+            .subtab-btn { font-size: 12px; padding: 8px 12px; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .kpi-value { font-size: 24px; }
+            .detail-modal { width: 100vw; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="title-group">
+                <h1>🎬 Clipper Team Manager</h1>
+                <p>Verwalte dein Clipper-Team, verfolge Uploads &amp; Aufrufzahlen in Echtzeit</p>
+            </div>
+            <div class="top-actions">
+                <button class="btn btn-primary" id="btnOpenAddClipper">+ Clipper Hinzufügen</button>
+                <button class="btn" id="btnCopyPublicUrl">🔗 Leaderboard Link</button>
+            </div>
+        </div>
+
+        <!-- KPI Grid -->
+        <div class="kpi-grid">
+            <div class="kpi-card kpi-accent">
+                <div class="kpi-label">Team Mitglieder</div>
+                <div class="kpi-value" id="kpiActiveClippers">—</div>
+                <div class="kpi-sub">Aktive Content Clipper</div>
+            </div>
+            <div class="kpi-card kpi-cyan">
+                <div class="kpi-label">Uploads (Woche)</div>
+                <div class="kpi-value" id="kpiWeeklyClips">—</div>
+                <div class="kpi-sub">Gepostete Videos diese Woche</div>
+            </div>
+            <div class="kpi-card kpi-purple">
+                <div class="kpi-label">Gesamt Aufrufe</div>
+                <div class="kpi-value" id="kpiTotalViews">—</div>
+                <div class="kpi-sub">Kumulierte Views aller Videos</div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="subtabs">
+            <button class="subtab-btn active" data-tab="tab-roster">👥 Roster</button>
+            <button class="subtab-btn" data-tab="tab-videos">📹 Video Log</button>
+            <button class="subtab-btn" data-tab="tab-leaderboard">🏆 Leaderboard</button>
+            <button class="subtab-btn" data-tab="tab-settings">⚙️ Einstellungen</button>
+        </div>
+
+        <!-- Tab 1: Clipper Roster -->
+        <div class="tab-section active" id="tab-roster">
+            <div class="panel-box">
+                <div class="panel-header">
+                    <h2>Clipper Roster &amp; Soll-Quoten</h2>
+                </div>
+                <div id="rosterContent">
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <p style="color: var(--text-muted); font-size: 13px;">Verbinde mit Firebase...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Video Log -->
+        <div class="tab-section" id="tab-videos">
+            <div class="panel-box">
+                <div class="panel-header">
+                    <h2>Video Log &amp; View Tracker</h2>
+                    <button class="btn btn-primary" id="btnOpenAddVideo">+ Video Loggen</button>
+                </div>
+                <div id="videosContent">
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <p style="color: var(--text-muted); font-size: 13px;">Lade Video-Daten...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Leaderboard Preview -->
+        <div class="tab-section" id="tab-leaderboard">
+            <div class="panel-box">
+                <div class="panel-header">
+                    <h2>🏆 Performance Leaderboard</h2>
+                </div>
+                <div class="lb-timeframe-tabs">
+                    <button class="lb-tf-btn active" data-tf="week">Diese Woche</button>
+                    <button class="lb-tf-btn" data-tf="month">Dieser Monat</button>
+                    <button class="lb-tf-btn" data-tf="all">Gesamt</button>
+                </div>
+                <div id="leaderboardPreviewContainer"></div>
+            </div>
+        </div>
+
+        <!-- Tab 4: Settings -->
+        <div class="tab-section" id="tab-settings">
+            <div class="panel-box">
+                <div class="panel-header">
+                    <h2>Clipper Team Einstellungen</h2>
+                </div>
+                <form id="settingsForm" style="max-width: 600px;">
+                    <div class="form-group">
+                        <label>Streamer Name</label>
+                        <input type="text" class="form-control" id="cfgStreamerName" placeholder="z. B. MinusND">
+                    </div>
+                    <div class="form-group">
+                        <label>Standard Wochenziel pro Clipper (Videos)</label>
+                        <input type="number" class="form-control" id="cfgQuotaTarget" value="7" min="1">
+                    </div>
+                    <button type="submit" class="btn btn-primary">💾 Einstellungen Speichern</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add Clipper -->
+    <div class="modal-overlay" id="addClipperModal">
+        <div class="modal-card">
+            <h2>✨ Clipper Hinzufügen</h2>
+            <form id="addClipperForm">
+                <div class="form-group">
+                    <label>Name des Clippers</label>
+                    <input type="text" class="form-control" id="clipperName" placeholder="z. B. Alex" required>
+                </div>
+                <div class="form-group">
+                    <label>TikTok Handle (@username)</label>
+                    <input type="text" class="form-control" id="clipperHandle" placeholder="@alex_clips">
+                </div>
+                <div class="form-group">
+                    <label>TikTok / Kanal URL</label>
+                    <input type="url" class="form-control" id="clipperUrl" placeholder="https://www.tiktok.com/@alex_clips">
+                </div>
+                <div class="form-group">
+                    <label>Profilbild URL (optional)</label>
+                    <input type="url" class="form-control" id="clipperProfileImage" placeholder="https://... (TikTok Profilbild URL)">
+                </div>
+                <div class="form-group">
+                    <label>Wochen-Ziel (Soll-Uploads)</label>
+                    <input type="number" class="form-control" id="clipperQuota" value="7" min="1" required>
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-top: 12px; margin-bottom: 16px;">
+                    <input type="checkbox" id="clipperInTeam" checked style="width: 18px; height: 18px; cursor: pointer;">
+                    <label for="clipperInTeam" style="margin: 0; cursor: pointer; font-weight: 500; font-size: 13px;">Offizielles Team-Mitglied</label>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn" id="btnCloseAddClipper">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary" id="btnSaveClipper">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add Video -->
+    <div class="modal-overlay" id="addVideoModal">
+        <div class="modal-card">
+            <h2>📹 Video Loggen</h2>
+            <form id="addVideoForm">
+                <div class="form-group">
+                    <label>Clipper auswählen</label>
+                    <select class="form-control" id="videoClipperSelect" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Video URL / Link</label>
+                    <input type="url" class="form-control" id="videoUrl" placeholder="https://www.tiktok.com/@username/video/..." required>
+                </div>
+                <div class="form-group">
+                    <label>Titel / Kurzbeschreibung</label>
+                    <input type="text" class="form-control" id="videoTitle" placeholder="z. B. Fortnite Clutch Clip">
+                </div>
+                <div class="form-group">
+                    <label>Aufrufzahl (Views)</label>
+                    <input type="number" class="form-control" id="videoViews" value="0" min="0" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn" id="btnCloseAddVideo">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary" id="btnSaveVideo">Video Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Clipper Detail Slide-In Panel -->
+    <div class="detail-backdrop" id="detailBackdrop"></div>
+    <div class="detail-modal" id="detailModal">
+        <div class="detail-header">
+            <div id="detailAvatarWrap"></div>
+            <div class="detail-info">
+                <div class="detail-name" id="detailName"></div>
+                <div class="detail-handle" id="detailHandle"></div>
+            </div>
+            <button class="detail-close" id="detailClose">✕</button>
+        </div>
+        <div class="detail-stats" id="detailStats"></div>
+        <div class="detail-section" style="border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 6px; border: 1px solid var(--border);">
+                <input type="checkbox" id="detailInTeamCheckbox" style="width: 18px; height: 18px; cursor: pointer;">
+                <label for="detailInTeamCheckbox" style="margin: 0; cursor: pointer; font-weight: 500; font-size: 13px;">Offizielles Team-Mitglied</label>
+            </div>
+            <button class="btn btn-primary" id="btnSyncTiktok" style="width: 100%; margin-bottom: 16px; justify-content: center; gap: 8px;">🔄 TikTok Daten synchronisieren</button>
+            <div id="detailTiktokBtn" style="margin-top: 10px;"></div>
+            <h3 style="margin-top: 20px;">📹 Hochgeladene Videos</h3>
+            <div id="detailVideosList"></div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ── Firebase Init ──
+        if (!firebase.apps.length && window.BINGO_CONFIG) {
+            firebase.initializeApp(window.BINGO_CONFIG.firebaseConfig);
+        }
+
+        // ── State ──
+        let streamId = null;
+        let clippersData = {};
+        let videosData = {};
+        let settingsData = {};
+        let isInitialized = false;
+        let leaderboardTimeframe = 'week';
+        let activeDetailClipperId = null;
+
+        // ── DOM Refs ──
+        const $ = id => document.getElementById(id);
+
+        // ── Toast System ──
+        function showToast(msg, duration = 3000) {
+            const t = $('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(t._timer);
+            t._timer = setTimeout(() => t.classList.remove('show'), duration);
+        }
+
+        // ── Stream ID Resolution (NO hardcoded default!) ──
+        function resolveStreamId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const raw = urlParams.get('stream') || urlParams.get('streamId');
+            if (raw && raw !== 'undefined' && raw !== 'null') return raw;
+
+            if (window.BingoStore && typeof window.BingoStore.getActiveStreamId === 'function') {
+                const sid = window.BingoStore.getActiveStreamId();
+                if (sid && sid !== 'undefined') return sid;
+            }
+
+            return null;
+        }
+
+        // ── Initialize Admin ──
+        function initAdmin(sid) {
+            if (!sid || sid === 'undefined' || sid === 'null') return;
+            if (isInitialized) {
+                if (streamId === sid) return;
+                // Different ID — detach old listeners, re-init
+                const db = firebase.database();
+                db.ref(`streams/${streamId}/data/clipper_team/settings`).off();
+                db.ref(`streams/${streamId}/data/clipper_team/clippers`).off();
+                db.ref(`streams/${streamId}/data/clipper_team/videos`).off();
+            }
+
+            streamId = sid;
+            isInitialized = true;
+            console.log('[ClipperAdmin] Initialized with streamId:', streamId);
+
+            const db = firebase.database();
+
+            // Settings
+            db.ref(`streams/${streamId}/data/clipper_team/settings`).on('value', snap => {
+                settingsData = snap.val() || {};
+                $('cfgStreamerName').value = settingsData.streamerName || '';
+                $('cfgQuotaTarget').value = settingsData.quotaTargetPerWeek || 7;
+                updateKPIs();
+                if (activeDetailClipperId) showClipperDetail(activeDetailClipperId);
+            });
+
+            // Clippers
+            db.ref(`streams/${streamId}/data/clipper_team/clippers`).on('value', snap => {
+                clippersData = snap.val() || {};
+                renderRoster();
+                updateClipperSelect();
+                updateKPIs();
+                renderLeaderboard();
+                if (activeDetailClipperId) showClipperDetail(activeDetailClipperId);
+            });
+
+            // Videos
+            db.ref(`streams/${streamId}/data/clipper_team/videos`).on('value', snap => {
+                videosData = snap.val() || {};
+                renderRoster();
+                renderVideos();
+                updateKPIs();
+                renderLeaderboard();
+                if (activeDetailClipperId) showClipperDetail(activeDetailClipperId);
+            });
+        }
+
+        // ── Multi-source Init (ordered by priority) ──
+        const resolvedId = resolveStreamId();
+        if (resolvedId) {
+            initAdmin(resolvedId);
+        }
+
+        // Parent window fallback (iframe in panel.html)
+        if (!isInitialized && window.parent && window.parent !== window) {
+            try {
+                const parentUser = window.parent.currentUser || (window.parent.firebase && window.parent.firebase.auth().currentUser);
+                if (parentUser && parentUser.uid) {
+                    initAdmin(parentUser.uid);
+                }
+            } catch(e) { /* cross-origin */ }
+        }
+
+        // Local Firebase Auth fallback
+        firebase.auth().onAuthStateChanged(user => {
+            if (user && user.uid && !isInitialized) {
+                initAdmin(user.uid);
+            }
+        });
+
+        // Parent postMessage listener
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'SET_STREAM_ID' && e.data.streamId) {
+                initAdmin(e.data.streamId);
+            }
+        });
+
+        // ── Subtabs Navigation ──
+        document.querySelectorAll('.subtab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+                btn.classList.add('active');
+                const tabEl = $(btn.dataset.tab);
+                if (tabEl) tabEl.classList.add('active');
+            });
+        });
+
+        // ── Leaderboard Timeframe Tabs ──
+        document.querySelectorAll('.lb-tf-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.lb-tf-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                leaderboardTimeframe = btn.dataset.tf;
+                renderLeaderboard();
+            });
+        });
+
+        // ── Modals ──
+        $('btnOpenAddClipper').addEventListener('click', () => $('addClipperModal').classList.add('active'));
+        $('btnCloseAddClipper').addEventListener('click', () => $('addClipperModal').classList.remove('active'));
+        $('btnOpenAddVideo').addEventListener('click', () => $('addVideoModal').classList.add('active'));
+        $('btnCloseAddVideo').addEventListener('click', () => $('addVideoModal').classList.remove('active'));
+
+        // Close modals on overlay click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) overlay.classList.remove('active');
+            });
+        });
+
+        // ── Copy Public URL ──
+        $('btnCopyPublicUrl').addEventListener('click', () => {
+            if (!streamId) { showToast('⚠️ Noch nicht verbunden'); return; }
+            const publicUrl = `${window.location.origin}/public/clipper-leaderboard.html?stream=${streamId}`;
+            navigator.clipboard.writeText(publicUrl).then(() => {
+                showToast('🔗 Leaderboard Link kopiert!');
+            }).catch(() => showToast('⚠️ Link konnte nicht kopiert werden'));
+        });
+
+        // ── Helper: Week/Month Start ──
+        function getWeekStart() {
+            const now = new Date();
+            const day = now.getDay();
+            const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+            const monday = new Date(now.getFullYear(), now.getMonth(), diff);
+            monday.setHours(0, 0, 0, 0);
+            return monday.getTime();
+        }
+
+        function getMonthStart() {
+            const now = new Date();
+            return new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+        }
+
+        // ── Update KPIs ──
+        function updateKPIs() {
+            const activeCount = Object.values(clippersData).filter(c => c.status !== 'inactive').length;
+
+            const weekStart = getWeekStart();
+            let weeklyClips = 0;
+            let totalViews = 0;
+
+            Object.values(videosData).forEach(v => {
+                totalViews += (parseInt(v.views) || 0);
+                const ts = v.timestamp || (v.uploadDate ? new Date(v.uploadDate).getTime() : 0);
+                if (ts >= weekStart) weeklyClips++;
+            });
+
+            $('kpiActiveClippers').textContent = activeCount;
+            $('kpiWeeklyClips').textContent = weeklyClips;
+            $('kpiTotalViews').textContent = totalViews.toLocaleString('de-DE');
+        }
+
+        // ── Update Clipper Select ──
+        function updateClipperSelect() {
+            const sel = $('videoClipperSelect');
+            sel.innerHTML = '<option value="">Wähle einen Clipper aus...</option>';
+            Object.entries(clippersData).forEach(([id, clipper]) => {
+                if (clipper.status !== 'inactive') {
+                    const opt = document.createElement('option');
+                    opt.value = id;
+                    opt.textContent = `${clipper.name} (${clipper.tiktokHandle || 'Kein Handle'})`;
+                    sel.appendChild(opt);
+                }
+            });
+        }
+
+        // ── Render Roster ──
+        function renderRoster() {
+            const container = $('rosterContent');
+            if (!clippersData || Object.keys(clippersData).length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">👥</div>
+                        <p>Noch keine Clipper im Team.<br>Klicke oben auf <strong>"+ Clipper Hinzufügen"</strong> um dein Team aufzubauen.</p>
+                    </div>`;
+                return;
+            }
+
+            const weekStart = getWeekStart();
+            let html = '<div class="table-wrap"><table><thead><tr>';
+            html += '<th>Clipper</th><th>Status</th><th>Wochen-Ziel</th><th>Clips (Woche)</th><th>Gesamt Views</th><th>Aktionen</th>';
+            html += '</tr></thead><tbody>';
+
+            Object.entries(clippersData).forEach(([id, clipper]) => {
+                let totalViews = 0, weekClips = 0;
+                Object.values(videosData).forEach(v => {
+                    if (v.clipperId === id) {
+                        totalViews += (parseInt(v.views) || 0);
+                        const ts = v.timestamp || (v.uploadDate ? new Date(v.uploadDate).getTime() : 0);
+                        if (ts >= weekStart) weekClips++;
+                    }
+                });
+
+                const quota = clipper.quotaTarget || 7;
+                const pct = Math.min(100, Math.round((weekClips / quota) * 100));
+                const isActive = clipper.status !== 'inactive';
+                const initial = (clipper.name || '?')[0].toUpperCase();
+                const inTeam = clipper.inTeam !== false;
+                const badgeHtml = inTeam 
+                    ? `<span class="badge-team" style="background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-left: 6px; border: 1px solid rgba(16, 185, 129, 0.3);">TEAM</span>`
+                    : `<span class="badge-candidate" style="background: rgba(156, 163, 175, 0.15); color: #9ca3af; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-left: 6px; border: 1px solid rgba(156, 163, 175, 0.3);">TEST</span>`;
+                const avatarHtml = clipper.profileImage
+                    ? `<img class="avatar" src="${esc(clipper.profileImage)}" referrerpolicy="no-referrer" alt="${esc(clipper.name)}" onerror="this.outerHTML='<div class=avatar-fallback>${initial}</div>'">`
+                    : `<div class="avatar-fallback">${initial}</div>`;
+
+                html += `<tr>
+                    <td>
+                        <div class="clipper-cell" onclick="showClipperDetail('${id}')">
+                            ${avatarHtml}
+                            <div>
+                                <div class="clipper-name" style="display: flex; align-items: center; gap: 4px;">
+                                    ${esc(clipper.name)}
+                                    ${badgeHtml}
+                                </div>
+                                <div class="clipper-handle-sub">${esc(clipper.tiktokHandle || '')}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="status-badge ${isActive ? 'status-active' : 'status-inactive'}">${isActive ? 'Aktiv' : 'Inaktiv'}</span></td>
+                    <td>${quota} Clips/Woche</td>
+                    <td><strong>${weekClips}</strong> / ${quota} <span style="color: var(--text-muted); font-size: 11px;">(${pct}%)</span></td>
+                    <td>${totalViews.toLocaleString('de-DE')}</td>
+                    <td><div class="actions-cell">
+                        <button class="btn btn-sm" onclick="toggleClipperStatus('${id}', '${clipper.status}')">${isActive ? 'Deaktivieren' : 'Aktivieren'}</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteClipper('${id}')">Löschen</button>
+                    </div></td>
+                </tr>`;
+            });
+
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        }
+
+        // ── Render Videos ──
+        function renderVideos() {
+            const container = $('videosContent');
+            if (!videosData || Object.keys(videosData).length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📹</div>
+                        <p>Noch keine Clips erfasst.<br>Klicke oben auf <strong>"+ Video Loggen"</strong> um den ersten Clip hinzuzufügen.</p>
+                    </div>`;
+                return;
+            }
+
+            const sorted = Object.entries(videosData).sort((a, b) => (b[1].timestamp || 0) - (a[1].timestamp || 0));
+
+            let html = '<div class="table-wrap"><table><thead><tr>';
+            html += '<th>Datum</th><th>Clipper</th><th>Titel</th><th>Link</th><th>Views</th><th>Aktionen</th>';
+            html += '</tr></thead><tbody>';
+
+            sorted.forEach(([id, video]) => {
+                const dateStr = video.uploadDate || (video.timestamp ? new Date(video.timestamp).toLocaleDateString('de-DE') : '—');
+                html += `<tr>
+                    <td>${esc(dateStr)}</td>
+                    <td><strong>${esc(video.clipperName || 'Unbekannt')}</strong></td>
+                    <td>${esc(video.title || 'Clip')}</td>
+                    <td><a href="${esc(video.videoUrl)}" target="_blank" style="color: var(--accent-cyan); text-decoration: none;">Öffnen 🔗</a></td>
+                    <td><strong>${(parseInt(video.views) || 0).toLocaleString('de-DE')}</strong></td>
+                    <td><div class="actions-cell">
+                        <button class="btn btn-sm" onclick="editViews('${id}', ${video.views || 0})">Views</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteVideo('${id}')">Löschen</button>
+                    </div></td>
+                </tr>`;
+            });
+
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        }
+
+        // ── Render Leaderboard ──
+        function renderLeaderboard() {
+            const container = $('leaderboardPreviewContainer');
+            if (!clippersData || Object.keys(clippersData).length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🏆</div>
+                        <p>Füge Clipper und Videos hinzu um das Leaderboard zu sehen.</p>
+                    </div>`;
+                return;
+            }
+
+            let filterStart = 0;
+            if (leaderboardTimeframe === 'week') filterStart = getWeekStart();
+            else if (leaderboardTimeframe === 'month') filterStart = getMonthStart();
+
+            const stats = {};
+            Object.entries(clippersData).forEach(([id, c]) => {
+                if (c.status === 'inactive') return;
+                stats[id] = { id, name: c.name, handle: c.tiktokHandle || '', url: c.tiktokUrl || '', profileImage: c.profileImage || '', quota: c.quotaTarget || 7, inTeam: c.inTeam !== false, clips: 0, views: 0 };
+            });
+
+            Object.values(videosData).forEach(v => {
+                if (!stats[v.clipperId]) return;
+                const ts = v.timestamp || (v.uploadDate ? new Date(v.uploadDate).getTime() : 0);
+                if (ts >= filterStart) {
+                    stats[v.clipperId].clips++;
+                    stats[v.clipperId].views += (parseInt(v.views) || 0);
+                }
+            });
+
+            const sorted = Object.values(stats).sort((a, b) => b.views - a.views || b.clips - a.clips);
+
+            if (sorted.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p style="color: var(--text-muted);">Keine aktiven Clipper vorhanden.</p></div>';
+                return;
+            }
+
+            let html = '';
+            sorted.forEach((item, i) => {
+                const rank = i + 1;
+                const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+                const rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
+                const quotaPct = Math.min(100, Math.round((item.clips / item.quota) * 100));
+                const goalMet = quotaPct >= 100;
+                const inTeam = item.inTeam !== false;
+                const badgeHtml = inTeam 
+                    ? `<span class="badge-team" style="background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-left: 6px; border: 1px solid rgba(16, 185, 129, 0.3);">TEAM</span>`
+                    : `<span class="badge-candidate" style="background: rgba(156, 163, 175, 0.15); color: #9ca3af; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-left: 6px; border: 1px solid rgba(156, 163, 175, 0.3);">TEST</span>`;
+
+                const lbInitial = (item.name || '?')[0].toUpperCase();
+                const lbAvatarHtml = item.profileImage
+                    ? `<img class="lb-avatar" src="${esc(item.profileImage)}" referrerpolicy="no-referrer" alt="" onerror="this.outerHTML='<div class=lb-avatar-fallback>${lbInitial}</div>'">`
+                    : `<div class="lb-avatar-fallback">${lbInitial}</div>`;
+
+                html += `<div class="lb-card" style="cursor:pointer" onclick="showClipperDetail('${item.id}')">
+                    <div class="lb-rank ${rankClass}">${rankEmoji}</div>
+                    ${lbAvatarHtml}
+                    <div class="lb-info">
+                        <div class="lb-name" style="display: flex; align-items: center; gap: 4px;">
+                            ${esc(item.name)}
+                            ${badgeHtml}
+                        </div>
+                        ${goalMet ? '<span style="color: var(--accent-green); font-size: 12px;">🎯 Goal Met</span>' : ''}
+                        <div class="lb-handle">${esc(item.handle)}</div>
+                        <div class="quota-bar"><div class="quota-bar-fill ${goalMet ? 'complete' : ''}" style="width: ${quotaPct}%"></div></div>
+                    </div>
+                    <div class="lb-stats">
+                        <div class="lb-stat-item">
+                            <div class="lb-stat-value">${item.clips}</div>
+                            <div class="lb-stat-label">Clips</div>
+                        </div>
+                        <div class="lb-stat-item">
+                            <div class="lb-stat-value">${item.views.toLocaleString('de-DE')}</div>
+                            <div class="lb-stat-label">Views</div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // ── Add Clipper ──
+        $('addClipperForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = $('clipperName').value.trim();
+            const handle = $('clipperHandle').value.trim();
+            const url = $('clipperUrl').value.trim();
+            const profileImage = $('clipperProfileImage').value.trim();
+            const quota = parseInt($('clipperQuota').value) || 7;
+
+            if (!name) { showToast('⚠️ Bitte gib einen Namen ein.'); return; }
+            if (!streamId) { showToast('⚠️ Nicht verbunden. Bitte Seite neu laden.'); return; }
+
+            const btn = $('btnSaveClipper');
+            try {
+                btn.disabled = true;
+                btn.textContent = 'Speichere...';
+
+                const clipperObj = {
+                    name,
+                    tiktokHandle: handle,
+                    tiktokUrl: url,
+                    quotaTarget: quota,
+                    status: 'active',
+                    inTeam: $('clipperInTeam').checked,
+                    joinedAt: firebase.database.ServerValue.TIMESTAMP
+                };
+                if (profileImage) clipperObj.profileImage = profileImage;
+
+                const newRef = firebase.database().ref(`streams/${streamId}/data/clipper_team/clippers`).push();
+                const clipperId = newRef.key;
+                await newRef.set(clipperObj);
+
+                // Auto-sync in the background
+                if (handle || url) {
+                    fetch('/api/clipper/sync-tiktok', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ streamId, clipperId })
+                    }).catch(err => console.error("Background auto-sync failed:", err));
+                }
+
+                $('addClipperForm').reset();
+                $('addClipperModal').classList.remove('active');
+                showToast('✅ Clipper hinzugefügt! Daten werden im Hintergrund geladen...');
+            } catch(err) {
+                console.error('Error saving clipper:', err);
+                showToast('⚠️ Fehler: ' + (err.message || err));
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Speichern';
+            }
+        });
+
+        // ── Add Video ──
+        $('addVideoForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const clipperId = $('videoClipperSelect').value;
+            const videoUrl = $('videoUrl').value.trim();
+            const title = $('videoTitle').value.trim();
+            const views = parseInt($('videoViews').value) || 0;
+
+            if (!clipperId || !videoUrl) { showToast('⚠️ Bitte Clipper und Link angeben.'); return; }
+            if (!streamId) { showToast('⚠️ Nicht verbunden.'); return; }
+
+            const btn = $('btnSaveVideo');
+            try {
+                btn.disabled = true;
+                btn.textContent = 'Speichere...';
+
+                let videoTimestamp = Date.now();
+                try {
+                    const match = videoUrl.match(/video\/(\d+)/);
+                    if (match) {
+                        videoTimestamp = Number(BigInt(match[1]) >> 32n) * 1000;
+                    }
+                } catch(e) {}
+                const uploadDate = new Date(videoTimestamp).toISOString().split('T')[0];
+
+                const clipper = clippersData[clipperId] || { name: 'Clipper' };
+                await firebase.database().ref(`streams/${streamId}/data/clipper_team/videos`).push().set({
+                    clipperId,
+                    clipperName: clipper.name,
+                    videoUrl,
+                    title: title || 'TikTok Clip',
+                    views,
+                    platform: 'tiktok',
+                    timestamp: videoTimestamp,
+                    uploadDate: uploadDate
+                });
+
+                $('addVideoForm').reset();
+                $('addVideoModal').classList.remove('active');
+                showToast('✅ Video erfolgreich geloggt!');
+            } catch(err) {
+                console.error('Error logging video:', err);
+                showToast('⚠️ Fehler: ' + (err.message || err));
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Video Speichern';
+            }
+        });
+
+        // ── Save Settings ──
+        $('settingsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!streamId) { showToast('⚠️ Nicht verbunden.'); return; }
+
+            try {
+                await firebase.database().ref(`streams/${streamId}/data/clipper_team/settings`).update({
+                    streamerName: $('cfgStreamerName').value.trim(),
+                    quotaTargetPerWeek: parseInt($('cfgQuotaTarget').value) || 7
+                });
+                showToast('✅ Einstellungen gespeichert!');
+            } catch(err) {
+                showToast('⚠️ Fehler: ' + (err.message || err));
+            }
+        });
+
+        // ── Action Helpers ──
+        window.toggleClipperStatus = function(id, currentStatus) {
+            if (!streamId) return;
+            const nextStatus = currentStatus === 'inactive' ? 'active' : 'inactive';
+            firebase.database().ref(`streams/${streamId}/data/clipper_team/clippers/${id}`).update({ status: nextStatus });
+            showToast(nextStatus === 'active' ? '✅ Clipper aktiviert' : 'Clipper deaktiviert');
+        };
+
+        window.deleteClipper = function(id) {
+            if (!streamId) return;
+            if (confirm('Clipper wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+                firebase.database().ref(`streams/${streamId}/data/clipper_team/clippers/${id}`).remove();
+                showToast('🗑️ Clipper gelöscht');
+            }
+        };
+
+        window.editViews = function(id, currentViews) {
+            if (!streamId) return;
+            const val = prompt('Neue Views für dieses Video eingeben:', currentViews);
+            if (val !== null) {
+                const parsed = parseInt(val) || 0;
+                firebase.database().ref(`streams/${streamId}/data/clipper_team/videos/${id}`).update({ views: parsed });
+                showToast('✅ Views aktualisiert');
+            }
+        };
+
+        window.deleteVideo = function(id) {
+            if (!streamId) return;
+            if (confirm('Video-Eintrag wirklich löschen?')) {
+                firebase.database().ref(`streams/${streamId}/data/clipper_team/videos/${id}`).remove();
+                showToast('🗑️ Video gelöscht');
+            }
+        };
+
+        // ── Show Clipper Detail Panel ──
+        window.showClipperDetail = function(clipperId) {
+            const clipper = clippersData[clipperId];
+            if (!clipper) return;
+
+            activeDetailClipperId = clipperId;
+
+            const initial = (clipper.name || '?')[0].toUpperCase();
+            $('detailAvatarWrap').innerHTML = clipper.profileImage
+                ? `<img class="detail-avatar" src="${esc(clipper.profileImage)}" referrerpolicy="no-referrer" alt="${esc(clipper.name)}" onerror="this.outerHTML='<div class=detail-avatar-fallback>${initial}</div>'">`
+                : `<div class="detail-avatar-fallback">${initial}</div>`;
+
+            $('detailName').textContent = clipper.name;
+            $('detailHandle').innerHTML = clipper.tiktokUrl
+                ? `<a href="${esc(clipper.tiktokUrl)}" target="_blank">${esc(clipper.tiktokHandle || clipper.tiktokUrl)}</a>`
+                : esc(clipper.tiktokHandle || 'Kein Handle');
+
+            // TikTok profile button
+            if (clipper.tiktokUrl) {
+                $('detailTiktokBtn').innerHTML = `<a href="${esc(clipper.tiktokUrl)}" target="_blank" class="detail-tiktok-btn">🎵 TikTok Profil öffnen</a>`;
+            } else {
+                $('detailTiktokBtn').innerHTML = '';
+            }
+
+            // Checkbox value setting and re-binding
+            const inTeamCheckbox = $('detailInTeamCheckbox');
+            inTeamCheckbox.checked = clipper.inTeam !== false;
+            const newInTeamCheckbox = inTeamCheckbox.cloneNode(true);
+            inTeamCheckbox.replaceWith(newInTeamCheckbox);
+            newInTeamCheckbox.addEventListener('change', async () => {
+                const checked = newInTeamCheckbox.checked;
+                try {
+                    await firebase.database().ref(`streams/${streamId}/data/clipper_team/clippers/${clipperId}`).update({
+                        inTeam: checked
+                    });
+                    showToast(checked ? '✅ Status geändert: Offizielles Team-Mitglied' : '✅ Status geändert: Test-Mitglied (Bewerber)');
+                } catch(e) {
+                    showToast('⚠️ Fehler beim Speichern des Status');
+                    newInTeamCheckbox.checked = !checked;
+                }
+            });
+
+            // Sync button event listener re-binding
+            const syncBtn = $('btnSyncTiktok');
+            const newSyncBtn = syncBtn.cloneNode(true);
+            syncBtn.replaceWith(newSyncBtn);
+            newSyncBtn.addEventListener('click', async () => {
+                newSyncBtn.disabled = true;
+                newSyncBtn.textContent = '⏳ Synchronisiere TikTok...';
+                try {
+                    const res = await fetch('/api/clipper/sync-tiktok', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ streamId, clipperId })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        showToast(`✅ TikTok synchronisiert! ${data.syncedVideosCount} Videos geladen.`);
+                    } else {
+                        showToast(`⚠️ Fehler: ${data.error || 'Sync blockiert'}`);
+                    }
+                } catch(e) {
+                    showToast('⚠️ Netzwerkfehler beim TikTok-Sync');
+                } finally {
+                    newSyncBtn.disabled = false;
+                    newSyncBtn.textContent = '🔄 TikTok Daten synchronisieren';
+                }
+            });
+
+            // Collect videos for this clipper
+            const clipperVideos = [];
+            let totalViews = 0, weekClips = 0, allClips = 0;
+            const weekStart = getWeekStart();
+
+            Object.entries(videosData).forEach(([vid, v]) => {
+                if (v.clipperId === clipperId) {
+                    clipperVideos.push({ id: vid, ...v });
+                    totalViews += (parseInt(v.views) || 0);
+                    allClips++;
+                    const ts = v.timestamp || (v.uploadDate ? new Date(v.uploadDate).getTime() : 0);
+                    if (ts >= weekStart) weekClips++;
+                }
+            });
+
+            clipperVideos.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+            const rate = parseFloat(settingsData.rewardRatePer1kViews) || 0.50;
+            const symbol = settingsData.currency || '€';
+            const payout = (totalViews / 1000) * rate;
+
+            // Stats cards
+            $('detailStats').innerHTML = `
+                <div class="detail-stat">
+                    <div class="detail-stat-value">${allClips}</div>
+                    <div class="detail-stat-label">Gesamt Clips</div>
+                </div>
+                <div class="detail-stat">
+                    <div class="detail-stat-value">${weekClips}</div>
+                    <div class="detail-stat-label">Clips (Woche)</div>
+                </div>
+                <div class="detail-stat">
+                    <div class="detail-stat-value">${totalViews.toLocaleString('de-DE')}</div>
+                    <div class="detail-stat-label">Gesamt Views</div>
+                </div>
+            `;
+
+            // Video list
+            if (clipperVideos.length === 0) {
+                $('detailVideosList').innerHTML = '<div class="empty-state" style="padding: 24px;"><p style="color: var(--text-muted); font-size: 13px;">Noch keine Videos von diesem Clipper.</p></div>';
+            } else {
+                let vhtml = '';
+                clipperVideos.forEach(v => {
+                    const dateStr = v.uploadDate || (v.timestamp ? new Date(v.timestamp).toLocaleDateString('de-DE') : '—');
+                    vhtml += `<div class="detail-video-card">
+                        <div class="dv-icon">📹</div>
+                        <div class="dv-info">
+                            <div class="dv-title">${esc(v.title || 'TikTok Clip')}</div>
+                            <div class="dv-date">${esc(dateStr)}</div>
+                        </div>
+                        <div class="dv-views">
+                            <div class="dv-views-value">${(parseInt(v.views) || 0).toLocaleString('de-DE')}</div>
+                            <div class="dv-views-label">Views</div>
+                        </div>
+                        <a href="${esc(v.videoUrl)}" target="_blank" class="dv-link">🔗</a>
+                    </div>`;
+                });
+                $('detailVideosList').innerHTML = vhtml;
+            }
+
+            // Open panel
+            $('detailModal').classList.add('open');
+            $('detailBackdrop').classList.add('open');
+        };
+
+        // Close detail panel
+        function closeDetail() {
+            activeDetailClipperId = null;
+            $('detailModal').classList.remove('open');
+            $('detailBackdrop').classList.remove('open');
+        }
+        $('detailClose').addEventListener('click', closeDetail);
+        $('detailBackdrop').addEventListener('click', closeDetail);
+
+        function esc(str) {
+            return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>

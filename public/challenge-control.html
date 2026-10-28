@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Win Challenge Steuerungs-Panel</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --bg: #030705;
+            --bg-card: #080e0a;
+            --bg-elevated: #0e1811;
+            --border: rgba(34, 197, 94, 0.08);
+            --border-hover: rgba(34, 197, 94, 0.2);
+            --text: #e2f0e7;
+            --text-muted: #62826d;
+            --accent: #22c55e;
+            --accent-cyan: #06b6d4;
+            --accent-grad: linear-gradient(135deg, #22c55e 0%, #06b6d4 100%);
+            --radius: 12px;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .ambient-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(140px);
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.45;
+        }
+        .orb-green { width: 400px; height: 400px; background: rgba(34, 197, 94, 0.08); top: -100px; right: -50px; }
+        .orb-cyan { width: 300px; height: 300px; background: rgba(6, 182, 212, 0.06); bottom: -50px; left: 100px; }
+
+        .app-wrap {
+            width: 100%;
+            max-width: 800px;
+            padding: 24px 16px;
+            z-index: 2;
+            position: relative;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        
+        .logo-text {
+            font-size: 20px; font-weight: 800; letter-spacing: 3px;
+            text-transform: uppercase;
+            background: var(--accent-grad);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+            display: inline-block;
+        }
+
+        h1 {
+            font-size: 26px; font-weight: 800; color: #fff; margin: 0 0 4px 0;
+            background: linear-gradient(to right, #fff, var(--text-muted));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .subtitle { color: var(--text-muted); margin: 0; font-size: 14px; }
+
+        .card {
+            background: linear-gradient(145deg, #09100c 0%, #050a07 100%);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            margin-bottom: 20px;
+        }
+
+        /* Access status styling */
+        #accessStatusCard { text-align: center; padding: 40px; }
+        #accessStatusCard h2 { color: var(--danger); font-size: 22px; margin-bottom: 12px; }
+        #accessStatusCard p { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+
+        /* Game rows list for moderators */
+        .mod-game-list { display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px; }
+        .mod-game-item {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 16px;
+            align-items: center;
+            transition: border-color 0.2s;
+        }
+        .mod-game-item:hover { border-color: var(--border-hover); }
+        .game-details { display: flex; flex-direction: column; min-width: 0; }
+        .game-name { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .game-progress-text { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+        
+        .counter-controls { display: flex; align-items: center; gap: 10px; }
+        
+        button {
+            padding: 12px 14px; font-size: 14px; font-weight: 700; font-family: inherit;
+            border-radius: 10px; border: 1px solid transparent; color: #fff; cursor: pointer; transition: all 0.15s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; gap: 8px;
+            user-select: none; -webkit-user-select: none;
+        }
+        button:active { transform: scale(0.96); }
+
+        .btn-plus {
+            width: 52px; height: 52px; font-size: 24px; font-weight: 800;
+            background: var(--accent-grad); color: #000; box-shadow: 0 4px 15px rgba(34, 197, 94, 0.15);
+        }
+        .btn-minus {
+            width: 52px; height: 52px; font-size: 24px; font-weight: 800;
+            background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #ff8080;
+        }
+        .btn-minus:hover:not(:disabled) { background: rgba(239, 68, 68, 0.25); color: #fff; }
+        .btn-minus:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #ff8080;
+            width: 100%;
+        }
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4); color: #fff;
+        }
+
+        /* Detail inline edit styling */
+        .inline-edit-btn {
+            background: transparent; border: none; color: var(--text-muted); padding: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+        }
+        .inline-edit-btn:hover { color: #fff; }
+
+        .game-edit-form {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 10px;
+            background: rgba(0,0,0,0.2);
+            border-top: 1px dashed var(--border);
+            padding: 12px 16px;
+            margin-top: -10px;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+            border-left: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 14px;
+        }
+        .game-edit-form input {
+            width: 100%; min-height: 38px; border-radius: 6px; border: 1px solid var(--border);
+            background: var(--bg-card); color: #fff; padding: 6px 10px; font-family: inherit; outline: none; font-size: 13px;
+        }
+        .game-edit-form input:focus { border-color: var(--accent); }
+
+        #saveStatus { text-align: center; font-size: 14px; font-weight: 600; min-height: 20px; margin-top: 12px; }
+    </style>
+</head>
+<body>
+    <div class="ambient-orb orb-green"></div>
+    <div class="ambient-orb orb-cyan"></div>
+    
+    <div class="app-wrap">
+        <header>
+            <span class="logo-text">MINUS BINGO</span>
+            <h1 id="headerTitle">Win Challenge Moderator</h1>
+            <p class="subtitle" id="moderatorSub">Lade Spieldaten...</p>
+        </header>
+
+        <!-- Access Verification State -->
+        <div id="accessStatusCard" class="card">
+            <h2 id="accessStatusTitle">Zugriffsprüfung</h2>
+            <p id="accessStatusMsg">Bitte warten, die Berechtigungen werden überprüft...</p>
+            <div id="accessDeniedIcon" style="display: none; font-size: 48px; margin-bottom: 16px;">🚫</div>
+        </div>
+
+        <!-- Main Panel Content -->
+        <div id="panelContent" style="display: none;">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+                    <h3 style="margin: 0; border: none; padding: 0;" id="overlayTitleLabel">Challenges</h3>
+                    <button id="toggleEditModeBtn" class="btn-ghost" style="width: auto; padding: 6px 12px; font-size: 12px; display: flex; align-items: center; gap: 4px;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                        Texte bearbeiten
+                    </button>
+                </div>
+                <div class="mod-game-list" id="gamesContainer">
+                    <!-- Game elements will be injected here -->
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px;">
+                    <button id="saveBtn" class="btn-primary" style="display: none;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        Änderungen senden
+                    </button>
+                    <button id="resetBtn" class="btn-danger">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                        Scores resetten
+                    </button>
+                </div>
+                <div id="saveStatus"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="realtime-store.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const streamId = urlParams.get('stream');
+        const token = urlParams.get('token');
+
+        const accessStatusCard = document.getElementById('accessStatusCard');
+        const accessStatusMsg = document.getElementById('accessStatusMsg');
+        const accessStatusTitle = document.getElementById('accessStatusTitle');
+        const accessDeniedIcon = document.getElementById('accessDeniedIcon');
+        const panelContent = document.getElementById('panelContent');
+        const gamesContainer = document.getElementById('gamesContainer');
+        const overlayTitleLabel = document.getElementById('overlayTitleLabel');
+        const saveStatus = document.getElementById('saveStatus');
+        
+        let gamesList = [];
+        let styleObj = {};
+        let titleVal = 'WIN-CHALLENGE';
+        let themeVal = 'standard';
+        let isEditMode = false;
+
+        function showAccessDenied(msg) {
+            accessStatusTitle.textContent = "Zugriff verweigert";
+            accessStatusMsg.textContent = msg;
+            accessStatusMsg.style.color = "var(--danger)";
+            accessDeniedIcon.style.display = "block";
+            panelContent.style.display = "none";
+        }
+
+        if (!streamId || !token) {
+            showAccessDenied("Ungültiger Link. Stream-ID oder Token-Parameter fehlen im Link.");
+        } else {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(window.BINGO_CONFIG.firebaseConfig);
+            }
+            
+            // Validate guest token with backend
+            fetch('/bot/api/scoreboard/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ streamId, token })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error("Server-Fehler bei der Validierung");
+                return res.json();
+            })
+            .then(data => {
+                if (data.valid) {
+                    initModeratorPanel();
+                } else {
+                    showAccessDenied("Zugriff verweigert. Der Freigabelink ist ungültig oder abgelaufen.");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showAccessDenied("Fehler beim Abrufen der Zugriffsrechte vom Server.");
+            });
+        }
+
+        function initModeratorPanel() {
+            accessStatusCard.style.display = 'none';
+            panelContent.style.display = 'block';
+            document.getElementById('moderatorSub').textContent = `Du steuerst das Overlay für: ${streamId}`;
+
+            // Subscribe to Firebase real-time data
+            firebase.database().ref(`streams/${streamId}/data/winChallenge`).on('value', (snap) => {
+                const val = snap.val();
+                if (val) {
+                    titleVal = val.title || 'WIN-CHALLENGE';
+                    themeVal = val.theme || 'standard';
+                    overlayTitleLabel.textContent = titleVal;
+                    gamesList = val.games || [];
+                    styleObj = val.style || {};
+                    renderModGames();
+                }
+            });
+        }
+
+        function renderModGames() {
+            gamesContainer.innerHTML = '';
+            if (gamesList.length === 0) {
+                gamesContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px;">Keine Spiele konfiguriert.</p>';
+                return;
+            }
+
+            gamesList.forEach((game, index) => {
+                // Wrapper div
+                const wrapper = document.createElement('div');
+                wrapper.style.display = 'block';
+
+                const item = document.createElement('div');
+                item.className = 'mod-game-item';
+                
+                const isCompleted = game.current >= game.target;
+                const progressTextStr = `${game.current} / ${game.target}`;
+                
+                item.innerHTML = `
+                    <div class="game-details">
+                        <span class="game-name" style="${isCompleted ? 'text-decoration: line-through; color: var(--text-muted);' : ''}">${escapeHtml(game.name || 'Ohne Name')}</span>
+                        <span class="game-progress-text" style="${isCompleted ? 'color: var(--success);' : ''}">
+                            ${isCompleted ? '✅ Abgeschlossen' : `Fortschritt: ${progressTextStr}`}
+                        </span>
+                    </div>
+                    <div class="counter-controls">
+                        <button type="button" class="btn-minus" ${game.current <= 0 ? 'disabled' : ''} onclick="adjustScore('${game.id}', -1)">-</button>
+                        <button type="button" class="btn-plus" onclick="adjustScore('${game.id}', 1)">+</button>
+                    </div>
+                `;
+
+                wrapper.appendChild(item);
+
+                // If in text edit mode, show inline input fields
+                if (isEditMode) {
+                    const form = document.createElement('div');
+                    form.className = 'game-edit-form';
+                    form.innerHTML = `
+                        <input type="text" class="inp-name" value="${escapeHtml(game.name)}" placeholder="Name" data-id="${game.id}">
+                        <input type="number" class="inp-current" value="${game.current}" placeholder="Ist" data-id="${game.id}">
+                        <input type="number" class="inp-target" value="${game.target}" placeholder="Soll" data-id="${game.id}">
+                    `;
+                    wrapper.appendChild(form);
+                }
+
+                gamesContainer.appendChild(wrapper);
+            });
+        }
+
+        function escapeHtml(str) {
+            return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // Adjust score action
+        window.adjustScore = function(id, amount) {
+            const game = gamesList.find(g => g.id === id);
+            if (!game) return;
+            
+            // Sync any text changes first if in edit mode
+            if (isEditMode) syncLocalStateFromTextInputs();
+
+            game.current = Math.max(0, (game.current || 0) + amount);
+            sendDatabaseUpdate();
+        };
+
+        // Sync local gamesList from text fields in edit mode
+        function syncLocalStateFromTextInputs() {
+            if (!isEditMode) return;
+            const rows = gamesContainer.querySelectorAll('.game-edit-form');
+            rows.forEach(row => {
+                const id = row.querySelector('.inp-name').dataset.id;
+                const name = row.querySelector('.inp-name').value.trim();
+                const current = Math.max(0, parseInt(row.querySelector('.inp-current').value) || 0);
+                const target = Math.max(1, parseInt(row.querySelector('.inp-target').value) || 1);
+                
+                const game = gamesList.find(g => g.id === id);
+                if (game) {
+                    game.name = name;
+                    game.current = current;
+                    game.target = target;
+                }
+            });
+        }
+
+        // Send database update via proxy API
+        async function sendDatabaseUpdate() {
+            saveStatus.textContent = 'Speichere...';
+            saveStatus.style.color = '#fff';
+
+            const payload = {
+                title: titleVal,
+                games: gamesList,
+                theme: themeVal,
+                style: styleObj
+            };
+
+            try {
+                const res = await fetch('/bot/api/scoreboard/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        streamId,
+                        token,
+                        path: 'winChallenge',
+                        value: payload
+                    })
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.error || "Fehler beim Senden");
+                }
+
+                saveStatus.textContent = 'Gespeichert!';
+                saveStatus.style.color = 'var(--accent)';
+                setTimeout(() => { saveStatus.textContent = ''; }, 2000);
+            } catch (err) {
+                console.error("Save error:", err);
+                saveStatus.textContent = 'Fehler: ' + err.message;
+                saveStatus.style.color = 'var(--danger)';
+            }
+        }
+
+        // Toggle edit mode
+        const toggleEditModeBtn = document.getElementById('toggleEditModeBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        
+        toggleEditModeBtn.addEventListener('click', () => {
+            if (isEditMode) {
+                // Disabling edit mode, sync inputs
+                syncLocalStateFromTextInputs();
+                isEditMode = false;
+                toggleEditModeBtn.textContent = 'Texte bearbeiten';
+                toggleEditModeBtn.style.background = 'transparent';
+                saveBtn.style.display = 'none';
+                renderModGames();
+            } else {
+                isEditMode = true;
+                toggleEditModeBtn.textContent = 'Fertig';
+                toggleEditModeBtn.style.background = 'rgba(255,255,255,0.06)';
+                saveBtn.style.display = 'block';
+                renderModGames();
+            }
+        });
+
+        // Save button manual action
+        saveBtn.addEventListener('click', () => {
+            syncLocalStateFromTextInputs();
+            sendDatabaseUpdate();
+        });
+
+        // Reset scores action
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            if (confirm("Wirklich alle Scores auf 0 setzen?")) {
+                if (isEditMode) syncLocalStateFromTextInputs();
+                gamesList.forEach(g => {
+                    g.current = 0;
+                });
+                renderModGames();
+                sendDatabaseUpdate();
+            }
+        });
+    </script>
+</body>
+</html>

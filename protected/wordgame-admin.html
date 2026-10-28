@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Worträtsel Chat-Spiel Admin Panel</title>
+    <!-- BINGO/MINUS default styles override -->
+    <link rel="stylesheet" href="../public/style.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+        
+        :root {
+            --bg: #050508;
+            --bg-card: #0c0c14;
+            --bg-elevated: #131322;
+            --border: rgba(255, 255, 255, 0.05);
+            --border-hover: rgba(255, 255, 255, 0.1);
+            --border-active: rgba(0, 242, 254, 0.25);
+            --text: #f4f4f9;
+            --text-muted: #9ca3af;
+            --accent: #00f2fe;
+            --accent-purple: #9d4edd;
+            --accent-grad: linear-gradient(135deg, #00f2fe 0%, #9d4edd 100%);
+            --radius: 16px;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * { box-sizing: border-box; }
+        
+        body {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            position: relative;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .ambient-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(140px);
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.35;
+        }
+        .orb-blue { width: 400px; height: 400px; background: rgba(0, 242, 254, 0.08); top: -100px; right: -50px; }
+        .orb-purple { width: 350px; height: 350px; background: rgba(157, 78, 221, 0.06); bottom: -50px; left: 100px; }
+
+        .app-wrap {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Sidebar Navigation styling matching default panel.html */
+        .sidebar {
+            width: 260px;
+            background: #07070c;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 32px 20px;
+            z-index: 10;
+            flex-shrink: 0;
+        }
+        
+        .logo { margin-bottom: 40px; padding: 0 8px; display: flex; align-items: center; gap: 12px; }
+        .logo-text {
+            font-size: 20px; font-weight: 800; letter-spacing: 3px;
+            text-transform: uppercase;
+            background: var(--accent-grad);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-menu { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        
+        .nav-btn {
+            background: transparent; border: none; color: var(--text-muted);
+            padding: 12px 16px; font-size: 14px; font-weight: 600;
+            text-align: left; border-radius: 8px; cursor: pointer;
+            transition: all 0.2s; font-family: inherit;
+            display: flex; align-items: center; gap: 10px;
+            text-decoration: none;
+        }
+        .nav-btn:hover { color: var(--text); background: var(--bg-elevated); }
+        .nav-btn.active {
+            color: var(--accent);
+            background: rgba(0, 242, 254, 0.06);
+            border: 1px solid var(--border-active);
+        }
+
+        /* Main Content Layout */
+        .main-content {
+            flex: 1;
+            padding: 40px 48px;
+            overflow-y: auto;
+        }
+
+        .view-header {
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .view-title { font-size: 28px; font-weight: 800; color: #fff; margin: 0 0 4px 0; }
+        .view-subtitle { color: var(--text-muted); margin: 0; font-size: 14px; }
+
+        .btn-back {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: var(--text);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-back:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateX(-2px);
+        }
+
+        /* Card Layout System */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 12px;
+        }
+
+        /* Active word styling */
+        .active-word-display {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            border: 1px dashed rgba(0, 242, 254, 0.15);
+        }
+
+        .admin-word-preview {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .admin-letter {
+            width: 38px;
+            height: 46px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text-muted);
+        }
+        .admin-letter.revealed {
+            background: rgba(0, 242, 254, 0.08);
+            border-color: var(--accent);
+            color: var(--accent);
+            text-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
+        }
+
+        .word-cheat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .word-cheat-label strong {
+            color: var(--accent);
+            font-size: 14px;
+        }
+
+        /* Game actions button layouts */
+        .action-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .btn-action {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            color: #050508;
+        }
+        .btn-primary:hover {
+            box-shadow: 0 6px 16px rgba(0, 242, 254, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(255,255,255,0.08);
+            color: var(--text);
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.2);
+            color: #ff8080;
+        }
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fff;
+        }
+
+        /* Custom word input */
+        .custom-word-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .input-text {
+            flex-grow: 1;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        .input-text:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* Settings labels / elements */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .status-badge.guessing { background: rgba(0, 242, 254, 0.1); color: var(--accent); border: 1px solid rgba(0, 242, 254, 0.2); }
+        .status-badge.winner { background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); }
+        .status-badge.leaderboard { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2); }
+        .status-badge.timeout { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
+        .status-badge.paused { background: rgba(255, 255, 255, 0.05); color: var(--text-muted); border: 1px solid rgba(255, 255, 255, 0.1); }
+
+        /* Scoreboard editor styling */
+        .score-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .score-item {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 10px;
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .score-user {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .score-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-circle {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn-circle:hover {
+            background: rgba(255,255,255,0.12);
+        }
+
+        .score-value {
+            font-weight: 800;
+            font-size: 16px;
+            color: var(--accent);
+            min-width: 25px;
+            text-align: center;
+        }
+
+        /* Guess log styling */
+        .guess-log {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 160px;
+            overflow-y: auto;
+        }
+
+        .guess-item {
+            font-size: 13px;
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-purple);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .guess-user { font-weight: 700; color: #fff; }
+        .guess-text { color: var(--text-muted); font-style: italic; }
+    </style>
+</head>
+<body class="admin-mode">
+
+    <div class="ambient-orb orb-blue"></div>
+    <div class="ambient-orb orb-purple"></div>
+
+    <div class="app-wrap">
+        <!-- Sidebar Navigation matching layout of panel.html -->
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="logo-text">MINUS<span style="color:var(--accent);">.</span></span>
+            </div>
+            <nav class="nav-menu">
+                <a href="/protected/panel.html" class="nav-btn active">
+                    <svg class="nav-icon" style="width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2;" viewBox="0 0 24 24">
+                        <rect x="3" y="3" width="7" height="9" rx="1"></rect>
+                        <rect x="14" y="3" width="7" height="5" rx="1"></rect>
+                        <rect x="14" y="12" width="7" height="9" rx="1"></rect>
+                        <rect x="3" y="16" width="7" height="5" rx="1"></rect>
+                    </svg>
+                    <span class="nav-text">Meine Projekte</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content area -->
+        <main class="main-content">
+            <div class="view-header">
+                <div>
+                    <h1 class="view-title">💬 Worträtsel Chat-Spiel</h1>
+                    <p class="view-subtitle">Steuere das aktive Rätsel-Spiel und bearbeite die Rangliste live.</p>
+                </div>
+                <button class="btn-back" onclick="window.location.href='/protected/panel.html'">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    Zurück zum Panel
+                </button>
+            </div>
+
+            <!-- DASHBOARD CONTAINER -->
+            <div class="dashboard-grid">
+                
+                <!-- LEFT COLUMN: GAME CONTROL -->
+                <div>
+                    <!-- Active Word Panel -->
+                    <div class="card">
+                        <div class="card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                            Aktives Rätselwort
+                        </div>
+                        
+                        <div class="active-word-display">
+                            <div id="wordPreview" class="admin-word-preview">
+                                <!-- Admin letter items -->
+                            </div>
+                            <div class="word-cheat-label">
+                                Lösungswort: <strong id="cheatWord">-</strong>
+                            </div>
+                        </div>
+
+                        <!-- Status badge row -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <span class="form-label">Spielstatus</span>
+                                <span id="gameStatusBadge" class="status-badge guessing">guessing</span>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0; text-align: right;">
+                                <span class="form-label">Zeit bis Enthüllung</span>
+                                <strong id="secondsLabel" style="font-size: 18px; color: var(--accent);">60s</strong>
+                            </div>
+                        </div>
+
+                        <!-- Action buttons -->
+                        <div class="action-row">
+                            <button id="btnRevealLetter" class="btn-action btn-primary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                Buchstabe aufdecken
+                            </button>
+                            <button id="btnSkipWord" class="btn-action btn-secondary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+                                Wort überspringen
+                            </button>
+                            <button id="btnPauseGame" class="btn-action btn-secondary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                                Pausieren
+                            </button>
+                        </div>
+
+                        <!-- Custom word input overrides -->
+                        <div class="form-group" style="margin-top: 10px;">
+                            <label class="form-label">Eigenes Wort vorgeben</label>
+                            <div class="custom-word-row">
+                                <input type="text" id="customWordInput" class="input-text" placeholder="Eigenes deutsches Wort eintippen...">
+                                <button id="btnSendCustomWord" class="btn-action btn-primary" style="flex: initial; width: 140px;">Wort setzen</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Configuration Settings Card -->
+                    <div class="card">
+                        <div class="card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                            Spiel-Einstellungen
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Twitch-Kanalname</label>
+                            <input type="text" id="twitchChannelInput" class="input-text" placeholder="z.B. Papaplatte">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label class="form-label">Buchstaben-Interval (Sek)</label>
+                                <input type="number" id="intervalInput" class="input-text" placeholder="60">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Runden pro Reset</label>
+                                <input type="number" id="roundsInput" class="input-text" placeholder="10">
+                            </div>
+                        </div>
+
+                        <button id="btnSaveConfig" class="btn-action btn-primary" style="width: 100%; margin-top: 10px;">Einstellungen speichern</button>
+                        <div id="saveStatus" style="text-align: center; margin-top: 10px; font-weight: 600; font-size: 13px;"></div>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN: LEADERBOARD & CHAT GUESSES -->
+                <div>
+                    <!-- Leaderboard Editor Card -->
+                    <div class="card">
+                        <div class="card-title" style="justify-content: space-between;">
+                            <span>🏆 Rangliste bearbeiten</span>
+                            <span id="adminRoundBadge" class="round-badge" style="font-size:12px; margin-left:0;">Runde 1/10</span>
+                        </div>
+                        
+                        <div id="scoreContainer" class="score-list" style="margin-bottom: 20px;">
+                            <!-- Score rows generated dynamically -->
+                        </div>
+
+                        <!-- Add manual score row -->
+                        <div class="form-group" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px;">
+                            <label class="form-label">Zuschauer manuell hinzufügen</label>
+                            <div class="custom-word-row">
+                                <input type="text" id="addUserInput" class="input-text" style="padding: 10px;" placeholder="Username...">
+                                <button id="btnAddUser" class="btn-action btn-secondary" style="flex: initial; width: 100px; padding: 10px;">Hinzufügen</button>
+                            </div>
+                        </div>
+
+                        <button id="btnResetScores" class="btn-action btn-danger" style="width: 100%; margin-top: 15px;">Punkte & Runden zurücksetzen</button>
+                    </div>
+
+                    <!-- Chat Guesses Monitor Card -->
+                    <div class="card">
+                        <div class="card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                            Letzte Chat-Tipps
+                        </div>
+                        <div id="guessLog" class="guess-log">
+                            <div style="color: var(--text-muted); font-style: italic; font-size: 13px; text-align: center; padding: 10px 0;">Noch keine Tipps empfangen...</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Firebase admin dependencies -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+    <script src="../public/app-config.js"></script>
+    <script src="../public/realtime-store.js?v=9"></script>
+    <script src="../public/tmi.min.js"></script>
+
+    <script>
+        // Unique Client ID generated on startup to distinguish who updates Firebase transitions
+        const myClientId = Math.random().toString(36).substring(2);
+
+        const streamId = BingoStore.getActiveStreamId();
+        
+        // State variables
+        let gameState = null;
+        let countdownInterval = null;
+        let isWaitingForNextRound = false;
+        let client = null;
+        let connectedChannel = "";
+
+        // Binds
+        const wordPreview = document.getElementById('wordPreview');
+        const cheatWordLabel = document.getElementById('cheatWord');
+        const secondsLabel = document.getElementById('secondsLabel');
+        const gameStatusBadge = document.getElementById('gameStatusBadge');
+        
+        const twitchChannelInput = document.getElementById('twitchChannelInput');
+        const intervalInput = document.getElementById('intervalInput');
+        const roundsInput = document.getElementById('roundsInput');
+        const saveStatus = document.getElementById('saveStatus');
+        
+        const scoreContainer = document.getElementById('scoreContainer');
+        const adminRoundBadge = document.getElementById('adminRoundBadge');
+        const guessLogContainer = document.getElementById('guessLog');
+
+        // BINGO_CONFIG Authentication guard
+        BingoStore.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = "/protected/panel.html";
+                return;
+            }
+            try {
+                await BingoStore.requireOwner(streamId, user.uid);
+                await BingoStore.ensureInitialized(streamId);
+                initializeDbSync();
+            } catch (err) {
+                alert(err.message || "Zugriff verweigert.");
+                window.location.href = "/protected/panel.html";
+            }
+        });
+
+        // Initialize Firebase node bindings
+        function initializeDbSync() {
+            const gameRef = firebase.database().ref(`streams/${streamId}/data/wordgame`);
+            
+            // Listen to state changes
+            gameRef.on('value', (snap) => {
+                const state = snap.val();
+                if (!state) {
+                    // Seed initial state if node is empty
+                    initializeDefaultState();
+                    return;
+                }
+                
+                gameState = state;
+                updateUI();
+
+                // Track transitions and Twitch connection in the Control Panel (Host)
+                if (state.gameStatus === 'guessing') {
+                    isWaitingForNextRound = false;
+                } else if (state.gameStatus === 'winner') {
+                    isWaitingForNextRound = true;
+                    stopCountdownTimer();
+
+                    // Only the exact client that registered the win processes the transition timeouts
+                    if (state.transitionOwnerId === myClientId) {
+                        setTimeout(async () => {
+                            await firebase.database().ref(`streams/${streamId}/data/wordgame`).update({
+                                gameStatus: "leaderboard"
+                            });
+                            
+                            setTimeout(async () => {
+                                await startNextRoundFirebase();
+                            }, 5000);
+                        }, 3000);
+                    }
+                } else if (state.gameStatus === 'timeout') {
+                    isWaitingForNextRound = true;
+                    stopCountdownTimer();
+
+                    // Only the exact client that registered the timeout processes the transition timeouts
+                    if (state.transitionOwnerId === myClientId) {
+                        setTimeout(async () => {
+                            await firebase.database().ref(`streams/${streamId}/data/wordgame`).update({
+                                gameStatus: "leaderboard"
+                            });
+                            
+                            setTimeout(async () => {
+                                await startNextRoundFirebase();
+                            }, 5000);
+                        }, 5000);
+                    }
+                } else if (state.gameStatus === 'leaderboard') {
+                    isWaitingForNextRound = true;
+                    stopCountdownTimer();
+                }
+
+                // Connect / Reconnect Twitch chat dynamically
+                const targetChannel = (state.twitchChannel || "").trim().toLowerCase();
+                if (targetChannel && targetChannel !== connectedChannel) {
+                    connectedChannel = targetChannel;
+                    connectTwitchChat(connectedChannel);
+                }
+            });
+        }
+
+        // Write defaults to database
+        function initializeDefaultState() {
+            const defaults = {
+                twitchChannel: "",
+                currentWord: "START",
+                revealedIndices: [0, 4],
+                nextRevealTime: Date.now() + 60000,
+                revealIntervalSec: 60,
+                currentRound: 1,
+                totalRoundsMax: 10,
+                paused: false,
+                pauseTimeRemaining: 60,
+                scores: {},
+                gameStatus: "guessing",
+                lastWinner: "",
+                lastGuesses: []
+            };
+            firebase.database().ref(`streams/${streamId}/data/wordgame`).set(defaults);
+        }
+
+        // Render data changes to DOM
+        function updateUI() {
+            if (!gameState) return;
+
+            // Cheat labels
+            cheatWordLabel.textContent = gameState.currentWord || "";
+            
+            // Render word preview blocks
+            wordPreview.innerHTML = '';
+            const word = gameState.currentWord || "";
+            const reveals = gameState.revealedIndices || [];
+            
+            for (let i = 0; i < word.length; i++) {
+                const letter = word[i];
+                const item = document.createElement('div');
+                item.className = 'admin-letter';
+                
+                if (reveals.includes(i)) {
+                    item.textContent = letter.toUpperCase();
+                    item.classList.add('revealed');
+                } else {
+                    item.textContent = '_';
+                }
+                wordPreview.appendChild(item);
+            }
+
+            // Status Badge
+            gameStatusBadge.textContent = gameState.paused ? 'paused' : gameState.gameStatus;
+            gameStatusBadge.className = 'status-badge ' + (gameState.paused ? 'paused' : gameState.gameStatus);
+
+            // Button label pause/resume
+            const btnPause = document.getElementById('btnPauseGame');
+            if (gameState.paused) {
+                btnPause.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Fortsetzen`;
+            } else {
+                btnPause.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg> Pausieren`;
+            }
+
+            // Round badges
+            adminRoundBadge.textContent = `Runde ${gameState.currentRound}/${gameState.totalRoundsMax}`;
+
+            // Config forms inputs values
+            if (document.activeElement !== twitchChannelInput) {
+                twitchChannelInput.value = gameState.twitchChannel || "";
+            }
+            if (document.activeElement !== intervalInput) {
+                intervalInput.value = gameState.revealIntervalSec || 60;
+            }
+            if (document.activeElement !== roundsInput) {
+                roundsInput.value = gameState.totalRoundsMax || 10;
+            }
+
+            // Sync countdown
+            startCountdownTimer();
+
+            // Render score columns editor list
+            renderScoreEditor();
+
+            // Render chat guess list
+            renderGuessList();
+        }
+
+        // Local timer sync to display remaining time
+        function startCountdownTimer() {
+            if (countdownInterval) clearInterval(countdownInterval);
+
+            if (gameState.paused || gameState.gameStatus !== 'guessing') {
+                const remaining = gameState.pauseTimeRemaining || gameState.revealIntervalSec || 60;
+                secondsLabel.textContent = `${remaining}s`;
+                return;
+            }
+
+            const updateSec = () => {
+                const now = Date.now();
+                const diffMs = gameState.nextRevealTime - now;
+                const secs = Math.max(0, Math.ceil(diffMs / 1000));
+                
+                secondsLabel.textContent = `${secs}s`;
+                
+                if (secs <= 0 && !gameState.paused && gameState.gameStatus === 'guessing') {
+                    clearInterval(countdownInterval);
+                    triggerFallbackReveal();
+                }
+            };
+
+            updateSec();
+            countdownInterval = setInterval(updateSec, 1000);
+        }
+
+        // Fallback letter reveal in case OBS overlay is not currently active
+        async function triggerFallbackReveal() {
+            const snap = await firebase.database().ref(`streams/${streamId}/data/wordgame`).once('value');
+            const data = snap.val();
+            if (!data || data.paused || data.gameStatus !== 'guessing') return;
+            
+            // Re-calculate remaining locally to confirm timeout
+            const diffMs = data.nextRevealTime - Date.now();
+            if (diffMs > 500) return; // not timed out yet in db
+
+            const word = data.currentWord || "";
+            const reveals = data.revealedIndices || [];
+
+            let hiddenIndices = [];
+            for (let i = 0; i < word.length; i++) {
+                if (!reveals.includes(i)) hiddenIndices.push(i);
+            }
+
+            const interval = data.revealIntervalSec || 60;
+            const ref = firebase.database().ref(`streams/${streamId}/data/wordgame`);
+
+            if (hiddenIndices.length > 0) {
+                const randIndex = hiddenIndices[Math.floor(Math.random() * hiddenIndices.length)];
+                reveals.push(randIndex);
+                await ref.update({
+                    revealedIndices: reveals,
+                    nextRevealTime: Date.now() + (interval * 1000)
+                });
+            } else {
+                // All letters shown -> Set to timeout state
+                await ref.update({
+                    gameStatus: "timeout",
+                    paused: true,
+                    transitionOwnerId: myClientId // Claim transition ownership
+                });
+            }
+        }
+
+        // Connect to Twitch Chat
+        function connectTwitchChat(channel) {
+            if (client) {
+                client.disconnect();
+                client = null;
+            }
+            if (!channel) return;
+
+            console.log(`Connecting to Twitch Channel: ${channel}`);
+            client = new tmi.Client({
+                connection: { secure: true, reconnect: true },
+                channels: [channel]
+            });
+
+            client.connect().catch(console.error);
+
+            client.on('message', (channel, tags, message, self) => {
+                if (self || isWaitingForNextRound) return;
+                
+                const guess = message.trim().toLowerCase();
+                const target = (gameState ? gameState.currentWord || "" : "").trim().toLowerCase();
+                
+                if (guess === target && target.length > 0) {
+                    handleWinnerFirebase(tags['display-name'] || tags.username);
+                } else {
+                    // Send to Firebase guesses monitor log
+                    if (gameState && gameState.gameStatus === 'guessing') {
+                        pushGuessToFirebase(tags['display-name'] || tags.username, message.trim());
+                    }
+                }
+            });
+        }
+
+        // Handle Winner Transition
+        async function handleWinnerFirebase(winnerName) {
+            if (isWaitingForNextRound) return;
+            isWaitingForNextRound = true;
+            stopCountdownTimer();
+            
+            const formattedWinner = winnerName.startsWith('@') ? winnerName : `@${winnerName}`;
+            
+            // Read fresh scores to prevent race conditions
+            const snap = await firebase.database().ref(`streams/${streamId}/data/wordgame`).once('value');
+            const data = snap.val();
+            if (!data || data.gameStatus !== 'guessing') return;
+            
+            const scores = data.scores || {};
+            scores[formattedWinner] = (scores[formattedWinner] || 0) + 1;
+            
+            const ref = firebase.database().ref(`streams/${streamId}/data/wordgame`);
+            await ref.update({
+                scores: scores,
+                lastWinner: formattedWinner,
+                gameStatus: "winner",
+                paused: true,
+                transitionOwnerId: myClientId // Claim transition ownership
+            });
+        }
+
+        // Start next round in DB
+        async function startNextRoundFirebase() {
+            const snap = await firebase.database().ref(`streams/${streamId}/data/wordgame`).once('value');
+            const data = snap.val();
+            if (!data) return;
+            
+            let round = (data.currentRound || 1) + 1;
+            let scores = data.scores || {};
+            
+            if (round > (data.totalRoundsMax || 10)) {
+                scores = {};
+                round = 1;
+            }
+            
+            const randomIndex = Math.floor(Math.random() * LOCAL_WORDS.length);
+            const word = LOCAL_WORDS[randomIndex].trim().toUpperCase();
+            
+            const reveals = [0];
+            if (word.length > 1) {
+                const second = Math.floor(Math.random() * (word.length - 1)) + 1;
+                reveals.push(second);
+            }
+            
+            const interval = data.revealIntervalSec || 60;
+            
+            await firebase.database().ref(`streams/${streamId}/data/wordgame`).update({
+                currentWord: word,
+                revealedIndices: reveals,
+                nextRevealTime: Date.now() + (interval * 1000),
+                currentRound: round,
+                paused: false,
+                gameStatus: "guessing",
+                lastGuesses: [],
+                scores: scores
+            });
+        }
+
+        // Push chat guess logs to Firebase
+        async function pushGuessToFirebase(user, guess) {
+            const logRef = firebase.database().ref(`streams/${streamId}/data/wordgame/lastGuesses`);
+            const snap = await logRef.once('value');
+            let list = snap.val() || [];
+            list.push({ user, guess, time: Date.now() });
+            if (list.length > 5) {
+                list.shift(); // limit to last 5
+            }
+            await logRef.set(list);
+        }
+
+        function stopCountdownTimer() {
+            if (countdownInterval) clearInterval(countdownInterval);
+        }
+
+        // Render Leaderboard items list with buttons
+        function renderScoreEditor() {
+            scoreContainer.innerHTML = '';
+            const scores = gameState.scores || {};
+            const players = Object.keys(scores).sort((a,b) => scores[b] - scores[a]);
+
+            if (players.length === 0) {
+                scoreContainer.innerHTML = '<div style="color:var(--text-muted); font-style:italic; font-size:13px; text-align:center; padding:10px 0;">Keine Einträge vorhanden.</div>';
+                return;
+            }
+
+            players.forEach(player => {
+                const item = document.createElement('div');
+                item.className = 'score-item';
+                item.innerHTML = `
+                    <div class="score-user">${player}</div>
+                    <div class="score-controls">
+                        <button class="btn-circle" onclick="changeScore('${player}', -1)">-</button>
+                        <span class="score-value">${scores[player]}</span>
+                        <button class="btn-circle" onclick="changeScore('${player}', 1)">+</button>
+                        <button class="btn-circle btn-danger" onclick="deleteUserScore('${player}')" style="margin-left: 10px; font-weight:800; font-size:12px;">✕</button>
+                    </div>
+                `;
+                scoreContainer.appendChild(item);
+            });
+        }
+
+        // Render last guesses log
+        function renderGuessList() {
+            guessLogContainer.innerHTML = '';
+            const list = gameState.lastGuesses || [];
+
+            if (list.length === 0) {
+                guessLogContainer.innerHTML = '<div style="color: var(--text-muted); font-style: italic; font-size: 13px; text-align: center; padding: 10px 0;">Noch keine Tipps empfangen...</div>';
+                return;
+            }
+
+            // Display newest first
+            [...list].reverse().forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'guess-item';
+                row.innerHTML = `
+                    <span class="guess-user">${item.user}</span>
+                    <span class="guess-text">${item.guess}</span>
+                `;
+                guessLogContainer.appendChild(row);
+            });
+        }
+
+        // Change score action helper
+        window.changeScore = async function(user, amount) {
+            if (!gameState) return;
+            const ref = firebase.database().ref(`streams/${streamId}/data/wordgame/scores/${user}`);
+            const current = gameState.scores[user] || 0;
+            const next = Math.max(0, current + amount);
+            await ref.set(next);
+        };
+
+        // Delete user score helper
+        window.deleteUserScore = async function(user) {
+            if (confirm(`Möchtest du ${user} von der Rangliste entfernen?`)) {
+                await firebase.database().ref(`streams/${streamId}/data/wordgame/scores/${user}`).remove();
+            }
+        };
+
+        // Add manual score viewer
+        document.getElementById('btnAddUser').addEventListener('click', async () => {
+            let user = document.getElementById('addUserInput').value.trim();
+            if (!user) return;
+            
+            if (!user.startsWith('@')) user = '@' + user;
+            
+            document.getElementById('addUserInput').value = '';
+            
+            const ref = firebase.database().ref(`streams/${streamId}/data/wordgame/scores/${user}`);
+            await ref.set(0);
+        });
+
+        // Config form saving
+        document.getElementById('btnSaveConfig').addEventListener('click', async () => {
+            const chan = twitchChannelInput.value.trim().toLowerCase();
+            const interval = parseInt(intervalInput.value) || 60;
+            const rounds = parseInt(roundsInput.value) || 10;
+            
+            saveStatus.textContent = "Speichere...";
+            saveStatus.style.color = "var(--text-muted)";
+
+            try {
+                // Update config settings and reset next reveal time
+                const ref = firebase.database().ref(`streams/${streamId}/data/wordgame`);
+                await ref.update({
+                    twitchChannel: chan,
+                    revealIntervalSec: interval,
+                    totalRoundsMax: rounds
+                });
+                
+                // If countdown is active, adjust nextRevealTime to match new interval
+                if (gameState && !gameState.paused && gameState.gameStatus === 'guessing') {
+                    await ref.update({
+                        nextRevealTime: Date.now() + (interval * 1000)
+                    });
+                }
+
+                saveStatus.textContent = "Erfolgreich gespeichert! ✓";
+                saveStatus.style.color = "var(--success)";
+                setTimeout(() => { saveStatus.textContent = ''; }, 3000);
+            } catch (err) {
+                saveStatus.textContent = "Fehler: " + err.message;
+                saveStatus.style.color = "var(--danger)";
+            }
+        });
+
+        // Button Click Action: Force Buchstabe aufdecken
+        document.getElementById('btnRevealLetter').addEventListener('click', async () => {
+            if (!gameState || gameState.gameStatus !== 'guessing') return;
+            
+            const word = gameState.currentWord || "";
+            const reveals = gameState.revealedIndices || [];
+            
+            let hiddenIndices = [];
+            for (let i = 0; i < word.length; i++) {
+                if (!reveals.includes(i)) hiddenIndices.push(i);
+            }
+
+            if (hiddenIndices.length > 0) {
+                const randIndex = hiddenIndices[Math.floor(Math.random() * hiddenIndices.length)];
+                reveals.push(randIndex);
+                
+                const ref = firebase.database().ref(`streams/${streamId}/data/wordgame`);
+                await ref.update({
+                    revealedIndices: reveals,
+                    nextRevealTime: Date.now() + (gameState.revealIntervalSec * 1000)
+                });
+            } else {
+                alert("Alle Buchstaben sind bereits aufgedeckt!");
+            }
+        });
+
+        // Words array duplicate for controller fallback
+        const LOCAL_WORDS = [
+            "Abend", "Abenteuer", "Affe", "Ahnung", "Aktion", "Aktivität", "Alkohol", "Alltag", "Alpen", "Alter",
+            "Ampel", "Angst", "Anker", "Ankunft", "Anruf", "Anzug", "Apfel", "Apotheke", "Arbeit", "Armband",
+            "Armut", "Arzt", "Asche", "Atem", "Atlas", "Auge", "Auto", "Baby", "Bach", "Backofen",
+            "Badewanne", "Bahnhof", "Ballon", "Banane", "Bank", "Bär", "Barriere", "Bart", "Batterie", "Bauch",
+            "Bauer", "Baum", "Baustelle", "Becher", "Becken", "Bein", "Beispiel", "Benzin", "Berg", "Beruf",
+            "Besen", "Besteck", "Besuch", "Bett", "Beutel", "Bibel", "Bibliothek", "Biene", "Bier", "Bild",
+            "Bildschirm", "Birne", "Blase", "Blatt", "Bleistift", "Blick", "Blitz", "Block", "Blume", "Bluse",
+            "Blut", "Boden", "Bogen", "Bohne", "Boot", "Bord", "Börse", "Bote", "Boxer", "Brand",
+            "Bratwurst", "Brauch", "Braut", "Bremse", "Brief", "Brille", "Brot", "Brücke", "Brunnen", "Brust",
+            "Buch", "Bühne", "Bürger", "Bürste", "Busch", "Butter", "Clown", "Computer", "Couch", "Creme",
+            "Dach", "Dame", "Dampf", "Dank", "Darm", "Datum", "Dauer", "Decke", "Degen", "Delfin",
+            "Denker", "Detail", "Diamant", "Diener", "Dienst", "Dinosaurier", "Diplom", "Direktor", "Disko", "Distel",
+            "Doktor", "Dolch", "Dom", "Donner", "Dorf", "Dorn", "Dose", "Drache", "Draht", "Dreieck",
+            "Dschungel", "Duft", "Düne", "Dunst", "Durst", "Dusche", "Dutzend", "Echo", "Ecke", "Edelstein",
+            "Efeu", "Eiche", "Eimer", "Eis", "Eisen", "Eisberg", "Elefant", "Elfenbein", "Ellbogen", "Elster",
+            "Empfang", "Ende", "Energie", "Engel", "Enkel", "Ente", "Entwurf", "Erbe", "Erde", "Erdbeere",
+            "Erfolg", "Erfahrung", "Ergebnis", "Ernte", "Esel", "Essig", "Etage", "Eule", "Experiment", "Export",
+            "Fabrik", "Faden", "Fähre", "Fahrrad", "Fahrstuhl", "Falke", "Fallschirm", "Familie", "Farbe", "Fasan",
+            "Fass", "Faust", "Feder", "Fehler", "Feier", "Feige", "Feind", "Felge", "Fels", "Fenster",
+            "Ferien", "Fernglas", "Fernseher", "Fessel", "Fest", "Feuer", "Fichte", "Fieber", "Figur", "Film",
+            "Filter", "Finger", "Firma", "Fisch", "Flamme", "Flasche", "Fleisch", "Fliege", "Fliese", "Floh",
+            "Floß", "Flöte", "Flugzeug", "Flur", "Fluss", "Flut", "Folie", "Forelle", "Form", "Forscher",
+            "Fortschritt", "Foto", "Fracht", "Frage", "Frau", "Freiheit", "Freund", "Friede", "Frosch", "Frost",
+            "Frucht", "Frühling", "Fuchs", "Fund", "Funke", "Fuß", "Fußball", "Gabel", "Galerie", "Gans",
+            "Garage", "Garten", "Gas", "Gast", "Gitarre", "Glas", "Gletscher", "Glocke", "Glück", "Gold",
+            "Gondel", "Grab", "Graf", "Gras", "Grenze", "Grippe", "Gürtel", "Haar", "Hafen", "Hahn",
+            "Haifisch", "Haken", "Halle", "Hals", "Hammer", "Hand", "Handtuch", "Handy", "Hase", "Hass",
+            "Haube", "Haus", "Haut", "Hecke", "Hefe", "Heft", "Heide", "Heimat", "Held", "Helm",
+            "Hemd", "Hengst", "Herbst", "Herd", "Herz", "Hexe", "Himmel", "Hirsch", "Hitze", "Hobel",
+            "Hochzeit", "Hof", "Höhe", "Höhle", "Holz", "Honig", "Horn", "Hose", "Hotel", "Huhn",
+            "Hummer", "Hund", "Hut", "Hütte", "Igel", "Insel", "Jacke", "Jagd", "Jäger", "Jahr",
+            "Jammer", "Juwel", "Kabine", "Käfer", "Kaffee", "Kahn", "Kaiser", "Kakao", "Kaktus", "Kalb",
+            "Kamel", "Kamera", "Kamin", "Kamm", "Kampf", "Kanal", "Kaninchen", "Kanne", "Kanu", "Kappe",
+            "Karotte", "Karte", "Karton", "Käse", "Kasse", "Kastanie", "Kater", "Katze", "Kauf", "Kegel",
+            "Kehle", "Keks", "Keller", "Kelch", "Kessel", "Kette", "Kiefern", "Kind", "Kinn", "Kirche",
+            "Kirsche", "Kissen", "Kiste", "Klaue", "Klavier", "Kleid", "Klee", "Klippe", "Klo", "Kloster", "Kluft",
+            "Kumpel", "Knoblauch", "Knochen", "Knopf", "Knoten", "Koffer", "Kohl", "Kollege", "Kompass", "König",
+            "Kopf", "Korb", "Korken", "Körper", "Kosmos", "Krabbe", "Kraft", "Krähe", "Kran", "Kranz",
+            "Kraut", "Krebs", "Kreide", "Kreis", "Kreuz", "Krieg", "Krokodil", "Krone", "Krug", "Küche",
+            "Kuchen", "Kugel", "Kuh", "Kunde", "Kunst", "Kupfer", "Kürbis", "Kutsche", "Labor", "Lachs",
+            "Laden", "Lager", "Lamm", "Lampe", "Land", "Laterne", "Laub", "Lauf", "Lawine", "Leben",
+            "Leder", "Lehm", "Lehrer", "Leib", "Leiche", "Leine", "Leiter", "Lerche", "Leser", "Licht", "Lied",
+            "Liga", "Lilie", "Linie", "Lippe", "Liste", "Loch", "Löffel", "Lohn", "Lokomotive", "Löwe",
+            "Luft", "Lunge", "Lust", "Macht", "Mädchen", "Mähne", "Maler", "Mantel", "Marder", "Markt",
+            "Marmor", "Marsch", "Maske", "Mast", "Mauer", "Maus", "Medizin", "Meer", "Mehl", "Meile",
+            "Meise", "Meister", "Melone", "Mensch", "Messer", "Metall", "Miete", "Milch", "Minze", "Mischung",
+            "Mitglied", "Möbel", "Mode", "Modell", "Mohn", "Möhre", "Mond", "Moos", "Mörtel", "Motor",
+            "Mücke", "Mühle", "Müll", "Mund", "Münze", "Muschel", "Musik", "Muskel", "Muster", "Mutter",
+            "Mütze", "Nachbar", "Nadel", "Nagel", "Nahrung", "Name", "Nase", "Natur", "Nebel", "Nest",
+            "Netz", "Niere", "Nudel", "Nuss", "Oase", "Obst", "Ofen", "Ohr", "Oliven", "Onkel",
+            "Oper", "Orange", "Orgel", "Ort", "Ozean", "Paar", "Paket", "Palast", "Palme", "Panther",
+            "Papier", "Papagei", "Paradies", "Park", "Pass", "Patent", "Pauke", "Pause", "Pech", "Pelz",
+            "Pendel", "Perle", "Person", "Pfad", "Pfanne", "Pfau", "Pfeffer", "Pfeife", "Pfeil", "Pferd",
+            "Pfirsich", "Pflaume", "Pfote", "Pfund", "Pille", "Pilz", "Pinguin", "Pinsel", "Pirat", "Pistole",
+            "Pizza", "Plakat", "Plan", "Planet", "Plastik", "Platte", "Platz", "Plauderei", "Pflug", "Polizei",
+            "Pony", "Portal", "Porträt", "Post", "Präsident", "Preis", "Presse", "Priester", "Prinz", "Prinzessin",
+            "Prisma", "Probe", "Produkt", "Profi", "Programm", "Projekt", "Prozess", "Puls", "Pulver",
+            "Pullover", "Pumpe", "Punkt", "Puppe", "Pyramide", "Qualle", "Quark", "Quelle", "Querflöte", "Quittung",
+            "Rabatt", "Rabe", "Rad", "Radio", "Rahmen", "Rain", "Rakete", "Rampe", "Rand", "Rang", "Rappe",
+            "Rasen", "Ratte", "Rauch", "Raum", "Raupe", "Rebe", "Rezept", "Rechen", "Rechner", "Recht",
+            "Rede", "Regal", "Regen", "Regierung", "Reh", "Reifen", "Reihe", "Reim", "Reise", "Reisepass",
+            "Rekord", "Rennbahn", "Rentner", "Republik", "Restaurant", "Rettich", "Richter", "Riese", "Rind",
+            "Ring", "Rinne", "Riss", "Ritter", "Robbe", "Rock", "Roggen", "Rohr", "Rolle", "Roman",
+            "Rose", "Rosine", "Rost", "Ruder", "Ruf", "Ruhe", "Rumpf", "Runde", "Rucksack", "Rübe",
+            "Rücken", "Rüstung", "Saal", "Saat", "Sack", "Saft", "Sage", "Salat", "Salz", "Samen",
+            "Sand", "Sänger", "Saphir", "Sarg", "Satellit", "Sattel", "Satz", "Sauce", "Sauerstoff", "Säule",
+            "Schacht", "Schaf", "Schal", "Schale", "Schalter", "Schatten", "Schatz", "Schaufel", "Schaum", "Scheibe",
+            "Schein", "Scheune", "Schere", "Scherz", "Schicht", "Schiff", "Schild", "Schildkröte", "Schinken", "Schirm",
+            "Schlacht", "Schlaf", "Schlag", "Schlange", "Schlauch", "Schleife", "Schloss", "Schlucht", "Schlüssel", "Schmalz",
+            "Schmerz", "Schmuck", "Schnabel", "Schnee", "Schnecke", "Schneider", "Schnur", "Schokolade", "Schrank", "Schraube",
+            "Schrift", "Schuh", "Schule", "Schüler", "Schulter", "Schuppe", "Schuss", "Schüssel", "Schutz", "Schwamm",
+            "Schwan", "Schwanz", "Schwert", "Schwester", "Schwimmbad", "See", "Segel", "Seide", "Seife", "Seil",
+            "Sekunde", "Semmel", "Senf", "Sessel", "Sieb", "Sieg", "Siegel", "Silber", "Smaragd", "Socke",
+            "Sofa", "Sohn", "Sommer", "Sonne", "Spiegel", "Spiel", "Spinat", "Spinne", "Spion", "Spur",
+            "Stadt", "Stall", "Stamm", "Stand", "Star", "Staub", "Stein", "Stempel", "Stern", "Steuer",
+            "Stiefel", "Stift", "Stimme", "Stirn", "Stoff", "Stolz", "Storch", "Strahl", "Strand", "Straße",
+            "Strauch", "Streik", "Strick", "Strom", "Strumpf", "Stube", "Stück", "Student", "Studio", "Stuhl",
+            "Sturm", "Stute", "Suppe", "Süßigkeit", "Tabak", "Tabelle", "Tafel", "Tag", "Tal", "Tanne",
+            "Tante", "Tanz", "Tasche", "Tasse", "Tastatur", "Tau", "Taube", "Taucher", "Teich", "Teig",
+            "Teil", "Telefon", "Teller", "Teppich", "Text", "Theater", "Thema", "Thron", "Tiefe", "Tier",
+            "Tiger", "Tinte", "Tisch", "Titel", "Tochter", "Tod", "Tomate", "Topf", "Tor", "Torte",
+            "Träne", "Traum", "Treffen", "Treppe", "Tresor", "Tribüne", "Trichter", "Trinkglas", "Triumph", "Trommel",
+            "Trompete", "Tropfen", "Trost", "Truhe", "Tulpe", "Tunnel", "Tür", "Turm", "Uhr", "Uhu",
+            "Unfall", "Uniform", "Universität", "Unterricht", "Urlaub", "Urwald", "Vase", "Vater", "Veilchen", "Ventil",
+            "Verband", "Verein", "Verhalten", "Verkauf", "Verkehr", "Verlag", "Versuch", "Vertrag", "Viertel", "Villa",
+            "Vogel", "Volk", "Vorhang", "Vortrag", "Waage", "Wabe", "Wachs", "Waffe", "Wagen", "Wahl",
+            "Wald", "Walfisch", "Walnuss", "Walze", "Wand", "Wange", "Wappen", "Wärme", "Warteschlange", "Wäsche",
+            "Wasser", "Weide", "Weihnachten", "Wein", "Weisheit", "Weizen", "Welle", "Welt", "Werkzeug", "Weste",
+            "Wetter", "Widerstand", "Wiese", "Wildnis", "Wimper", "Wind", "Winkel", "Winter", "Wirbel", "Wirtschaft",
+            "Wissenschaft", "Witz", "Woche", "Wolke", "Wolle", "Wort", "Wunde", "Wunsch", "Wurm", "Wurst",
+            "Wüste", "Wut", "Zahl", "Zahn", "Zange", "Zaun", "Zebra", "Zehe", "Zeichen", "Zeichnung", "Zeigefinger",
+            "Zeit", "Zeitung", "Zelt", "Zement", "Zensur", "Zentimeter", "Zepter", "Zettel", "Zeuge", "Ziege",
+            "Ziegel", "Ziel", "Zigarre", "Zimmer", "Zimt", "Zink", "Zinn", "Zirkel", "Zirkus", "Zitrone",
+            "Zoll", "Zone", "Zoo", "Zopf", "Zucker", "Zug", "Zukunft", "Zunge", "Zuschauer", "Zweig", "Zwiebel",
+            "Zylinder"
+        ];
+
+        // Button Click Action: Wort überspringen (Skip Word)
+        document.getElementById('btnSkipWord').addEventListener('click', async () => {
+            if (!gameState) return;
+            
+            // Pick new random word
+            const randIdx = Math.floor(Math.random() * LOCAL_WORDS.length);
+            const word = LOCAL_WORDS[randIdx].trim().toUpperCase();
+            
+            // Reveals
+            const reveals = [0];
+            if (word.length > 1) {
+                const second = Math.floor(Math.random() * (word.length - 1)) + 1;
+                reveals.push(second);
+            }
+
+            const interval = gameState.revealIntervalSec || 60;
+            
+            const ref = firebase.database().ref(`streams/${streamId}/data/wordgame`);
+            await ref.update({
+                currentWord: word,
+                revealedIndices: reveals,
+                nextRevealTime: Date.now() + (interval * 1000),
+                gameStatus: "guessing"
+            });
+        });
+
+        // Button Click Action: Pausieren / Fortsetzen
+        document.getElementById('btnPauseGame').addEventListener('click', async () => {
+            if (!gameState) return;
+            
+            const ref = firebase.database().ref(`streams/${streamId}/data/wordgame`);
+            
+            if (gameState.paused) {
+                // Resume game
+                const remaining = gameState.pauseTimeRemaining || 60;
+                await ref.update({
+                    paused: false,
+                    nextRevealTime: Date.now() + (remaining * 1000)
+                });
+            } else {
+                // Pause game
+                const diffMs = gameState.nextRevealTime - Date.now();
+                const remaining = Math.max(0, Math.ceil(diffMs / 1000));
+                await ref.update({
+                    paused: true,
+                    pauseTimeRemaining: remaining
+                });
+            }
+        });
+
+        // Button Click Action: Set custom word override
+        document.getElementById('btnSendCustomWord').addEventListener('click', async () => {
+            if (!gameState) return;
+            const val = document.getElementById('customWordInput').value.trim().toUpperCase();
+            if (!val) return;
+            
+            document.getElementById('customWordInput').value = '';
+
+            const reveals = [0];
+            if (val.length > 1) {
+                const second = Math.floor(Math.random() * (val.length - 1)) + 1;
+                reveals.push(second);
+            }
+
+            const interval = gameState.revealIntervalSec || 60;
+            
+            const ref = firebase.database().ref(`streams/${streamId}/data/wordgame`);
+            await ref.update({
+                currentWord: val,
+                revealedIndices: reveals,
+                nextRevealTime: Date.now() + (interval * 1000),
+                gameStatus: "guessing"
+            });
+        });
+
+        // Trigger enter press in custom word box
+        document.getElementById('customWordInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('btnSendCustomWord').click();
+            }
+        });
+
+        // Reset points and round stats
+        document.getElementById('btnResetScores').addEventListener('click', async () => {
+            if (confirm("Möchtest du wirklich die Rangliste und den Rundenzähler komplett zurücksetzen?")) {
+                const ref = firebase.database().ref(`streams/${streamId}/data/wordgame`);
+                await ref.update({
+                    scores: {},
+                    currentRound: 1,
+                    gameStatus: "guessing"
+                });
+                
+                // Trigger a new word skip to clean board
+                document.getElementById('btnSkipWord').click();
+            }
+        });
+    </script>
+</body>
+</html>

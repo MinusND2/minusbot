@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Win Challenge Admin Panel</title>
+    <link rel="stylesheet" href="../public/style.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --bg: #050505;
+            --bg-card: #0c0c0e;
+            --bg-elevated: #121214;
+            --border: rgba(255, 255, 255, 0.05);
+            --border-hover: rgba(255, 255, 255, 0.1);
+            --border-active: rgba(245, 197, 24, 0.15);
+            --text: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --accent: #f5c518;
+            --accent-cyan: #06b6d4;
+            --accent-grad: linear-gradient(135deg, #f5c518 0%, #ffb700 100%);
+            --radius: 12px;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --purple: #8b5cf6;
+        }
+        * { box-sizing: border-box; }
+        body.admin-mode {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            position: relative;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .ambient-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(140px);
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.45;
+        }
+        .orb-yellow { width: 400px; height: 400px; background: rgba(245, 197, 24, 0.025); top: -100px; right: -50px; }
+        .orb-cyan { width: 300px; height: 300px; background: rgba(6, 182, 212, 0.015); bottom: -50px; left: 100px; }
+
+        .app-wrap {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .sidebar {
+            width: 260px;
+            background: #09090b;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 32px 20px;
+            z-index: 10;
+            flex-shrink: 0;
+        }
+        .logo { margin-bottom: 40px; padding: 0 8px; display: flex; align-items: center; gap: 12px; }
+        .logo-text {
+            font-size: 20px; font-weight: 800; letter-spacing: 3px;
+            text-transform: uppercase;
+            background: var(--accent-grad);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .nav-menu { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        .nav-btn {
+            background: transparent; border: none; color: var(--text-muted);
+            padding: 12px 16px; font-size: 14px; font-weight: 600;
+            text-align: left; border-radius: 8px; cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); font-family: inherit;
+            display: flex; align-items: center; gap: 10px;
+            text-decoration: none;
+        }
+        .nav-btn:hover { color: var(--text); background: var(--bg-elevated); }
+        .nav-btn.active {
+            color: var(--accent);
+            background: rgba(245, 197, 24, 0.06);
+            border: 1px solid var(--border-active);
+            box-shadow: 0 4px 12px rgba(245, 197, 24, 0.05);
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 48px 56px;
+            overflow-y: auto;
+        }
+
+        h1, h2, h3 { margin: 0; font-weight: 600; }
+        h1 {
+            font-size: 32px; font-weight: 800; color: #fff; margin-bottom: 8px;
+            background: linear-gradient(to right, #fff, var(--text-muted));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        h3 { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .subtitle { color: var(--text-muted); margin: 0 0 32px 0; font-size: 15px; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: minmax(500px, 1.4fr) 1fr;
+            gap: 32px;
+            align-items: start;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            margin-bottom: 24px;
+        }
+
+        /* Form styling */
+        .input-group { margin-bottom: 18px; }
+        .input-group label {
+            display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+            color: var(--text-muted); margin-bottom: 6px; font-weight: 700;
+        }
+        .input-group input[type="text"],
+        .input-group input[type="number"],
+        .input-group select {
+            width: 100%; min-height: 44px; border-radius: 8px; border: 1px solid var(--border);
+            background: var(--bg-elevated); color: #fff; padding: 8px 12px; font-family: inherit; outline: none; transition: all 0.2s;
+        }
+        .input-group input:focus, .input-group select:focus {
+            border-color: var(--accent); box-shadow: 0 0 0 3px rgba(245, 197, 24, 0.15);
+        }
+
+        .color-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .color-picker-wrap { display: flex; align-items: center; gap: 8px; background: var(--bg-elevated); border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; }
+        .color-picker-wrap input[type="color"] { width: 32px; height: 32px; border: none; border-radius: 4px; cursor: pointer; background: transparent; padding: 0; }
+        .color-picker-wrap span { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+
+        /* Game table/list styling */
+        .game-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .game-item {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 120px;
+            gap: 12px;
+            align-items: center;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .game-item:hover { border-color: var(--border-hover); }
+        .game-actions-cell { display: flex; gap: 6px; justify-content: flex-end; }
+        
+        .btn-icon {
+            width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 6px; color: var(--text);
+            cursor: pointer; transition: all 0.2s;
+        }
+        .btn-icon:hover { background: var(--bg-elevated); border-color: var(--border-hover); color: #fff; }
+        .btn-icon.delete:hover { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); color: #ff8080; }
+
+        button {
+            padding: 12px 14px; font-size: 14px; font-weight: 700; font-family: inherit;
+            border-radius: 10px; border: 1px solid transparent; color: #fff; cursor: pointer; transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); width: 100%;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.3); }
+        
+        .btn-primary { background: var(--accent-grad); box-shadow: 0 4px 15px rgba(245, 197, 24, 0.15); color: #000; }
+        .btn-primary:hover { box-shadow: 0 6px 20px rgba(245, 197, 24, 0.25); }
+        .btn-danger { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #ff8080; }
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.4); color: #fff; }
+        .btn-success { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); color: #86efac; }
+        .btn-success:hover { background: rgba(34, 197, 94, 0.2); border-color: rgba(34, 197, 94, 0.4); color: #fff; }
+        .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); box-shadow: none; }
+        .btn-ghost:hover { color: #fff; background: var(--bg-elevated); border-color: var(--border-hover); }
+
+        /* Share panel link card */
+        .share-card {
+            background: rgba(6, 182, 212, 0.02);
+            border-color: rgba(6, 182, 212, 0.15);
+        }
+        .share-link-group {
+            background: #060a0d;
+            border: 1px solid rgba(6, 182, 212, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 8px;
+            margin-bottom: 14px;
+        }
+        .share-url {
+            color: var(--accent-cyan);
+            font-size: 13px;
+            font-family: monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-decoration: none;
+            flex: 1;
+        }
+
+        #saveStatus { font-size: 13px; font-weight: 500; text-align: center; margin-top: 12px; min-height: 20px; }
+
+        @media (max-width: 1100px) {
+            .app-wrap { flex-direction: column; }
+            .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); padding: 20px; flex-direction: row; align-items: center; justify-content: space-between; }
+            .logo { margin-bottom: 0; }
+            .nav-menu { flex-direction: row; gap: 12px; margin-left: 20px; }
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body class="admin-mode">
+    <div class="ambient-orb orb-yellow"></div>
+    <div class="ambient-orb orb-cyan"></div>
+    
+    <div class="app-wrap">
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="logo-text">MINUS<span style="color:var(--accent);">.</span></span>
+            </div>
+            <nav class="nav-menu">
+                <a id="bingoAdminLink" href="/protected/admin.html" class="nav-btn">
+                    <svg class="nav-icon" style="width:16px; height:16px; fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
+                    Bingo Board
+                </a>
+                <a id="scoreboardAdminLink" href="/protected/scoreboard-admin.html" class="nav-btn">
+                    <svg class="nav-icon" style="width:16px; height:16px; fill:currentColor;" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2zm0-4H7V7h10v2zm0 8H7v-2h10v2z"/></svg>
+                    Scoreboard
+                </a>
+                <a id="scoreboard2v2v2AdminLink" href="/protected/scoreboard-2v2v2-admin.html" class="nav-btn">
+                    <svg class="nav-icon" style="width:16px; height:16px; fill:currentColor;" viewBox="0 0 24 24"><path d="M21 6H3V4h18v2zm0 4H3v2h18v-2zm0 4H3v2h18v-2zm0 4H3v2h18v-2z"/></svg>
+                    2v2v2 Game
+                </a>
+                <a href="#" class="nav-btn active">
+                    <svg class="nav-icon" style="width:16px; height:16px; fill:currentColor;" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"></path></svg>
+                    Win Challenge
+                </a>
+                <a id="subathonAdminLink" href="/protected/subathon-admin.html" class="nav-btn">
+                    <svg class="nav-icon" style="width:16px; height:16px; fill:currentColor;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Subathon
+                </a>
+            </nav>
+            <div style="margin-top:auto;">
+                <a href="/protected/panel.html" class="nav-btn">← Zurück zum Hub</a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <h1 id="panelTitle">Win Challenge steuern</h1>
+            <p class="subtitle" id="panelSubtitle">Erstelle deine Spiele, bearbeite Spielstände und passe das Layout an.</p>
+
+            <div class="dashboard-grid">
+                <!-- Challenge list card -->
+                <div>
+                    <div class="card">
+                        <h3>Spiele & Challenges</h3>
+                        
+                        <div class="input-group">
+                            <label for="overlayTitle">Overlay Überschrift</label>
+                            <input id="overlayTitle" type="text" placeholder="z.B. WIN-CHALLENGE" value="WIN-CHALLENGE">
+                        </div>
+
+                        <div class="game-list" id="gamesContainer">
+                            <!-- Game items will be rendered here dynamically -->
+                        </div>
+
+                        <button id="addGameBtn" class="btn-success" style="margin-bottom: 20px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Neues Spiel hinzufügen
+                        </button>
+                        
+                        <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px;">
+                            <button id="saveAllBtn" class="btn-primary">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                Änderungen speichern
+                            </button>
+                            <button id="resetScoresBtn" class="btn-danger">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                                Scores resetten
+                            </button>
+                        </div>
+                        <div id="saveStatus"></div>
+                    </div>
+
+                    <!-- Challenge Timer Steuerung Card -->
+                    <div class="card" style="margin-top: 20px;">
+                        <h3>Challenge Timer</h3>
+                        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 15px;">
+                            Steuere einen Timer im Header deiner Win-Challenge.
+                        </p>
+                        
+                        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 16px;">
+                            <div style="flex: 1;">
+                                <div id="lblChallengeTimerTime" style="font-size: 32px; font-weight: 800; font-family: monospace; color: var(--accent); text-align: center; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid var(--border);">00:00</div>
+                                <div id="lblChallengeTimerStatus" style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 4px;">Pausiert</div>
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
+                                <button id="btnChallengeTimerStart" class="btn-primary" style="padding: 6px 12px; font-size: 12px; width: 100%;">Start</button>
+                                <button id="btnChallengeTimerPause" class="btn-ghost" style="padding: 6px 12px; font-size: 12px; width: 100%;">Pause</button>
+                                <button id="btnChallengeTimerReset" class="btn-danger" style="padding: 6px 12px; font-size: 12px; width: 100; border-color: rgba(239,68,68,0.3);">Reset</button>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 16px;">
+                            <input id="txtChallengeTimerMinutes" type="number" value="10" min="0" max="180" style="padding: 8px 12px; font-size: 13px; max-width: 100px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; color: #fff;">
+                            <button id="btnChallengeTimerSetMinutes" class="btn-ghost" style="padding: 8px 14px; font-size: 12px; white-space: nowrap;">Startzeit setzen</button>
+                        </div>
+
+                        <div class="input-group" style="margin-bottom: 0;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--text-color);">
+                                <input id="chkChallengeTimerEnabled" type="checkbox" style="width: 16px; height: 16px; cursor: pointer;">
+                                Timer im Overlay anzeigen
+                            </label>
+                        </div>
+
+                        <div class="input-group" style="margin-top: 12px; margin-bottom: 0;">
+                            <label for="selChallengeTimerMode">Timer-Modus</label>
+                            <select id="selChallengeTimerMode" style="width: 100%; padding: 8px 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; color: #fff; font-size: 13px;">
+                                <option value="countdown">Runterzählen (Countdown)</option>
+                                <option value="countup">Hochzählen (Stoppuhr / Count-up)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Share / Access Links Card -->
+                    <div class="card share-card">
+                        <h3 style="color: var(--accent-cyan);">Freigabe & OBS Integration</h3>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+                            Kopiere den OBS Link als Browser-Quelle. Den Moderator Link kannst du an deine Partner oder Mods weitergeben, damit sie die Scores anpassen können.
+                        </p>
+
+                        <div class="input-group">
+                            <label>OBS Overlay Link (In OBS einfügen)</label>
+                            <div class="share-link-group">
+                                <a id="obsOverlayLink" href="#" target="_blank" class="share-url">Lade Link...</a>
+                                <button id="copyObsBtn" type="button" class="btn-primary" style="width: auto; padding: 6px 12px; font-size: 12px;">Kopieren</button>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Moderator Steuerungs-Link (Für deine Mods)</label>
+                            <div id="modLinkContainer" class="share-link-group" style="display: none;">
+                                <a id="modShareLink" href="#" target="_blank" class="share-url">Lade Link...</a>
+                                <button id="copyModBtn" type="button" class="btn-primary" style="width: auto; padding: 6px 12px; font-size: 12px;">Kopieren</button>
+                            </div>
+                            <div id="noModLinkText" style="color: var(--text-muted); font-size: 12px; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px dashed var(--border); text-align: center;">
+                                ⚠️ Kein Moderator-Token vorhanden. Generiere einen Token im <a href="/protected/scoreboard-admin.html" style="color: var(--accent); font-weight: bold; text-decoration: none;">Scoreboard Admin</a>.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Design / Layout parameters card -->
+                <div>
+                    <div class="card">
+                        <h3>Design Einstellungen</h3>
+                        
+                        <div class="input-group">
+                            <label for="themeSelect">Design-Style</label>
+                            <select id="themeSelect">
+                                <option value="standard">Standard (Glassmorphism)</option>
+                                <option value="fantasy">Fantasy (Anime/Butterfly)</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="stylePreset">Farb-Preset für Header</label>
+                            <select id="stylePreset">
+                                <option value="turquoise">Türkis / Mint (Default)</option>
+                                <option value="volcano">Vulkan / Feuer-Orange</option>
+                                <option value="purple">Neon Violett / Cyan</option>
+                                <option value="pink">Pink / Indigo</option>
+                                <option value="dark">Edles Anthrazit / Kohle</option>
+                                <option value="custom">Benutzerdefiniert</option>
+                            </select>
+                        </div>
+
+                        <div id="customColorsContainer" style="display: none;">
+                            <label style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 6px; font-weight: 700;">Custom Header Verlauf</label>
+                            <div class="color-row">
+                                <div class="color-picker-wrap">
+                                    <input id="colorHeaderA" type="color" value="#00b4db">
+                                    <span>Von</span>
+                                </div>
+                                <div class="color-picker-wrap">
+                                    <input id="colorHeaderB" type="color" value="#0083b0">
+                                    <span>Bis</span>
+                                </div>
+                            </div>
+                            <div class="color-picker-wrap" style="margin-bottom: 18px;">
+                                <input id="colorHeaderTextColor" type="color" value="#ffffff">
+                                <span>Header Textfarbe</span>
+                            </div>
+                        </div>
+
+                        <div class="color-row">
+                            <div class="color-picker-wrap">
+                                <input id="colorBodyBg" type="color" value="#0a0f0c">
+                                <span>Box Hintergrund</span>
+                            </div>
+                            <div class="color-picker-wrap">
+                                <input id="colorTextColor" type="color" value="#e2f0e7">
+                                <span>Textfarbe</span>
+                            </div>
+                        </div>
+
+                        <div class="color-row">
+                            <div class="color-picker-wrap">
+                                <input id="colorAccent" type="color" value="#00e5ff">
+                                <span>Akzent (Bars)</span>
+                            </div>
+                            <div class="color-picker-wrap">
+                                <input id="colorGlow" type="color" value="#00e5ff">
+                                <span>Leuchteffekt</span>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="sliderBodyOpacity">Hintergrund-Deckkraft (%)</label>
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <input id="sliderBodyOpacity" type="range" min="0" max="100" value="75" style="flex:1;">
+                                <span id="opacityVal" style="font-size:14px; font-weight:bold; min-width:36px; text-align:right;">75%</span>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div class="input-group">
+                                <label for="numScale">Skalierung Overlay</label>
+                                <input id="numScale" type="number" min="0.3" max="3" step="0.05" value="1.0">
+                            </div>
+                            <div class="input-group">
+                                <label for="numRadius">Eckenradius (px)</label>
+                                <input id="numRadius" type="number" min="0" max="32" value="12">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div class="input-group">
+                                <label for="numPosX">Position X (px)</label>
+                                <input id="numPosX" type="number" min="0" value="40">
+                            </div>
+                            <div class="input-group">
+                                <label for="numPosY">Position Y (px)</label>
+                                <input id="numPosY" type="number" min="0" value="40">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div class="input-group">
+                                <label for="numFontSize">Schriftgröße Spiele (px)</label>
+                                <input id="numFontSize" type="number" min="10" max="32" value="15">
+                            </div>
+                            <div class="input-group">
+                                <label for="numHeaderFontSize">Schriftgröße Header (px)</label>
+                                <input id="numHeaderFontSize" type="number" min="12" max="40" value="18">
+                            </div>
+                        </div>
+
+                        <button id="saveDesignBtn" class="btn-primary" style="margin-top: 10px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"></path><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line></svg>
+                            Design anwenden
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../public/app-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="../public/realtime-store.js"></script>
+    <script>
+        const streamId = BingoStore.getActiveStreamId();
+        document.getElementById("panelTitle").textContent = "Win Challenge Admin: " + streamId;
+        
+        // Navigation side link setup
+        document.getElementById('bingoAdminLink').href = "/protected/admin.html?stream=" + encodeURIComponent(streamId);
+        document.getElementById('scoreboardAdminLink').href = "/protected/scoreboard-admin.html?stream=" + encodeURIComponent(streamId);
+        document.getElementById('scoreboard2v2v2AdminLink').href = "/protected/scoreboard-2v2v2-admin.html?stream=" + encodeURIComponent(streamId);
+        const subathonAdminLink = document.getElementById('subathonAdminLink');
+        if (subathonAdminLink) {
+            subathonAdminLink.href = "/protected/subathon-admin.html?stream=" + encodeURIComponent(streamId);
+        }
+
+        // State variables
+        let gamesList = [];
+        let styleObj = {};
+        let currentGuestToken = null;
+
+        // UI elements
+        const gamesContainer = document.getElementById('gamesContainer');
+        const overlayTitleInput = document.getElementById('overlayTitle');
+        const saveStatus = document.getElementById('saveStatus');
+        
+        // Design settings inputs
+        const stylePreset = document.getElementById('stylePreset');
+        const customColorsContainer = document.getElementById('customColorsContainer');
+        const colorHeaderA = document.getElementById('colorHeaderA');
+        const colorHeaderB = document.getElementById('colorHeaderB');
+        const colorHeaderTextColor = document.getElementById('colorHeaderTextColor');
+        const colorBodyBg = document.getElementById('colorBodyBg');
+        const colorTextColor = document.getElementById('colorTextColor');
+        const colorAccent = document.getElementById('colorAccent');
+        const colorGlow = document.getElementById('colorGlow');
+        const sliderBodyOpacity = document.getElementById('sliderBodyOpacity');
+        const opacityVal = document.getElementById('opacityVal');
+        const numScale = document.getElementById('numScale');
+        const numRadius = document.getElementById('numRadius');
+        const numPosX = document.getElementById('numPosX');
+        const numPosY = document.getElementById('numPosY');
+        const numFontSize = document.getElementById('numFontSize');
+        const numHeaderFontSize = document.getElementById('numHeaderFontSize');
+
+        // Challenge Timer UI Elements
+        const lblChallengeTimerTime = document.getElementById('lblChallengeTimerTime');
+        const lblChallengeTimerStatus = document.getElementById('lblChallengeTimerStatus');
+        const btnChallengeTimerStart = document.getElementById('btnChallengeTimerStart');
+        const btnChallengeTimerPause = document.getElementById('btnChallengeTimerPause');
+        const btnChallengeTimerReset = document.getElementById('btnChallengeTimerReset');
+        const txtChallengeTimerMinutes = document.getElementById('txtChallengeTimerMinutes');
+        const btnChallengeTimerSetMinutes = document.getElementById('btnChallengeTimerSetMinutes');
+        const chkChallengeTimerEnabled = document.getElementById('chkChallengeTimerEnabled');
+        const selChallengeTimerMode = document.getElementById('selChallengeTimerMode');
+
+        let timerObj = {
+            enabled: false,
+            mode: 'countdown',
+            minutes: 10,
+            baseTime: Date.now(),
+            accumulatedTime: 0,
+            isRunning: false
+        };
+
+        function updateAdminTimerDisplay() {
+            if (!timerObj) return;
+            let totalSeconds = (timerObj.minutes || 10) * 60;
+            let displaySeconds = 0;
+
+            if (timerObj.mode === "countup") {
+                if (timerObj.isRunning) {
+                    const elapsed = Math.floor((Date.now() - (timerObj.baseTime || Date.now())) / 1000);
+                    displaySeconds = totalSeconds + Math.floor((timerObj.accumulatedTime || 0) / 1000) + elapsed;
+                } else {
+                    displaySeconds = totalSeconds + Math.floor((timerObj.accumulatedTime || 0) / 1000);
+                }
+                lblChallengeTimerStatus.textContent = timerObj.isRunning ? "Läuft live (Hochzählen)" : "Pausiert";
+                lblChallengeTimerStatus.style.color = timerObj.isRunning ? "var(--success)" : "var(--text-muted)";
+            } else {
+                let remaining = totalSeconds;
+                if (timerObj.isRunning) {
+                    const elapsed = Math.floor((Date.now() - (timerObj.baseTime || Date.now())) / 1000);
+                    remaining = totalSeconds - (Math.floor((timerObj.accumulatedTime || 0) / 1000) + elapsed);
+                } else {
+                    remaining = totalSeconds - Math.floor((timerObj.accumulatedTime || 0) / 1000);
+                }
+                if (remaining < 0) remaining = 0;
+                displaySeconds = remaining;
+
+                lblChallengeTimerStatus.textContent = timerObj.isRunning ? "Läuft live" : "Pausiert";
+                lblChallengeTimerStatus.style.color = timerObj.isRunning ? "var(--success)" : "var(--text-muted)";
+            }
+
+            const h = Math.floor(displaySeconds / 3600);
+            const m = Math.floor((displaySeconds % 3600) / 60);
+            const s = displaySeconds % 60;
+            
+            if (h > 0) {
+                lblChallengeTimerTime.textContent = h + ":" + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+            } else {
+                lblChallengeTimerTime.textContent = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+            }
+        }
+
+        setInterval(updateAdminTimerDisplay, 200);
+
+        async function saveTimerState(newTimer) {
+            timerObj = newTimer;
+            try {
+                await firebase.database().ref(`streams/${streamId}/data/winChallenge/timer`).set(timerObj);
+                await firebase.database().ref(`streams/${streamId}/data/updatedAt`).set(Date.now());
+            } catch (err) {
+                console.error("Timer save error:", err);
+            }
+        }
+
+        // Challenge Timer Controls Event Listeners
+        if (btnChallengeTimerStart) {
+            btnChallengeTimerStart.addEventListener('click', async () => {
+                if (timerObj.isRunning) return;
+                const next = {
+                    ...timerObj,
+                    isRunning: true,
+                    baseTime: Date.now()
+                };
+                await saveTimerState(next);
+            });
+        }
+
+        if (btnChallengeTimerPause) {
+            btnChallengeTimerPause.addEventListener('click', async () => {
+                if (!timerObj.isRunning) return;
+                const now = Date.now();
+                const added = now - (timerObj.baseTime || now);
+                const next = {
+                    ...timerObj,
+                    isRunning: false,
+                    baseTime: now,
+                    accumulatedTime: (timerObj.accumulatedTime || 0) + added
+                };
+                await saveTimerState(next);
+            });
+        }
+
+        if (btnChallengeTimerReset) {
+            btnChallengeTimerReset.addEventListener('click', async () => {
+                const next = {
+                    ...timerObj,
+                    isRunning: false,
+                    baseTime: Date.now(),
+                    accumulatedTime: 0
+                };
+                await saveTimerState(next);
+            });
+        }
+
+        if (btnChallengeTimerSetMinutes) {
+            btnChallengeTimerSetMinutes.addEventListener('click', async () => {
+                const mins = parseInt(txtChallengeTimerMinutes.value, 10);
+                if (isNaN(mins) || mins < 0) return;
+                const next = {
+                    ...timerObj,
+                    isRunning: false,
+                    baseTime: Date.now(),
+                    accumulatedTime: 0,
+                    minutes: mins
+                };
+                await saveTimerState(next);
+            });
+        }
+
+        if (chkChallengeTimerEnabled) {
+            chkChallengeTimerEnabled.addEventListener('change', async () => {
+                const next = {
+                    ...timerObj,
+                    enabled: chkChallengeTimerEnabled.checked
+                };
+                await saveTimerState(next);
+            });
+        }
+
+        if (selChallengeTimerMode) {
+            selChallengeTimerMode.addEventListener('change', async () => {
+                const next = {
+                    ...timerObj,
+                    mode: selChallengeTimerMode.value
+                };
+                await saveTimerState(next);
+            });
+        }
+
+        // Presets map
+        const presets = {
+            turquoise: { headerBg: 'linear-gradient(135deg, #00b4db 0%, #0083b0 100%)', headerTextColor: '#ffffff' },
+            volcano: { headerBg: 'linear-gradient(135deg, #f12711 0%, #f5af19 100%)', headerTextColor: '#ffffff' },
+            purple: { headerBg: 'linear-gradient(135deg, #7f00ff 0%, #e100ff 100%)', headerTextColor: '#ffffff' },
+            pink: { headerBg: 'linear-gradient(135deg, #ec008c 0%, #fc6767 100%)', headerTextColor: '#ffffff' },
+            dark: { headerBg: 'linear-gradient(135deg, #141e30 0%, #243b55 100%)', headerTextColor: '#ffffff' }
+        };
+
+        // Opacity slider event listener
+        sliderBodyOpacity.addEventListener('input', () => {
+            opacityVal.textContent = sliderBodyOpacity.value + '%';
+        });
+
+        // Preset change listener
+        stylePreset.addEventListener('change', () => {
+            if (stylePreset.value === 'custom') {
+                customColorsContainer.style.display = 'block';
+            } else {
+                customColorsContainer.style.display = 'none';
+            }
+        });
+
+        // Generate clean random ID
+        function makeId() {
+            return Math.random().toString(36).substr(2, 9);
+        }
+
+        // Render challenge list in UI
+        function renderGames() {
+            gamesContainer.innerHTML = '';
+            if (gamesList.length === 0) {
+                gamesContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px;">Keine Spiele vorhanden. Füge eins hinzu!</p>';
+                return;
+            }
+
+            gamesList.forEach((game, index) => {
+                const item = document.createElement('div');
+                item.className = 'game-item';
+                item.innerHTML = `
+                    <input type="text" class="game-name-input" placeholder="Name des Spiels" value="${escapeHtml(game.name)}" data-id="${game.id}">
+                    <div class="input-group" style="margin: 0;">
+                        <input type="number" class="game-current-input" min="0" value="${game.current || 0}" data-id="${game.id}" placeholder="Score">
+                    </div>
+                    <div class="input-group" style="margin: 0;">
+                        <input type="number" class="game-target-input" min="1" value="${game.target || 1}" data-id="${game.id}" placeholder="Ziel">
+                    </div>
+                    <div class="game-actions-cell">
+                        <button type="button" class="btn-icon move-up" title="Nach oben" onclick="moveGame(${index}, -1)">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                        </button>
+                        <button type="button" class="btn-icon move-down" title="Nach unten" onclick="moveGame(${index}, 1)">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <button type="button" class="btn-icon delete" title="Löschen" onclick="deleteGame('${game.id}')">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </div>
+                `;
+                gamesContainer.appendChild(item);
+            });
+        }
+
+        // Helper escape HTML
+        function escapeHtml(str) {
+            return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // Add game row
+        document.getElementById('addGameBtn').addEventListener('click', () => {
+            syncStateFromInputs(); // Keep what user edited in table
+            gamesList.push({
+                id: makeId(),
+                name: '',
+                current: 0,
+                target: 1
+            });
+            renderGames();
+        });
+
+        // Delete game row
+        window.deleteGame = function(id) {
+            syncStateFromInputs();
+            gamesList = gamesList.filter(g => g.id !== id);
+            renderGames();
+        };
+
+        // Move game row up/down
+        window.moveGame = function(index, direction) {
+            syncStateFromInputs();
+            const targetIndex = index + direction;
+            if (targetIndex < 0 || targetIndex >= gamesList.length) return;
+            const temp = gamesList[index];
+            gamesList[index] = gamesList[targetIndex];
+            gamesList[targetIndex] = temp;
+            renderGames();
+        };
+
+        // Sync local gamesList array from current DOM input values
+        function syncStateFromInputs() {
+            const rows = gamesContainer.querySelectorAll('.game-item');
+            const map = {};
+            rows.forEach(row => {
+                const nameInp = row.querySelector('.game-name-input');
+                const curInp = row.querySelector('.game-current-input');
+                const tarInp = row.querySelector('.game-target-input');
+                const id = nameInp.dataset.id;
+                map[id] = {
+                    name: nameInp.value.trim(),
+                    current: Math.max(0, parseInt(curInp.value) || 0),
+                    target: Math.max(1, parseInt(tarInp.value) || 1)
+                };
+            });
+
+            gamesList.forEach(game => {
+                if (map[game.id]) {
+                    game.name = map[game.id].name;
+                    game.current = map[game.id].current;
+                    game.target = map[game.id].target;
+                }
+            });
+        }
+
+        // Authenticate and subscribe
+        BingoStore.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = "/protected/panel.html";
+                return;
+            }
+            try {
+                await BingoStore.requireOwner(streamId, user.uid);
+                await BingoStore.ensureInitialized(streamId);
+                
+                // Initialize OBS Links UI
+                const baseUrl = window.location.origin;
+                const obsUrl = `${baseUrl}/public/challenge.html?stream=${encodeURIComponent(streamId)}`;
+                const obsEl = document.getElementById('obsOverlayLink');
+                obsEl.href = obsUrl;
+                obsEl.textContent = obsUrl;
+
+                document.getElementById('copyObsBtn').addEventListener('click', () => {
+                    navigator.clipboard.writeText(obsUrl);
+                    alert('OBS Overlay Link kopiert!');
+                });
+
+                // Listen for guest token to update moderator link
+                firebase.database().ref(`streams/${streamId}/meta/guestToken`).on('value', (snap) => {
+                    currentGuestToken = snap.val();
+                    const container = document.getElementById('modLinkContainer');
+                    const textFallback = document.getElementById('noModLinkText');
+                    
+                    if (currentGuestToken) {
+                        const modUrl = `${baseUrl}/public/challenge-control.html?stream=${encodeURIComponent(streamId)}&token=${encodeURIComponent(currentGuestToken)}`;
+                        const linkEl = document.getElementById('modShareLink');
+                        linkEl.href = modUrl;
+                        linkEl.textContent = modUrl;
+                        
+                        container.style.display = 'flex';
+                        textFallback.style.display = 'none';
+                    } else {
+                        container.style.display = 'none';
+                        textFallback.style.display = 'block';
+                    }
+                });
+
+                // Listen to challenge data
+                firebase.database().ref(`streams/${streamId}/data/winChallenge`).on('value', (snap) => {
+                    const val = snap.val();
+                    if (val) {
+                        overlayTitleInput.value = val.title || "WIN-CHALLENGE";
+                        document.getElementById('themeSelect').value = val.theme || "standard";
+                        gamesList = val.games || [];
+                        styleObj = val.style || {};
+                        applyStyleObjToInputs(styleObj);
+
+                        // Load timer data
+                        timerObj = val.timer || {
+                            enabled: false,
+                            mode: 'countdown',
+                            minutes: 10,
+                            baseTime: Date.now(),
+                            accumulatedTime: 0,
+                            isRunning: false
+                        };
+                        chkChallengeTimerEnabled.checked = !!timerObj.enabled;
+                        selChallengeTimerMode.value = timerObj.mode || 'countdown';
+                        txtChallengeTimerMinutes.value = timerObj.minutes || 10;
+                        updateAdminTimerDisplay();
+
+                        renderGames();
+                    } else {
+                        // Create default setup if none exists
+                        gamesList = [
+                            { id: "1", name: "CS2 - Revolver/Scout only", current: 0, target: 1 },
+                            { id: "2", name: "Valorant - B2B", current: 0, target: 2 },
+                            { id: "3", name: "Fall Guys", current: 0, target: 2 }
+                        ];
+                        document.getElementById('themeSelect').value = "standard";
+                        styleObj = {
+                            scale: 1.0,
+                            posX: 40,
+                            posY: 40,
+                            headerBg: 'linear-gradient(135deg, #00b4db 0%, #0083b0 100%)',
+                            headerTextColor: '#ffffff',
+                            bodyBg: '#0a0f0c',
+                            textColor: '#e2f0e7',
+                            accentColor: '#00e5ff',
+                            glowColor: '#00e5ff',
+                            bodyOpacity: 75,
+                            borderRadius: 12,
+                            fontSize: 15,
+                            headerFontSize: 18
+                        };
+                        renderGames();
+                        applyStyleObjToInputs(styleObj);
+                    }
+                });
+
+                // Copy moderator link
+                document.getElementById('copyModBtn').addEventListener('click', () => {
+                    if (currentGuestToken) {
+                        const modUrl = `${baseUrl}/public/challenge-control.html?stream=${encodeURIComponent(streamId)}&token=${encodeURIComponent(currentGuestToken)}`;
+                        navigator.clipboard.writeText(modUrl);
+                        alert('Moderator-Link kopiert!');
+                    }
+                });
+
+            } catch (err) {
+                alert(err.message || "Zugriff verweigert.");
+                window.location.href = "/protected/panel.html";
+            }
+        });
+
+        // Convert HEX + Opacity (0-100) to RGBA string
+        function hexToRgba(hex, opacity) {
+            let c = hex.substring(1);
+            if (c.length === 3) c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
+            const r = parseInt(c.substring(0,2), 16);
+            const g = parseInt(c.substring(2,4), 16);
+            const b = parseInt(c.substring(4,6), 16);
+            const a = (opacity / 100).toFixed(2);
+            return `rgba(${r}, ${g}, ${b}, ${a})`;
+        }
+
+        // Apply style configuration object to HTML input fields
+        function applyStyleObjToInputs(style) {
+            if (!style) return;
+            numScale.value = style.scale ?? 1.0;
+            numRadius.value = style.borderRadius ?? 12;
+            numPosX.value = style.posX ?? 40;
+            numPosY.value = style.posY ?? 40;
+            numFontSize.value = style.fontSize ?? 15;
+            numHeaderFontSize.value = style.headerFontSize ?? 18;
+            sliderBodyOpacity.value = style.bodyOpacity ?? 75;
+            opacityVal.textContent = (style.bodyOpacity ?? 75) + '%';
+
+            colorBodyBg.value = style.colorBodyHex || '#0a0f0c';
+            colorTextColor.value = style.colorTextHex || '#e2f0e7';
+            colorAccent.value = style.colorAccentHex || '#00e5ff';
+            colorGlow.value = style.colorGlowHex || '#00e5ff';
+
+            // Check preset
+            if (style.presetName) {
+                stylePreset.value = style.presetName;
+            } else {
+                stylePreset.value = 'custom';
+            }
+            
+            if (stylePreset.value === 'custom') {
+                customColorsContainer.style.display = 'block';
+                colorHeaderA.value = style.colorHeaderAHex || '#00b4db';
+                colorHeaderB.value = style.colorHeaderBHex || '#0083b0';
+                colorHeaderTextColor.value = style.colorHeaderTextColorHex || '#ffffff';
+            } else {
+                customColorsContainer.style.display = 'none';
+            }
+        }
+
+        // Read styling inputs from DOM to build a configuration object
+        function getStyleObjFromInputs() {
+            const presetVal = stylePreset.value;
+            let headerBgStr = '';
+            let headerTextColorStr = '';
+            
+            if (presetVal !== 'custom' && presets[presetVal]) {
+                headerBgStr = presets[presetVal].headerBg;
+                headerTextColorStr = presets[presetVal].headerTextColor;
+            } else {
+                const hexA = colorHeaderA.value;
+                const hexB = colorHeaderB.value;
+                headerBgStr = `linear-gradient(135deg, ${hexA} 0%, ${hexB} 100%)`;
+                headerTextColorStr = colorHeaderTextColor.value;
+            }
+
+            const opacity = parseInt(sliderBodyOpacity.value) || 75;
+            const bodyBgRgba = hexToRgba(colorBodyBg.value, opacity);
+
+            return {
+                scale: parseFloat(numScale.value) || 1.0,
+                borderRadius: parseInt(numRadius.value) || 12,
+                posX: parseInt(numPosX.value) || 40,
+                posY: parseInt(numPosY.value) || 40,
+                fontSize: parseInt(numFontSize.value) || 15,
+                headerFontSize: parseInt(numHeaderFontSize.value) || 18,
+                bodyOpacity: opacity,
+                
+                headerBg: headerBgStr,
+                headerTextColor: headerTextColorStr,
+                bodyBg: bodyBgRgba,
+                textColor: colorTextColor.value,
+                accentColor: colorAccent.value,
+                glowColor: hexToRgba(colorGlow.value, 40), // slightly transparent for glow effect
+
+                // HEX codes cached for editing inputs later
+                presetName: presetVal,
+                colorHeaderAHex: colorHeaderA.value,
+                colorHeaderBHex: colorHeaderB.value,
+                colorHeaderTextColorHex: colorHeaderTextColor.value,
+                colorBodyHex: colorBodyBg.value,
+                colorTextHex: colorTextColor.value,
+                colorAccentHex: colorAccent.value,
+                colorGlowHex: colorGlow.value
+            };
+        }
+
+        // Write updates to Firebase
+        async function saveAllData(updatedStyleOnly = false) {
+            syncStateFromInputs();
+            saveStatus.textContent = 'Speichere...';
+            saveStatus.style.color = '#fff';
+
+            const payload = {
+                title: overlayTitleInput.value.trim() || 'WIN-CHALLENGE',
+                games: gamesList,
+                theme: document.getElementById('themeSelect').value,
+                style: getStyleObjFromInputs(),
+                timer: timerObj || {
+                    enabled: false,
+                    mode: 'countdown',
+                    minutes: 10,
+                    baseTime: Date.now(),
+                    accumulatedTime: 0,
+                    isRunning: false
+                }
+            };
+
+            try {
+                await firebase.database().ref(`streams/${streamId}/data/winChallenge`).set(payload);
+                await firebase.database().ref(`streams/${streamId}/data/updatedAt`).set(Date.now());
+                saveStatus.textContent = 'Erfolgreich gespeichert!';
+                saveStatus.style.color = 'var(--success)';
+                setTimeout(() => { saveStatus.textContent = ''; }, 3000);
+            } catch (err) {
+                console.error("Save error:", err);
+                saveStatus.textContent = 'Fehler beim Speichern: ' + (err.message || err);
+                saveStatus.style.color = 'var(--danger)';
+            }
+        }
+
+        // Save buttons action listeners
+        document.getElementById('saveAllBtn').addEventListener('click', () => saveAllData(false));
+        document.getElementById('saveDesignBtn').addEventListener('click', () => saveAllData(true));
+        
+        // Reset scores action listener
+        document.getElementById('resetScoresBtn').addEventListener('click', () => {
+            if (confirm('Möchtest du wirklich alle Scores auf 0 zurücksetzen?')) {
+                syncStateFromInputs();
+                gamesList.forEach(game => {
+                    game.current = 0;
+                });
+                renderGames();
+                saveAllData(false);
+            }
+        });
+    </script>
+</body>
+</html>

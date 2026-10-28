@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Stream Social Media Rotator Overlay</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="../app-config.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: transparent !important;
+            overflow: hidden;
+            font-family: 'Outfit', sans-serif;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .social-box {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: rgba(10, 15, 12, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 16px 28px;
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            min-width: 250px;
+            transition: all 0.5s ease;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .social-box.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .social-box.transitioning {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        .icon-container {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.5s ease, filter 0.5s ease;
+        }
+
+        .icon-container svg {
+            width: 18px;
+            height: 18px;
+            fill: #ffffff;
+            transition: fill 0.5s ease;
+        }
+
+        .social-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .platform-name {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: rgba(255, 255, 255, 0.4);
+            margin: 0;
+        }
+
+        .username {
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 0;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="social-box" id="socialBox">
+        <div class="icon-container" id="iconContainer">
+            <!-- Dynamic SVG Icon here -->
+        </div>
+        <div class="social-info">
+            <span class="platform-name" id="platformName">Platform</span>
+            <span class="username" id="username">@user</span>
+        </div>
+    </div>
+
+    <script>
+        const SVGS = {
+            instagram: `<svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>`,
+            tiktok: `<svg viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.02 1.62 4.2 1.12 1.25 2.7 2.05 4.34 2.25v3.6c-1.36-.07-2.65-.54-3.72-1.34-.84-.63-1.48-1.5-1.85-2.49v8.83c.04 1.7-.42 3.42-1.38 4.79-1.07 1.57-2.76 2.69-4.63 3.07-2.11.45-4.38.16-6.27-.92C2.45 20.85 1.15 18.77.92 16.48c-.28-2.66.93-5.38 3.06-6.99 1.63-1.25 3.73-1.8 5.79-1.5v3.63c-1.24-.26-2.58.07-3.52.88-1.02.83-1.52 2.2-1.26 3.49.27 1.29 1.34 2.33 2.64 2.53 1.33.2 2.7-.43 3.32-1.63.29-.61.37-1.3.36-1.97V.02h1.71z"/></svg>`,
+            youtube: `<svg viewBox="0 0 24 24"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.517 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.508 9.388.508 9.388.508s7.517 0 9.388-.508a3.002 3.002 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`,
+            twitch: `<svg viewBox="0 0 24 24"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></svg>`
+        };
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const profileId = urlParams.get('profileId');
+
+        if (!profileId) {
+            document.body.innerHTML = "<div style='color: white; font-size: 20px; font-weight: 600; padding: 20px; background: rgba(0,0,0,0.8); border-radius: 10px;'>Fehlende profileId in der URL.</div>";
+        } else {
+            // Initialize Firebase
+            if (!firebase.apps.length) {
+                firebase.initializeApp(window.BINGO_CONFIG.firebaseConfig);
+            }
+            const db = firebase.database();
+
+            const socialBoxEl = document.getElementById("socialBox");
+            const iconContainerEl = document.getElementById("iconContainer");
+            const platformNameEl = document.getElementById("platformName");
+            const usernameEl = document.getElementById("username");
+
+            let activeSocials = [];
+            let currentIndex = 0;
+            let intervalId = null;
+            let displayDuration = 5;
+            let themeColor = "#22c55e";
+
+            db.ref(`general_profiles/${profileId}/social`).on('value', (snapshot) => {
+                const data = snapshot.val() || {};
+
+                displayDuration = parseInt(data.duration, 10) || 5;
+                themeColor = data.color || "#22c55e";
+
+                // Parse channels
+                const parsed = [];
+                if (data.twitch) parsed.push({ platform: 'twitch', username: data.twitch, name: 'Twitch' });
+                if (data.youtube) parsed.push({ platform: 'youtube', username: data.youtube, name: 'YouTube' });
+                if (data.instagram) parsed.push({ platform: 'instagram', username: data.instagram, name: 'Instagram' });
+                if (data.tiktok) parsed.push({ platform: 'tiktok', username: data.tiktok, name: 'TikTok' });
+
+                activeSocials = parsed;
+                socialBoxEl.style.borderColor = `${themeColor}33`; // 20% opacity border
+
+                if (activeSocials.length === 0) {
+                    socialBoxEl.classList.remove("active");
+                    stopLoop();
+                    return;
+                }
+
+                // If only 1 channel, show immediately and don't loop
+                if (activeSocials.length === 1) {
+                    stopLoop();
+                    showSocial(activeSocials[0]);
+                    socialBoxEl.classList.add("active");
+                } else {
+                    // Start or restart loop
+                    startLoop();
+                }
+            });
+
+            function showSocial(social) {
+                iconContainerEl.innerHTML = SVGS[social.platform] || "";
+                
+                // Color the background icon circle matching the brand or theme
+                let brandColor = themeColor;
+                if (social.platform === 'twitch') brandColor = '#9146ff';
+                else if (social.platform === 'youtube') brandColor = '#ff0000';
+                else if (social.platform === 'instagram') brandColor = '#e1306c';
+                else if (social.platform === 'tiktok') brandColor = '#000000';
+
+                iconContainerEl.style.backgroundColor = brandColor;
+                platformNameEl.textContent = social.name;
+                usernameEl.textContent = social.username.startsWith('@') || social.platform === 'youtube' ? social.username : `@${social.username}`;
+            }
+
+            function transitionToNext() {
+                if (activeSocials.length <= 1) return;
+
+                socialBoxEl.classList.add("transitioning");
+
+                setTimeout(() => {
+                    currentIndex = (currentIndex + 1) % activeSocials.length;
+                    showSocial(activeSocials[currentIndex]);
+                    socialBoxEl.classList.remove("transitioning");
+                    socialBoxEl.classList.add("active");
+                }, 600);
+            }
+
+            function startLoop() {
+                stopLoop();
+                currentIndex = 0;
+                showSocial(activeSocials[currentIndex]);
+                socialBoxEl.classList.add("active");
+
+                intervalId = setInterval(transitionToNext, displayDuration * 1000);
+            }
+
+            function stopLoop() {
+                if (intervalId) {
+                    clearInterval(intervalId);
+                    intervalId = null;
+                }
+            }
+        }
+    </script>
+</body>
+</html>

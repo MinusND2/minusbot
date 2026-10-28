@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Win Challenge Premium Overlay</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playball&family=Outfit:wght@400;600;700;800;900&display=swap');
+
+        :root {
+            --header-bg: linear-gradient(135deg, #00b4db 0%, #0083b0 100%);
+            --header-text-color: #ffffff;
+            --body-bg: rgba(10, 15, 12, 0.78);
+            --text-color: #e2f0e7;
+            --accent-color: #00e5ff;
+            --glow-color: rgba(0, 229, 255, 0.2);
+            --border-radius: 12px;
+            --font-size: 15px;
+            --header-font-size: 18px;
+            --scale: 1.0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: transparent;
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            color: var(--text-color);
+        }
+
+        /* Ambient back-glow for holographic effect */
+        .overlay-wrapper {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            transform-origin: top left;
+            transform: scale(var(--scale));
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 15px; /* Spacing for the outer glow */
+        }
+
+        /* Glassmorphism Card with double-layer border & ambient glow */
+        .challenge-card {
+            min-width: 330px;
+            max-width: 500px;
+            width: 370px;
+            background: var(--body-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: var(--border-radius);
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.65),
+                0 0 30px var(--glow-color),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                inset 0 0 15px rgba(255, 255, 255, 0.02);
+            overflow: visible;
+            animation: cardEntrance 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, cardPulse 3s ease-in-out infinite alternate;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        /* Card Header with a futuristic mesh stripe overlay */
+        .card-header {
+            background: var(--header-bg);
+            padding: 16px 20px;
+            font-weight: 900;
+            font-size: var(--header-font-size);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--header-text-color);
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+            border-top-left-radius: inherit;
+            border-top-right-radius: inherit;
+        }
+        /* Glass glare stripe */
+        .card-header::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 50%, transparent 50.1%);
+            pointer-events: none;
+            z-index: 1;
+        }
+        /* Cyber dot design element */
+        .card-header::after {
+            content: '';
+            width: 6px; height: 6px;
+            background: var(--header-text-color);
+            border-radius: 50%;
+            opacity: 0.8;
+            box-shadow: 0 0 8px var(--header-text-color);
+        }
+
+        /* Games List Body */
+        .games-list {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: visible;
+            position: relative;
+        }
+
+        .games-slider {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            width: 100%;
+        }
+
+        @keyframes autoScroll {
+            0%, 15% { transform: translateY(0); }
+            85%, 100% { transform: translateY(var(--scroll-dist)); }
+        }
+
+        /* Challenge item row with staggered slide-in entrance */
+        .game-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            position: relative;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255,255,255,0.03);
+            border-radius: calc(var(--border-radius) - 4px);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            opacity: 0;
+            transform: translateX(-15px);
+            animation: rowEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .game-row:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.08);
+            transform: translateX(2px);
+        }
+
+        .game-name {
+            font-size: var(--font-size);
+            font-weight: 700;
+            line-height: 1.3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 220px;
+            transition: all 0.3s ease;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* Progress wrap */
+        .progress-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        /* Glowing Score Capsules (for targets <= 5) */
+        .progress-dots {
+            display: flex;
+            gap: 5px;
+        }
+        .dot {
+            width: 13px;
+            height: 13px;
+            border-radius: 4px; /* Capsules */
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: inset 0 2px 3px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        .dot.filled {
+            background: var(--accent-color);
+            border-color: rgba(255,255,255,0.1);
+            box-shadow: 
+                0 0 10px var(--glow-color),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+            animation: dotFillPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* Futuristic progress bar (for targets > 5) */
+        .progress-bar-container {
+            width: 80px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
+        }
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-color) 0%, #fff 100%);
+            border-radius: 5px;
+            transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 0 10px var(--glow-color);
+            position: relative;
+        }
+        
+        /* Laser scanning effect inside the progress bar */
+        .progress-bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(
+                90deg, 
+                transparent 0%, 
+                rgba(255, 255, 255, 0.4) 50%, 
+                transparent 100%
+            );
+            background-size: 200% 100%;
+            animation: laserScan 2s linear infinite;
+        }
+
+        .progress-numeric {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-color);
+            opacity: 0.8;
+            font-variant-numeric: tabular-nums;
+            min-width: 32px;
+            text-align: right;
+            transition: all 0.3s ease;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* Strikethrough & Completed states */
+        .game-row.completed .game-name {
+            text-decoration: line-through !important;
+            text-decoration-color: var(--accent-color) !important;
+            text-decoration-thickness: 2px !important;
+            color: rgba(255, 255, 255, 0.3) !important;
+            text-shadow: none !important;
+        }
+        .game-row.completed .progress-numeric {
+            color: #10b981;
+            opacity: 1;
+            font-weight: 900;
+        }
+
+        /* SVG checkmark draw-in animation */
+        .check-badge {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #10b981;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.5), inset 0 1px 0 rgba(255,255,255,0.4);
+            animation: badgePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            margin-left: 4px;
+        }
+        .check-badge svg {
+            width: 10px;
+            height: 10px;
+            color: #000;
+        }
+        .check-badge svg path {
+            stroke-dasharray: 20;
+            stroke-dashoffset: 20;
+            animation: drawCheck 0.3s ease-out 0.2s forwards;
+        }
+
+        /* Incremental update scale animation on numeric text */
+        @keyframes numScalePop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.4) rotate(-5deg); color: var(--accent-color); }
+            100% { transform: scale(1); }
+        }
+        .num-pop {
+            animation: numScalePop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* Energy ripple flash when score changes */
+        @keyframes rowEnergyRipple {
+            0% { background: rgba(255, 255, 255, 0.02); box-shadow: 0 0 0 rgba(0, 229, 255, 0); }
+            30% { background: rgba(0, 229, 255, 0.12); box-shadow: 0 0 20px rgba(0, 229, 255, 0.25); border-color: var(--accent-color); }
+            100% { background: rgba(255, 255, 255, 0.02); box-shadow: 0 0 0 rgba(0, 229, 255, 0); }
+        }
+        .game-row.updated-flash {
+            animation: rowEnergyRipple 1.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        /* Animation definitions */
+        @keyframes cardEntrance {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes rowEntrance {
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes laserScan {
+            0% { background-position: 100% 0; }
+            100% { background-position: -100% 0; }
+        }
+        @keyframes drawCheck {
+            to { stroke-dashoffset: 0; }
+        }
+        @keyframes badgePop {
+            0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+            70% { transform: scale(1.2) rotate(15deg); }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        @keyframes dotFillPop {
+            0% { transform: scale(0.6); }
+            70% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        /* ─── Fantasy Theme (Anime Sunset & Butterflies) ─── */
+        .challenge-card.theme-fantasy {
+            background: rgba(24, 12, 28, 0.6) !important; /* Soft dark magenta/violet glass */
+            border: 1px dashed rgba(255, 182, 193, 0.3) !important;
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.7),
+                0 0 25px rgba(255, 105, 180, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+        }
+        .challenge-card.theme-fantasy .card-header {
+            font-family: 'Playball', cursive !important;
+            font-weight: 500 !important;
+            font-size: calc(var(--header-font-size) + 5px) !important;
+            letter-spacing: 1px !important;
+            background: linear-gradient(135deg, #ff7a00 0%, #ff007a 100%) !important; /* warm anime sunset gradient */
+            text-shadow: 0 0 8px #ff7a00, 0 1px 3px rgba(0,0,0,0.5) !important;
+        }
+        .challenge-card.theme-fantasy .game-name {
+            font-family: 'Playball', cursive !important;
+            font-size: calc(var(--font-size) + 4px) !important;
+            font-weight: 500 !important;
+            letter-spacing: 0.5px;
+            color: #ffffff !important;
+            text-shadow: 0 0 5px #ff7a00, 0 1px 2px rgba(0,0,0,0.7) !important;
+        }
+        .challenge-card.theme-fantasy .game-row {
+            background: transparent !important;
+            border: none !important;
+            border-bottom: 1px dashed rgba(255, 182, 193, 0.12) !important;
+            border-radius: 0 !important;
+            padding: 10px 14px !important;
+            overflow: visible !important;
+        }
+        .challenge-card.theme-fantasy .game-row:last-child {
+            border-bottom: none !important;
+        }
+
+        /* Butterfly particles relative to the card */
+        .challenge-card .butterfly {
+            position: absolute;
+            font-size: 14px;
+            pointer-events: none;
+            filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.7)) drop-shadow(0 0 2px #ff69b4);
+            opacity: 0.85;
+            z-index: 10;
+            display: none;
+        }
+        .challenge-card.theme-fantasy .butterfly {
+            display: block;
+        }
+        .challenge-card .b1 {
+            top: -15px;
+            left: 10px;
+            animation: floatButterfly1 8s ease-in-out infinite alternate, flapWings 0.4s ease-in-out infinite alternate;
+        }
+        .challenge-card .b2 {
+            bottom: -15px;
+            right: 15px;
+            animation: floatButterfly2 9s ease-in-out infinite alternate, flapWings 0.5s ease-in-out infinite alternate;
+        }
+        .challenge-card .b3 {
+            top: 40%;
+            right: -15px;
+            animation: floatButterfly3 10s ease-in-out infinite alternate, flapWings 0.45s ease-in-out infinite alternate;
+        }
+        .challenge-card .star {
+            position: absolute;
+            font-size: 10px;
+            color: #ffffff;
+            pointer-events: none;
+            filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.8));
+            animation: sparkleStar 4s ease-in-out infinite alternate;
+            z-index: 9;
+            display: none;
+        }
+        .challenge-card.theme-fantasy .star {
+            display: block;
+        }
+        .challenge-card .s1 {
+            top: 15px;
+            right: 25px;
+        }
+        .challenge-card .s2 {
+            bottom: 25px;
+            left: 20px;
+            animation-delay: 1s;
+        }
+        .challenge-card .s3 {
+            top: 60%;
+            left: -10px;
+            animation-delay: 2s;
+        }
+
+        @keyframes floatButterfly1 {
+            0% { transform: translate(0, 0) rotate(-15deg) scale(0.95); }
+            100% { transform: translate(12px, -12px) rotate(15deg) scale(1.15); }
+        }
+        @keyframes floatButterfly2 {
+            0% { transform: translate(0, 0) rotate(25deg) scale(1.1); }
+            100% { transform: translate(-12px, 12px) rotate(-10deg) scale(0.9); }
+        }
+        @keyframes floatButterfly3 {
+            0% { transform: translate(0, 0) rotate(-5deg) scale(1.0); }
+            100% { transform: translate(10px, 10px) rotate(20deg) scale(1.1); }
+        }
+        @keyframes sparkleStar {
+            0% { opacity: 0.2; transform: scale(0.7) rotate(0deg); }
+            100% { opacity: 1; transform: scale(1.1) rotate(180deg); }
+        }
+
+        /* Glowing star indicators for fantasy progress dots */
+        .challenge-card.theme-fantasy .dot {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 12px;
+            height: 12px;
+        }
+        .challenge-card.theme-fantasy .dot::before {
+            content: '✦';
+            color: rgba(255,255,255,0.18);
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+        .challenge-card.theme-fantasy .dot.filled::before {
+            content: '✦';
+            color: #ffd700;
+            text-shadow: 0 0 6px #ff7a00, 0 0 12px #ff007a;
+            animation: dotFillPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .challenge-card.theme-fantasy .progress-bar-container {
+            background: rgba(0, 0, 0, 0.5) !important;
+            border-color: rgba(255, 182, 193, 0.15) !important;
+        }
+        .challenge-card.theme-fantasy .progress-bar-fill {
+            background: linear-gradient(90deg, #ff007a 0%, #ffd700 100%) !important;
+            box-shadow: 0 0 10px rgba(255, 0, 122, 0.5) !important;
+        }
+        
+        /* Completed target states */
+        .challenge-card.theme-fantasy .game-row.completed .game-name {
+            text-decoration: line-through !important;
+            text-decoration-color: #ff007a !important;
+            text-decoration-thickness: 2px !important;
+            color: rgba(255, 255, 255, 0.35) !important;
+            text-shadow: none !important;
+        }
+        .challenge-card.theme-fantasy .game-row.completed .check-badge {
+            background: #ff007a !important;
+            box-shadow: 0 0 12px rgba(255, 0, 122, 0.6) !important;
+        }
+
+        /* RPG floating score increment effect */
+        .progress-wrap {
+            position: relative;
+        }
+        .rpg-pop {
+            position: absolute;
+            right: 45px;
+            top: -15px;
+            font-size: 14px;
+            font-weight: 900;
+            color: var(--accent-color);
+            text-shadow: 0 0 8px var(--accent-color), 0 1px 2px #000;
+            pointer-events: none;
+            z-index: 100;
+            animation: rpgFloat 1.0s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+        }
+        .challenge-card.theme-fantasy .rpg-pop {
+            color: #ffd700;
+            text-shadow: 0 0 8px #ff007a, 0 1px 2px #000;
+        }
+        @keyframes rpgFloat {
+            0% { transform: translateY(10px) scale(0.5); opacity: 0; }
+            20% { transform: translateY(0) scale(1.4); opacity: 1; }
+            80% { transform: translateY(-15px) scale(1.0); opacity: 1; }
+            100% { transform: translateY(-25px) scale(0.8); opacity: 0; }
+        }
+
+        /* Card Bobber */
+        .card-bobber {
+            animation: cardBobbing 4s ease-in-out infinite alternate;
+        }
+        @keyframes cardBobbing {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-8px); }
+        }
+        @keyframes cardPulse {
+            0% {
+                box-shadow: 
+                    0 25px 50px -12px rgba(0, 0, 0, 0.65),
+                    0 0 25px var(--glow-color),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                    inset 0 0 15px rgba(255, 255, 255, 0.02);
+            }
+            100% {
+                box-shadow: 
+                    0 25px 50px -12px rgba(0, 0, 0, 0.65),
+                    0 0 45px var(--glow-color),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+                    inset 0 0 20px rgba(255, 255, 255, 0.04);
+            }
+        }
+
+        /* Wing flapping animation */
+        @keyframes flapWings {
+            0% { transform: scaleX(1); }
+            100% { transform: scaleX(0.2) rotate(5deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="overlay-wrapper" id="overlayWrapper">
+        <div class="card-bobber">
+            <div class="challenge-card" id="challengeCard">
+                <div class="card-header" id="cardHeader">
+                    <span id="headerTitle">WIN-CHALLENGE</span>
+                    <span id="headerTimer" style="display: none; font-variant-numeric: tabular-nums; font-family: monospace; font-weight: 800; background: rgba(0,0,0,0.25); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06); letter-spacing: 0; font-size: 14px;">00:00</span>
+                </div>
+                <div class="games-list" id="gamesContainer">
+                    <div class="games-slider" id="gamesSlider"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="realtime-store.js"></script>
+    <script>
+        const overlayWrapper = document.getElementById('overlayWrapper');
+        const challengeCard = document.getElementById('challengeCard');
+        const cardHeader = document.getElementById('cardHeader');
+        const gamesContainer = document.getElementById('gamesContainer');
+        const gamesSlider = document.getElementById('gamesSlider');
+
+        let previousGames = {}; // Cache to track updates
+
+        let timerBaseTime = 0;
+        let timerAccumulatedTime = 0;
+        let timerIsRunning = false;
+        let timerMinutes = 10;
+        let timerMode = 'countdown';
+
+        function updateChallengeTimerDisplay() {
+            const headerTimer = document.getElementById('headerTimer');
+            if (!headerTimer) return;
+            
+            let totalSeconds = timerMinutes * 60;
+            let displaySeconds = 0;
+
+            if (timerMode === "countup") {
+                if (timerIsRunning) {
+                    const elapsed = (Date.now() - timerBaseTime) / 1000;
+                    displaySeconds = totalSeconds + (timerAccumulatedTime / 1000) + elapsed;
+                } else {
+                    displaySeconds = totalSeconds + (timerAccumulatedTime / 1000);
+                }
+            } else {
+                let remaining = totalSeconds;
+                if (timerIsRunning) {
+                    const elapsed = (Date.now() - timerBaseTime) / 1000;
+                    remaining = totalSeconds - ((timerAccumulatedTime / 1000) + elapsed);
+                } else {
+                    remaining = totalSeconds - (timerAccumulatedTime / 1000);
+                }
+                if (remaining < 0) remaining = 0;
+                displaySeconds = remaining;
+            }
+
+            const h = Math.floor(displaySeconds / 3600);
+            const m = Math.floor((displaySeconds % 3600) / 60);
+            const s = displaySeconds % 60;
+            
+            if (h > 0) {
+                headerTimer.textContent = h + ":" + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+            } else {
+                headerTimer.textContent = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+            }
+        }
+
+        setInterval(() => {
+            if (timerIsRunning) {
+                updateChallengeTimerDisplay();
+            }
+        }, 200);
+
+        // Get Stream ID from query param
+        const streamId = new URLSearchParams(window.location.search).get('stream') || 
+                         (window.BINGO_CONFIG && window.BINGO_CONFIG.streamId) || 
+                         'default-stream';
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(window.BINGO_CONFIG.firebaseConfig);
+        }
+
+        // Subscribe to Win Challenge data
+        firebase.database().ref(`streams/${streamId}/data/winChallenge`).on('value', (snap) => {
+            const val = snap.val();
+            if (val) {
+                updateOverlay(val);
+            } else {
+                gamesContainer.innerHTML = '<p style="text-align: center; color: rgba(255,255,255,0.4); font-size: 13px; padding: 20px;">Lade Daten...</p>';
+            }
+        });
+
+        function updateOverlay(data) {
+            // 1. Update Theme class
+            const theme = data.theme || 'standard';
+            if (theme === 'fantasy') {
+                challengeCard.classList.add('theme-fantasy');
+                // Ensure butterflies are spawned on the card if they don't exist yet
+                if (!challengeCard.querySelector('.butterfly')) {
+                    const b1 = document.createElement("div"); b1.className = "butterfly b1"; b1.textContent = "🦋";
+                    const b2 = document.createElement("div"); b2.className = "butterfly b2"; b2.textContent = "🦋";
+                    const b3 = document.createElement("div"); b3.className = "butterfly b3"; b3.textContent = "🦋";
+                    challengeCard.appendChild(b1);
+                    challengeCard.appendChild(b2);
+                    challengeCard.appendChild(b3);
+
+                    const s1 = document.createElement("div"); s1.className = "star s1"; s1.textContent = "✦";
+                    const s2 = document.createElement("div"); s2.className = "star s2"; s2.textContent = "✦";
+                    const s3 = document.createElement("div"); s3.className = "star s3"; s3.textContent = "✦";
+                    challengeCard.appendChild(s1);
+                    challengeCard.appendChild(s2);
+                    challengeCard.appendChild(s3);
+                }
+            } else {
+                challengeCard.classList.remove('theme-fantasy');
+                // Remove butterflies
+                challengeCard.querySelectorAll('.butterfly, .star').forEach(el => el.remove());
+            }
+
+            // 2. Update Title
+            const titleEl = document.getElementById('headerTitle');
+            if (titleEl) {
+                titleEl.textContent = data.title || 'WIN-CHALLENGE';
+            }
+
+            // 2b. Timer logic
+            const timer = data.timer || {};
+            const headerTimer = document.getElementById('headerTimer');
+            if (headerTimer) {
+                if (timer.enabled) {
+                    headerTimer.style.display = 'inline-block';
+                    timerBaseTime = timer.baseTime || 0;
+                    timerAccumulatedTime = timer.accumulatedTime || 0;
+                    timerIsRunning = !!timer.isRunning;
+                    timerMinutes = timer.minutes || 10;
+                    timerMode = timer.mode || 'countdown';
+                    updateChallengeTimerDisplay();
+                } else {
+                    headerTimer.style.display = 'none';
+                    timerIsRunning = false;
+                }
+            }
+
+            // 3. Update Style variables
+            const style = data.style || {};
+            const root = document.documentElement;
+
+            root.style.setProperty('--scale', style.scale ?? 1.0);
+            root.style.setProperty('--border-radius', `${style.borderRadius ?? 12}px`);
+            root.style.setProperty('--font-size', `${style.fontSize ?? 15}px`);
+            root.style.setProperty('--header-font-size', `${style.headerFontSize ?? 18}px`);
+
+            if (style.headerBg) root.style.setProperty('--header-bg', style.headerBg);
+            if (style.headerTextColor) root.style.setProperty('--header-text-color', style.headerTextColor);
+            if (style.bodyBg) root.style.setProperty('--body-bg', style.bodyBg);
+            if (style.textColor) root.style.setProperty('--text-color', style.textColor);
+            if (style.accentColor) root.style.setProperty('--accent-color', style.accentColor);
+            if (style.glowColor) root.style.setProperty('--glow-color', style.glowColor);
+
+            // Position card
+            overlayWrapper.style.left = `${style.posX ?? 40}px`;
+            overlayWrapper.style.top = `${style.posY ?? 40}px`;
+
+            // 4. Render Games
+            const games = data.games || [];
+            
+            // Build temporary maps to check for updates (only highlight if value changed and it's not the initial load)
+            const isInitialLoad = Object.keys(previousGames).length === 0;
+            const currentGamesCache = {};
+
+            // Clear container
+            gamesSlider.innerHTML = '';
+
+            games.forEach((game, index) => {
+                const isCompleted = game.current >= game.target;
+                const progressPercent = Math.min(100, Math.round((game.current / game.target) * 100));
+
+                const row = document.createElement('div');
+                row.className = `game-row ${isCompleted ? 'completed' : ''}`;
+                row.id = `row-${game.id}`;
+                // Staggered slide in animation delay
+                row.style.animationDelay = `${index * 80}ms`;
+
+                // Check if current value changed
+                const prev = previousGames[game.id];
+                const hasChanged = prev !== undefined && prev.current !== game.current;
+                
+                // Store in new cache
+                currentGamesCache[game.id] = { current: game.current, target: game.target };
+
+                // Build progress indicator HTML
+                let progressHtml = '';
+                if (game.target <= 5) {
+                    // Render dots
+                    let dots = '';
+                    for (let i = 1; i <= game.target; i++) {
+                        dots += `<div class="dot ${i <= game.current ? 'filled' : ''}"></div>`;
+                    }
+                    progressHtml = `<div class="progress-dots">${dots}</div>`;
+                } else {
+                    // Render bar
+                    progressHtml = `
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: ${progressPercent}%;"></div>
+                        </div>
+                    `;
+                }
+
+                row.innerHTML = `
+                    <span class="game-name">${escapeHtml(game.name || 'Spiel')}</span>
+                    <div class="progress-wrap">
+                        ${progressHtml}
+                        <span class="progress-numeric ${hasChanged && !isInitialLoad ? 'num-pop' : ''}">${game.current}/${game.target}</span>
+                        ${isCompleted ? `
+                            <div class="check-badge">
+                                <svg fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                    <path d="M20 6L9 17l-5-5"></path>
+                                </svg>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                gamesSlider.appendChild(row);
+
+                // Add animation class if it has been updated
+                if (hasChanged && !isInitialLoad) {
+                    row.classList.add('updated-flash');
+                    
+                    // Spawn RPG damage/point floating bubble
+                    if (game.current > prev.current) {
+                        const pop = document.createElement('div');
+                        pop.className = 'rpg-pop';
+                        pop.textContent = `+${game.current - prev.current}`;
+                        row.querySelector('.progress-wrap').appendChild(pop);
+                        setTimeout(() => pop.remove(), 1000);
+                    }
+                    
+                    setTimeout(() => {
+                        row.classList.remove('updated-flash');
+                    }, 1200);
+                }
+            });
+
+            // Update previous cache
+            previousGames = currentGamesCache;
+
+            // Apply autoscroll animation if > 3 games
+            if (games.length > 3) {
+                // Wait for layout rendering so heights are computed
+                setTimeout(() => {
+                    const rows = gamesSlider.querySelectorAll('.game-row');
+                    if (rows.length >= 3) {
+                        // Sum first 3 rows heights
+                        let first3Height = 0;
+                        for (let i = 0; i < 3; i++) {
+                            first3Height += rows[i].offsetHeight;
+                        }
+                        // Gaps between 3 rows is 2 * 14px
+                        const totalGaps = 28;
+                        
+                        // Set fixed height on gamesContainer (content height)
+                        const visibleHeight = first3Height + totalGaps;
+                        gamesContainer.style.height = `${visibleHeight}px`;
+                        gamesContainer.style.overflow = 'hidden';
+
+                        // Calculate overflow scroll distance
+                        const totalHeight = gamesSlider.scrollHeight;
+                        const scrollDist = totalHeight - visibleHeight;
+
+                        if (scrollDist > 0) {
+                            document.documentElement.style.setProperty('--scroll-dist', `-${scrollDist}px`);
+                            // Calculate dynamic duration: 4s per overflow game
+                            const duration = Math.max(6, (games.length - 3) * 4);
+                            gamesSlider.style.animation = `autoScroll ${duration}s ease-in-out infinite alternate`;
+                        } else {
+                            gamesSlider.style.animation = 'none';
+                        }
+                    }
+                }, 100);
+            } else {
+                gamesContainer.style.height = 'auto';
+                gamesContainer.style.overflow = 'visible';
+                gamesSlider.style.animation = 'none';
+            }
+        }
+
+
+
+        function escapeHtml(str) {
+            return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scoreboard WM 2026 Overlay</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: transparent;
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .scoreboard-wrapper {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            display: flex;
+            align-items: center;
+            height: 56px;
+            filter: drop-shadow(0 10px 25px rgba(0,0,0,0.5));
+        }
+
+        /* Gradient outline container for main scoreboard - only left and bottom padding to form bracket/bottom line */
+        .scoreboard-main-outer {
+            padding: 0 0 3.5px 3.5px;
+            background: linear-gradient(90deg, #ff8080 0%, #ffdf79 35%, #22c55e 70%, #a855f7 100%);
+            border-radius: 28px 0 0 28px;
+            display: flex;
+            align-items: center;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .scoreboard-main {
+            display: flex;
+            align-items: center;
+            background: #000000;
+            height: 52.5px; /* 56px - 3.5px bottom padding */
+            border-radius: 25px 0 0 25px;
+            padding: 0 22px 0 20px;
+            gap: 14px;
+            box-sizing: border-box;
+        }
+
+        /* Team block */
+        .team {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .team.home {
+            justify-content: flex-end;
+        }
+
+        .team.away {
+            justify-content: flex-start;
+        }
+
+        /* Flag wrapper */
+        .flag-container {
+            width: 38px;
+            height: 25px;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            flex-shrink: 0;
+        }
+
+        .team-logo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Status Dot */
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .home-dot {
+            background: #93c5fd;
+            box-shadow: 0 0 6px #93c5fd;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .away-dot {
+            background: #374151;
+            border: 1.5px solid #9ca3af;
+        }
+
+        /* Team name */
+        .team-name {
+            font-size: 20px;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            min-width: 45px;
+        }
+
+        /* Score Pill */
+        .score-pill {
+            background: #13ffa2;
+            color: #030705;
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 900;
+            box-shadow: 0 0 10px rgba(19, 255, 162, 0.3);
+            flex-shrink: 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Center FIFA Emblem overlaps the main board */
+        .fifa-pill-container {
+            width: 52px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        .fifa-pill {
+            position: absolute;
+            width: 52px;
+            height: 70px;
+            background: #ffffff;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        .fifa-logo {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* Timer Section outer container */
+        .timer-section-outer {
+            padding: 0;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .timer-section {
+            background: #ffffff;
+            color: #000000;
+            height: 56px;
+            border-radius: 20px 28px 28px 20px; /* rounded pill shape overlap */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            font-weight: 900;
+            font-size: 24px;
+            min-width: 95px;
+            box-sizing: border-box;
+            font-variant-numeric: tabular-nums;
+            border-left: 5px solid #a855f7; /* curved purple separator on the left */
+            margin-left: -12px; /* overlap to hide straight boundary */
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scoreboard-wrapper" id="scoreboardWrapper">
+        <div class="scoreboard-main-outer">
+            <div class="scoreboard-main">
+                <!-- Home Team -->
+                <div class="team home" id="homeTeamEl">
+                    <div class="flag-container">
+                        <img id="logoHome" class="team-logo" src="">
+                    </div>
+                    <div class="status-dot home-dot"></div>
+                    <span id="nameHome" class="team-name">FRA</span>
+                    <div class="score-pill" id="scoreHome">0</div>
+                </div>
+
+                <!-- FIFA overlapping logo -->
+                <div class="fifa-pill-container">
+                    <div class="fifa-pill">
+                        <img src="fifa2026.svg" alt="FIFA 2026" class="fifa-logo">
+                    </div>
+                </div>
+
+                <!-- Away Team -->
+                <div class="team away" id="awayTeamEl">
+                    <div class="score-pill" id="scoreAway">0</div>
+                    <span id="nameAway" class="team-name">SEN</span>
+                    <div class="status-dot away-dot"></div>
+                    <div class="flag-container">
+                        <img id="logoAway" class="team-logo" src="">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Timer -->
+        <div class="timer-section-outer">
+            <div class="timer-section" id="clockDisplay">90:00</div>
+        </div>
+    </div>
+
+    <script src="app-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="realtime-store.js"></script>
+    <script>
+        const scoreboardWrapper = document.getElementById('scoreboardWrapper');
+        const homeTeamEl = document.getElementById('homeTeamEl');
+        const awayTeamEl = document.getElementById('awayTeamEl');
+        const clockDisplay = document.getElementById('clockDisplay');
+        
+        const scoreHome = document.getElementById('scoreHome');
+        const scoreAway = document.getElementById('scoreAway');
+        const nameHome = document.getElementById('nameHome');
+        const logoHome = document.getElementById('logoHome');
+        const nameAway = document.getElementById('nameAway');
+        const logoAway = document.getElementById('logoAway');
+
+        let currentTimer = { isRunning: false, baseTime: Date.now(), accumulatedTime: 0 };
+
+        BingoStore.subscribe((data) => {
+            updateScore(data.score);
+            updateTeams(data.teams);
+            updateStyle(data.scoreboardStyle);
+            
+            if (data.timer) {
+                currentTimer = data.timer;
+            }
+        }, new URLSearchParams(window.location.search).get('stream') || (window.BINGO_CONFIG && window.BINGO_CONFIG.streamId) || 'default-stream');
+
+        // Smooth timer animation
+        function renderTimer() {
+            let totalMs = currentTimer.accumulatedTime;
+            if (currentTimer.isRunning) {
+                totalMs += (Date.now() - currentTimer.baseTime);
+            }
+            
+            const totalSeconds = Math.floor(totalMs / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            
+            const mm = minutes.toString().padStart(2, '0');
+            const ss = seconds.toString().padStart(2, '0');
+            
+            if (currentTimer.isVisible === false) {
+                clockDisplay.style.color = 'transparent';
+            } else {
+                clockDisplay.style.color = '#000000';
+            }
+            
+            if (clockDisplay.textContent !== `${mm}:${ss}`) {
+                clockDisplay.textContent = `${mm}:${ss}`;
+            }
+            
+            requestAnimationFrame(renderTimer);
+        }
+        requestAnimationFrame(renderTimer);
+
+        function updateScore(score) {
+            scoreHome.textContent = score.home;
+            scoreAway.textContent = score.away;
+        }
+
+        function updateTeams(teams) {
+            if(teams.home) {
+                nameHome.textContent = teams.home.name.substring(0, 3).toUpperCase();
+                logoHome.src = teams.home.logo;
+                const flagContainer = logoHome.closest('.flag-container');
+                if (flagContainer) {
+                    flagContainer.style.display = teams.home.logo ? 'flex' : 'none';
+                }
+            }
+            if(teams.away) {
+                nameAway.textContent = teams.away.name.substring(0, 3).toUpperCase();
+                logoAway.src = teams.away.logo;
+                const flagContainer = logoAway.closest('.flag-container');
+                if (flagContainer) {
+                    flagContainer.style.display = teams.away.logo ? 'flex' : 'none';
+                }
+            }
+        }
+
+        function updateStyle(style) {
+            if (!style) return;
+            scoreboardWrapper.style.left = `${style.posX ?? 40}px`;
+            scoreboardWrapper.style.top = `${style.posY ?? 40}px`;
+            
+            // Adjust height
+            if (style.height) {
+                scoreboardWrapper.style.height = `${style.height}px`;
+            }
+            
+            // Adjust team font size
+            if (style.teamFontSize) {
+                nameHome.style.fontSize = `${style.teamFontSize}px`;
+                nameAway.style.fontSize = `${style.teamFontSize}px`;
+            }
+            
+            // Adjust score font size
+            if (style.scoreFontSize) {
+                scoreHome.style.fontSize = `${style.scoreFontSize}px`;
+                scoreAway.style.fontSize = `${style.scoreFontSize}px`;
+            }
+            
+            // Adjust border radius
+            if (style.radius) {
+                const mainOuter = document.querySelector('.scoreboard-main-outer');
+                const main = document.querySelector('.scoreboard-main');
+                if (mainOuter) mainOuter.style.borderRadius = `${style.radius}px 0 0 ${style.radius}px`;
+                if (main) main.style.borderRadius = `${style.radius - 3.5}px 0 0 ${style.radius - 3.5}px`;
+                const timerSection = document.querySelector('.timer-section');
+                if (timerSection) timerSection.style.borderRadius = `0 ${style.radius}px ${style.radius}px 0`;
+            }
+            
+            const scale = style.scale ?? 1;
+            scoreboardWrapper.style.transform = `scale(${scale})`;
+            scoreboardWrapper.style.transformOrigin = 'top left';
+        }
+    </script>
+</body>
+</html>

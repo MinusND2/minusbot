@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Glücksrad - Geheime Steuerung</title>
+  <link rel="stylesheet" href="wheel.css">
+</head>
+<body>
+  <div class="control-container">
+    <h1>
+      Glücksrad Steuerung <span class="badge">Secret Panel</span>
+    </h1>
+
+    <!-- Setup Options -->
+    <div class="form-group">
+      <label for="options-input">Sektoren / Zahlen (Komma-getrennt)</label>
+      <textarea id="options-input" placeholder="Z.B.: 10, 20, 50, 100, 500, Niete, Joker">10, 20, 50, 100, 200, 500, 1000, 0, 5, 25</textarea>
+    </div>
+
+    <!-- Mute / Unmute Sound -->
+    <div class="switch-container">
+      <label>Sound-Effekte auf Rad-Seite aktivieren</label>
+      <label class="switch">
+        <input type="checkbox" id="sound-toggle" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <!-- Rig / Cheat Winner Selection -->
+    <div class="form-group">
+      <label>Nächsten Gewinner erzwingen (Vorauswahl)</label>
+      <div class="winner-grid" id="winner-grid">
+        <!-- Generated dynamically based on options input -->
+      </div>
+    </div>
+
+    <!-- State Monitor -->
+    <div class="status-card">
+      <div class="status-indicator">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">Bereit</span>
+      </div>
+      <div>
+        Letzter Gewinn: <strong id="last-winner-text" style="color: #00f5d4;">Keiner</strong>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="btn-container">
+      <button class="btn-primary" id="spin-btn">RAD DREHEN</button>
+      <button class="btn-secondary" id="reset-btn">Reset</button>
+    </div>
+  </div>
+
+  <script>
+    // Elements
+    const optionsInput = document.getElementById('options-input');
+    const winnerGrid = document.getElementById('winner-grid');
+    const soundToggle = document.getElementById('sound-toggle');
+    const spinBtn = document.getElementById('spin-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    const lastWinnerText = document.getElementById('last-winner-text');
+
+    // Broadcast Channel
+    const bc = new BroadcastChannel('wheel_channel');
+    
+    // State
+    let currentOptions = [];
+    let selectedWinnerIndex = -1; // -1 means Random
+
+    // Load from localStorage or defaults
+    function loadSavedSettings() {
+      const savedOptions = localStorage.getItem('wheel_options');
+      const savedSound = localStorage.getItem('wheel_sound');
+      const savedWinner = localStorage.getItem('wheel_winner_index');
+
+      if (savedOptions) {
+        optionsInput.value = savedOptions;
+      }
+      if (savedSound !== null) {
+        soundToggle.checked = savedSound === 'true';
+      }
+      if (savedWinner !== null) {
+        selectedWinnerIndex = parseInt(savedWinner, 10);
+      }
+
+      parseAndBuildOptions();
+    }
+
+    // Save to localStorage
+    function saveSettings() {
+      localStorage.setItem('wheel_options', optionsInput.value);
+      localStorage.setItem('wheel_sound', soundToggle.checked);
+      localStorage.setItem('wheel_winner_index', selectedWinnerIndex);
+    }
+
+    // Parse textarea input and build the winner selection grid
+    function parseAndBuildOptions() {
+      const rawText = optionsInput.value;
+      currentOptions = rawText.split(',')
+        .map(opt => opt.trim())
+        .filter(opt => opt !== "");
+
+      // Rebuild winner selection grid
+      winnerGrid.innerHTML = '';
+
+      // 1. Add Random choice
+      const randomOptionDiv = document.createElement('div');
+      randomOptionDiv.className = 'winner-option';
+      
+      const randomRadio = document.createElement('input');
+      randomRadio.type = 'radio';
+      randomRadio.name = 'forced-winner';
+      randomRadio.id = 'winner-opt-random';
+      randomRadio.value = '-1';
+      if (selectedWinnerIndex === -1 || selectedWinnerIndex >= currentOptions.length) {
+        randomRadio.checked = true;
+        selectedWinnerIndex = -1;
+      }
+      
+      const randomLabel = document.createElement('label');
+      randomLabel.htmlFor = 'winner-opt-random';
+      randomLabel.innerText = '🎲 ZUFALL';
+      
+      randomRadio.addEventListener('change', () => {
+        selectedWinnerIndex = -1;
+        saveSettings();
+      });
+
+      randomOptionDiv.appendChild(randomRadio);
+      randomOptionDiv.appendChild(randomLabel);
+      winnerGrid.appendChild(randomOptionDiv);
+
+      // 2. Add each option
+      currentOptions.forEach((option, index) => {
+        const optionDiv = document.createElement('div');
+        optionDiv.className = 'winner-option';
+        
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'forced-winner';
+        radio.id = `winner-opt-${index}`;
+        radio.value = index.toString();
+        
+        if (selectedWinnerIndex === index) {
+          radio.checked = true;
+        }
+
+        const label = document.createElement('label');
+        label.htmlFor = `winner-opt-${index}`;
+        label.innerText = option;
+        label.title = option;
+
+        radio.addEventListener('change', () => {
+          selectedWinnerIndex = index;
+          saveSettings();
+        });
+
+        optionDiv.appendChild(radio);
+        optionDiv.appendChild(label);
+        winnerGrid.appendChild(optionDiv);
+      });
+
+      // Synchronize display page
+      bc.postMessage({
+        type: 'update',
+        data: {
+          options: currentOptions,
+          soundEnabled: soundToggle.checked
+        }
+      });
+      
+      saveSettings();
+    }
+
+    // Listen for changes
+    optionsInput.addEventListener('input', parseAndBuildOptions);
+    soundToggle.addEventListener('change', () => {
+      saveSettings();
+      bc.postMessage({
+        type: 'update',
+        data: {
+          options: currentOptions,
+          soundEnabled: soundToggle.checked
+        }
+      });
+    });
+
+    // Spin button click
+    spinBtn.addEventListener('click', () => {
+      // Set local UI status
+      statusDot.className = 'status-dot spinning';
+      statusText.innerText = 'Rad dreht sich...';
+      spinBtn.disabled = true;
+      spinBtn.style.opacity = '0.5';
+
+      // Send spin event
+      bc.postMessage({
+        type: 'spin',
+        data: {
+          options: currentOptions,
+          winnerIndex: selectedWinnerIndex === -1 ? null : selectedWinnerIndex,
+          soundEnabled: soundToggle.checked
+        }
+      });
+    });
+
+    // Reset button click
+    resetBtn.addEventListener('click', () => {
+      statusDot.className = 'status-dot';
+      statusText.innerText = 'Bereit';
+      spinBtn.disabled = false;
+      spinBtn.style.opacity = '1';
+      lastWinnerText.innerText = 'Keiner';
+
+      bc.postMessage({
+        type: 'reset',
+        data: {
+          options: currentOptions,
+          soundEnabled: soundToggle.checked
+        }
+      });
+    });
+
+    // Receive message back from wheel page (e.g. when spin ends)
+    bc.onmessage = (event) => {
+      const msg = event.data;
+      if (msg.type === 'spin_ended') {
+        // Reset status monitor
+        statusDot.className = 'status-dot';
+        statusText.innerText = 'Bereit';
+        spinBtn.disabled = false;
+        spinBtn.style.opacity = '1';
+
+        // Update winner output
+        lastWinnerText.innerText = msg.winner;
+      }
+    };
+
+    // Load initial settings
+    loadSavedSettings();
+  </script>
+</body>
+</html>

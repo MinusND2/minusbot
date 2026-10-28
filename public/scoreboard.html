@@ -5,21 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scoreboard Overlay</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;900&display=swap');
+
         :root {
-            --sb-bg: rgba(8, 14, 28, 0.88);
-            --sb-border: rgba(255, 255, 255, 0.2);
-            --sb-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
-            --sb-home-a: #183788;
-            --sb-home-b: #a70053;
-            --sb-away-a: #dc3b2a;
-            --sb-away-b: #1f2a68;
+            --sb-bg: rgba(12, 16, 33, 0.7);
+            --sb-border: rgba(255, 255, 255, 0.15);
+            --sb-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255,255,255,0.05);
+            --sb-home-a: #2563eb;
+            --sb-home-b: #1d4ed8;
+            --sb-away-a: #dc2626;
+            --sb-away-b: #b91c1c;
         }
 
         body {
             margin: 0;
             padding: 0;
             background-color: transparent;
-            font-family: Inter, "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Outfit', -apple-system, sans-serif;
             overflow: hidden;
         }
 
@@ -33,93 +35,101 @@
             width: 500px;
             border: 1px solid var(--sb-border);
             box-shadow: var(--sb-shadow);
-            border-radius: 14px;
+            border-radius: 16px;
             overflow: hidden;
             color: white;
-            font-weight: bold;
+            font-weight: 700;
             background: var(--sb-bg);
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            transition: all 0.3s ease;
         }
 
         .team {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 12px;
+            padding: 0 16px;
             font-size: 15px;
             width: 205px;
-            font-weight: 800;
-            letter-spacing: 0.8px;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
             min-width: 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .team::after {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.1) 0%, transparent 100%);
+            pointer-events: none;
         }
 
         .home {
-            background: linear-gradient(120deg, var(--sb-home-a) 0%, #2649ac 35%, var(--sb-home-b) 100%);
+            background: linear-gradient(135deg, var(--sb-home-a) 0%, var(--sb-home-b) 100%);
             justify-content: flex-start;
-            border-right: 1px solid rgba(255,255,255,0.22);
+            border-right: 1px solid rgba(255,255,255,0.1);
         }
 
         .away {
-            background: linear-gradient(120deg, var(--sb-away-a) 0%, #e24e33 45%, var(--sb-away-b) 100%);
+            background: linear-gradient(135deg, var(--sb-away-a) 0%, var(--sb-away-b) 100%);
             justify-content: flex-end;
-            border-left: 1px solid rgba(255,255,255,0.22);
+            border-left: 1px solid rgba(255,255,255,0.1);
             text-align: right;
         }
 
         .team-logo {
-            height: 34px;
-            width: 34px;
-            width: auto;
+            height: 38px;
+            width: 38px;
             object-fit: contain;
-            filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
             flex: 0 0 auto;
+            z-index: 1;
         }
 
         .team-name {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: clip;
-            line-height: 1.08;
+            line-height: 1.1;
             display: block;
             min-width: 0;
+            z-index: 1;
         }
         
-        .home .team-logo {
-            margin-right: 10px;
-        }
-
-        .away .team-logo {
-            margin-left: 10px;
-            order: 2;
-        }
+        .home .team-logo { margin-right: 12px; }
+        .away .team-logo { margin-left: 12px; order: 2; }
 
         .score-container {
-            background: linear-gradient(180deg, #0d111d, #171d2f);
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.9) 0%, rgba(2, 6, 23, 0.95) 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            padding: 0 14px;
-            font-size: 22px;
-            font-family: "Inter", "Segoe UI", Arial, sans-serif;
-            min-width: 82px;
+            gap: 12px;
+            padding: 0 16px;
+            font-size: 24px;
+            min-width: 86px;
             z-index: 10;
-            border-left: 1px solid rgba(255,255,255,0.15);
-            border-right: 1px solid rgba(255,255,255,0.15);
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
             font-variant-numeric: tabular-nums;
         }
 
         .score {
             font-weight: 900;
-            min-width: 16px;
+            min-width: 20px;
             text-align: center;
+            background: linear-gradient(to bottom, #fff 20%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
         }
 
         .divider {
-            color: #7f8aa8;
-            font-size: 16px;
+            color: rgba(255,255,255,0.3);
+            font-size: 18px;
             font-weight: 700;
+            margin-top: -2px;
         }
     </style>
 </head>
@@ -204,6 +214,10 @@
                 fitTeamName(nameHome, homeTeamEl);
                 fitTeamName(nameAway, awayTeamEl);
             });
+
+            const scale = style.scale ?? 1;
+            scoreboardEl.style.transform = `scale(${scale})`;
+            scoreboardEl.style.transformOrigin = 'top left';
         }
 
         function computeTeamWidth(style) {

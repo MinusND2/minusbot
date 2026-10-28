@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cutter Trainer & Test-Center</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.4);
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.4);
+            --danger: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.4);
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border: rgba(255, 255, 255, 0.08);
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
+            padding: 2rem;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, #a78bfa 0%, #10b981 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .badge {
+            background: rgba(139, 92, 246, 0.2);
+            color: #c084fc;
+            padding: 0.4rem 0.8rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr 380px;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        @media (max-width: 1400px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-title {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 1.25rem;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        /* Inputs */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        select, input[type="text"], input[type="number"] {
+            width: 100%;
+            background: rgba(31, 41, 55, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-color);
+            padding: 0.75rem;
+            font-family: var(--font-body);
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        select:focus, input[type="text"]:focus, input[type="number"]:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-glow);
+        }
+
+        /* Sliders */
+        .slider-container {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .slider-label {
+            color: var(--text-muted);
+        }
+
+        .slider-value {
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--primary);
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        /* Sliders colors depending on type */
+        .webcam-sliders input[type="range"] {
+            accent-color: var(--danger);
+        }
+        .webcam-sliders .slider-value {
+            color: var(--danger);
+        }
+
+        .gameplay-sliders input[type="range"] {
+            accent-color: var(--success);
+        }
+        .gameplay-sliders .slider-value {
+            color: var(--success);
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 0.85rem 1.5rem;
+            border-radius: 8px;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            box-shadow: 0 4px 14px var(--primary-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 14px var(--success-glow);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-color);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* Preset grid */
+        .presets-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .preset-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            color: var(--text-color);
+            padding: 0.5rem;
+            font-size: 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .preset-btn:hover {
+            background: rgba(139, 92, 246, 0.15);
+            border-color: var(--primary);
+        }
+
+        /* Video Workspace */
+        .workspace-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            aspect-ratio: 16/9;
+        }
+
+        video.raw-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        /* Overlay Canvas */
+        .crop-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Let video controls through by default */
+        }
+
+        .crop-box {
+            position: absolute;
+            border: 2px solid;
+            pointer-events: auto; /* Enable dragging on boxes */
+            cursor: move;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .crop-box.webcam {
+            border-color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .crop-box.gameplay {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .crop-label {
+            background: rgba(0,0,0,0.7);
+            color: #fff;
+            padding: 2px 6px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            align-self: flex-start;
+            pointer-events: none;
+            font-family: var(--font-display);
+        }
+
+        .crop-box.webcam .crop-label {
+            color: #fca5a5;
+        }
+
+        .crop-box.gameplay .crop-label {
+            color: #6ee7b7;
+        }
+
+        /* Resize handles */
+        .resize-handle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #fff;
+            border: 1px solid #000;
+            bottom: 0;
+            right: 0;
+            cursor: se-resize;
+            pointer-events: auto;
+        }
+
+        .crop-box.webcam .resize-handle {
+            background: var(--danger);
+        }
+
+        .crop-box.gameplay .resize-handle {
+            background: var(--success);
+        }
+
+        /* Progress list */
+        .progress-box {
+            margin-top: 1.5rem;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            padding: 1rem;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .progress-bar-outer {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress-bar-inner {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--success) 100%);
+            transition: width 0.3s;
+        }
+
+        /* Output Video Area */
+        .output-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.4);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            aspect-ratio: 9/16;
+            width: 100%;
+            max-width: 320px;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .output-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        .output-placeholder {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 2rem;
+        }
+
+        .output-placeholder svg {
+            margin-bottom: 1rem;
+            color: var(--text-muted);
+            opacity: 0.4;
+        }
+
+        /* Video controls helper bar */
+        .controls-helper {
+            display: flex;
+            gap: 0.5rem;
+            background: rgba(255,255,255,0.02);
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            align-items: center;
+        }
+
+        .status-message {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .alert {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.25rem;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #a7f3d0;
+        }
+
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fecaca;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div>
+            <h1>Cutter Trainer & Test-Center</h1>
+            <p style="color: var(--text-muted); margin-top: 0.25rem; font-size: 0.95rem;">Wähle einen Clip aus, passe die Webcam und das Gameplay visuell an und lade den Test-Schnitt sofort herunter.</p>
+        </div>
+        <div class="badge">Visual Cropper v3.0</div>
+    </div>
+
+    <div class="alert alert-success" id="successAlert">Erfolg!</div>
+    <div class="alert alert-danger" id="errorAlert">Fehler!</div>
+
+    <div class="dashboard-grid">
+        
+        <!-- Left Column: Controls -->
+        <div class="card">
+            <div class="card-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary)"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                1. Clip & Streamer
+            </div>
+            
+            <div class="form-group">
+                <label for="clipSelect">Test-Clip wählen</label>
+                <select id="clipSelect">
+                    <option value="">Lade Clips...</option>
+                </select>
+
+                <!-- Upload custom clip -->
+                <div id="uploadZone" style="margin-top: 0.75rem; border: 2px dashed rgba(139, 92, 246, 0.3); border-radius: 10px; padding: 1rem; text-align: center; cursor: pointer; transition: all 0.3s ease; background: rgba(139, 92, 246, 0.05);"
+                     ondragover="event.preventDefault(); this.style.borderColor='var(--primary)'; this.style.background='rgba(139,92,246,0.15)';"
+                     ondragleave="this.style.borderColor='rgba(139,92,246,0.3)'; this.style.background='rgba(139,92,246,0.05)';"
+                     ondrop="event.preventDefault(); this.style.borderColor='rgba(139,92,246,0.3)'; this.style.background='rgba(139,92,246,0.05)'; handleClipUpload(event.dataTransfer.files[0]);">
+                    <input type="file" id="clipFileInput" accept="video/mp4,.mp4" style="display:none;" onchange="handleClipUpload(this.files[0]);">
+                    <div onclick="document.getElementById('clipFileInput').click();" style="pointer-events: auto;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:0.4rem;">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">
+                            <strong style="color: var(--primary);">Eigenen Clip hochladen</strong><br>
+                            .mp4 hierher ziehen oder klicken (max 200 MB)
+                        </div>
+                    </div>
+                    <div id="uploadProgress" style="display:none; margin-top: 0.75rem;">
+                        <div style="background: rgba(255,255,255,0.1); border-radius: 6px; height: 6px; overflow: hidden;">
+                            <div id="uploadProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--primary), var(--success)); border-radius: 6px; transition: width 0.3s ease;"></div>
+                        </div>
+                        <div id="uploadStatus" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.4rem;">Hochladen...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="streamerName">Streamer Name</label>
+                <input type="text" id="streamerName" placeholder="z.B. xrohat, eliasn97, zarbex">
+            </div>
+
+            <div class="form-group">
+                <label for="layoutSelect">Layout-Format</label>
+                <select id="layoutSelect">
+                    <option value="35">Split-Screen (35% Webcam / 65% Game)</option>
+                    <option value="50">Split-Screen (50% Webcam / 50% Game)</option>
+                    <option value="3-way">Discord 3-Way-Stack (3 gestapelte Cams)</option>
+                    <option value="too-many-cams">Ignoriert / Übersprungen (Mehr als 3 Cams)</option>
+                    <option value="blur-bg">Reines Gameplay (blur-bg)</option>
+                    <option value="blur-bg-logo">Breitbild + Logo (blur-bg-logo)</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <button id="btnAutoDetect" class="btn btn-secondary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                    Auto-Erkennung (KI) ausführen
+                </button>
+            </div>
+            
+            <div id="confidenceBox" style="display:none; margin-top: 1rem; padding: 0.75rem; border-radius: 8px; background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.2); font-size: 0.9rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-muted)">Erkennungssicherheit:</span>
+                    <span id="confidenceValue" style="color: #c084fc; font-weight: bold; font-family: monospace;">0%</span>
+                </div>
+            </div>
+
+            <div class="card-title" style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 1rem; margin-bottom: 1rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--danger)"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                2. Webcam Ausschnitt
+            </div>
+
+            <div class="webcam-sliders">
+                <div class="slider-container">
+                    <div class="slider-header">
+                        <span class="slider-label">X Position</span>
+                        <span class="slider-value"><span id="val_cam_x">80</span>%</span>
+                    </div>
+                    <input type="range" id="cam_x" min="0" max="100" value="80">
+                </div>
+                <div class="slider-container">
+                    <div class="slider-header">
+                        <span class="slider-label">Y Position</span>
+                        <span class="slider-value"><span id="val_cam_y">60</span>%</span>
+                    </div>
+                    <input type="range" id="cam_y" min="0" max="100" value="60">
+                </div>
+                <div class="slider-container">
+                    <div class="slider-header">
+                        <span class="slider-label">Breite</span>
+                        <span class="slider-value"><span id="val_cam_w">20</span>%</span>
+                    </div>
+                    <input type="range" id="cam_w" min="5" max="100" value="20">
+                </div>
+                <div class="slider-container">
+                    <div class="slider-header">
+                        <span class="slider-label">Höhe</span>
+                        <span class="slider-value"><span id="val_cam_h">40</span>%</span>
+                    </div>
+                    <input type="range" id="cam_h" min="5" max="100" value="40">
+                </div>
+            </div>
+
+            <div class="presets-grid">
+                <button type="button" class="preset-btn" onclick="applyCamPreset('bottom-right')">Unten-Rechts</button>
+                <button type="button" class="preset-btn" onclick="applyCamPreset('top-right')">Oben-Rechts</button>
+                <button type="button" class="preset-btn" onclick="applyCamPreset('bottom-left')">Unten-Links</button>
+                <button type="button" class="preset-btn" onclick="applyCamPreset('top-left')">Oben-Links</button>
+            </div>
+        </div>
+
+        <!-- Middle Column: Workspace (Video Canvas) -->
+        <div class="workspace-container">
+            <div class="card" style="flex: 1;">
+                <div class="card-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--success)"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                    Visueller Editor (Zuschnitt anpassen)
+                </div>
+
+                <div class="video-wrapper" id="videoWrapper">
+                    <video id="rawVideo" class="raw-video" preload="auto">
+                        <source id="videoSource" src="" type="video/mp4">
+                        Dein Browser unterstützt das Video-Tag nicht.
+                    </video>
+                    
+                    <!-- Draggable overlays overlaying the video -->
+                    <div class="crop-overlay" id="cropOverlay">
+                        <div class="crop-box webcam" id="boxWebcam">
+                            <span class="crop-label">WEBCAM</span>
+                            <div class="resize-handle" id="resCam"></div>
+                        </div>
+                        <div class="crop-box gameplay" id="boxGameplay">
+                            <span class="crop-label">GAMEPLAY</span>
+                            <div class="resize-handle" id="resGame"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="controls-helper">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        <span>Tipp: Ziehe oder vergrößere die Boxen direkt im Video-Player!</span>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('rawVideo').play()" style="width: auto; padding: 0.5rem 1rem;">Abspielen</button>
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('rawVideo').pause()" style="width: auto; padding: 0.5rem 1rem;">Pause</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Debug Frame Visualizer -->
+            <div class="card" id="debugFramesCard" style="display: none; margin-top: 1.5rem;">
+                <div class="card-title" style="margin-bottom: 1rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary)"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    KI-Erkennungsverlauf (Debug-Frames)
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                    Die KI hat folgende Frames analysiert. Grüne Boxen zeigen die Facecam (mit Kontur-Erkennung), rote/blaue Boxen die Gesichter:
+                </div>
+                <div class="debug-slider-container" id="debugSliderContainer" style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.5rem; scrollbar-width: thin;">
+                    <!-- JS fills this with debug frame thumbnails -->
+                </div>
+            </div>
+
+            <!-- Candidate Debug Scores Console -->
+            <div class="card" id="candidateScoresCard" style="display: none; margin-top: 1.5rem;">
+                <div class="card-title" style="margin-bottom: 1.25rem; justify-content: space-between; display: flex; align-items: center; width: 100%;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#c084fc"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                        <span>KI-Bewertungs-Konsole (Debug-Scores)</span>
+                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="copyDebugConsole()" style="width: auto; padding: 0.35rem 0.75rem; font-size: 0.75rem; border-radius: 6px;">Kopieren</button>
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                    Hier siehst du die detaillierte Punktebewertung aller erkannten Facecam-Kandidaten zur einfachen Weitergabe an andere KIs:
+                </div>
+                <pre id="debugConsoleArea" style="background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border); padding: 1rem; border-radius: 8px; font-family: monospace; font-size: 0.8rem; line-height: 1.4; color: #34d399; overflow-x: auto; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; text-align: left;"></pre>
+            </div>
+
+            <!-- Gameplay settings -->
+            <div class="card">
+                <div class="card-title" style="margin-bottom: 1rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--success)"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line></svg>
+                    3. Gameplay Ausschnitt
+                </div>
+                
+                <div class="gameplay-sliders" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                    <div>
+                        <div class="slider-container">
+                            <div class="slider-header">
+                                <span class="slider-label">X Position</span>
+                                <span class="slider-value"><span id="val_game_x">25</span>%</span>
+                            </div>
+                            <input type="range" id="game_x" min="0" max="100" value="25">
+                        </div>
+                        <div class="slider-container">
+                            <div class="slider-header">
+                                <span class="slider-label">Y Position</span>
+                                <span class="slider-value"><span id="val_game_y">0</span>%</span>
+                            </div>
+                            <input type="range" id="game_y" min="0" max="100" value="0">
+                        </div>
+                    </div>
+                    <div>
+                        <div class="slider-container">
+                            <div class="slider-header">
+                                <span class="slider-label">Breite</span>
+                                <span class="slider-value"><span id="val_game_w">50</span>%</span>
+                            </div>
+                            <input type="range" id="game_w" min="5" max="100" value="50">
+                        </div>
+                        <div class="slider-container">
+                            <div class="slider-header">
+                                <span class="slider-label">Höhe</span>
+                                <span class="slider-value"><span id="val_game_h">100</span>%</span>
+                            </div>
+                            <input type="range" id="game_h" min="5" max="100" value="100">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="presets-grid" style="grid-template-columns: repeat(4, 1fr);">
+                    <button type="button" class="preset-btn" onclick="applyGamePreset('center')">Mittig (50%)</button>
+                    <button type="button" class="preset-btn" onclick="applyGamePreset('left')">Links</button>
+                    <button type="button" class="preset-btn" onclick="applyGamePreset('right')">Rechts</button>
+                    <button type="button" class="preset-btn" onclick="applyGamePreset('full')">Ganzes Bild</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Render Test & Result -->
+        <div class="card">
+            <div class="card-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary)"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                4. Rendern & Speichern
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <button id="btnRenderTest" class="btn btn-primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    Test-Video rendern (3 Sekunden)
+                </button>
+                
+                <button id="btnSaveOverride" class="btn btn-success">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    Koordinaten in Firebase speichern
+                </button>
+            </div>
+
+            <div class="progress-box" id="progressBox">
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                    <span id="progressMessage" style="color: var(--text-muted);">Verarbeite Video...</span>
+                    <span id="progressPercent" style="font-weight: bold;">0%</span>
+                </div>
+                <div class="progress-bar-outer">
+                    <div class="progress-bar-inner" id="progressBar"></div>
+                </div>
+            </div>
+
+            <div class="card-title" style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                Vorschau Ergebnis
+            </div>
+
+            <div class="output-container" id="outputContainer">
+                <div class="output-placeholder" id="outputPlaceholder">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                    <p>Noch kein gerendertes Video vorhanden.</p>
+                    <p style="font-size: 0.8rem; margin-top: 0.25rem;">Klicke oben auf "Test-Video rendern" zum Generieren.</p>
+                </div>
+                <video id="outputVideo" class="output-video" controls autoplay loop></video>
+            </div>
+            
+            <div id="outputDownloadContainer" style="margin-top: 1rem; display: none; text-align: center;">
+                <a id="downloadBtn" href="#" download class="btn btn-secondary" style="background: rgba(16, 185, 129, 0.1); border-color: var(--success); color: var(--success); width: 100%;">
+                    Fertiges Video herunterladen
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const API_URL = ""; // Relative paths will work since HTML is served by express
+
+        // UI Elements
+        const clipSelect = document.getElementById('clipSelect');
+        const streamerNameInput = document.getElementById('streamerName');
+        const layoutSelect = document.getElementById('layoutSelect');
+        const rawVideo = document.getElementById('rawVideo');
+        const videoSource = document.getElementById('videoSource');
+        const videoWrapper = document.getElementById('videoWrapper');
+        const cropOverlay = document.getElementById('cropOverlay');
+        
+        // Webcam Sliders & values
+        const camSliders = {
+            x: document.getElementById('cam_x'),
+            y: document.getElementById('cam_y'),
+            w: document.getElementById('cam_w'),
+            h: document.getElementById('cam_h')
+        };
+        const camValues = {
+            x: document.getElementById('val_cam_x'),
+            y: document.getElementById('val_cam_y'),
+            w: document.getElementById('val_cam_w'),
+            h: document.getElementById('val_cam_h')
+        };
+
+        // Gameplay Sliders & values
+        const gameSliders = {
+            x: document.getElementById('game_x'),
+            y: document.getElementById('game_y'),
+            w: document.getElementById('game_w'),
+            h: document.getElementById('game_h')
+        };
+        const gameValues = {
+            x: document.getElementById('val_game_x'),
+            y: document.getElementById('val_game_y'),
+            w: document.getElementById('val_game_w'),
+            h: document.getElementById('val_game_h')
+        };
+
+        // Overlay boxes
+        const boxWebcam = document.getElementById('boxWebcam');
+        const boxGameplay = document.getElementById('boxGameplay');
+
+        // Buttons & Statuses
+        const btnAutoDetect = document.getElementById('btnAutoDetect');
+        const btnRenderTest = document.getElementById('btnRenderTest');
+        const btnSaveOverride = document.getElementById('btnSaveOverride');
+        const progressBox = document.getElementById('progressBox');
+        const progressMessage = document.getElementById('progressMessage');
+        const progressPercent = document.getElementById('progressPercent');
+        const progressBar = document.getElementById('progressBar');
+        
+        const outputVideo = document.getElementById('outputVideo');
+        const outputPlaceholder = document.getElementById('outputPlaceholder');
+        const outputDownloadContainer = document.getElementById('outputDownloadContainer');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        const successAlert = document.getElementById('successAlert');
+        const errorAlert = document.getElementById('errorAlert');
+
+        // State variables
+        let detectedCam2 = null;
+        let detectedCam3 = null;
+        let rawVideoWidth = 1920;
+        let rawVideoHeight = 1080;
+        let isDragging = false;
+        let activeBox = null;
+        let dragMode = ''; // 'drag' or 'resize'
+        let startX, startY, startLeft, startTop, startWidth, startHeight;
+
+        // Init
+        window.addEventListener('load', () => {
+            loadClips();
+            setupEventListeners();
+            updateBoxesFromSliders();
+        });
+
+        function showAlert(type, msg) {
+            const alert = type === 'success' ? successAlert : errorAlert;
+            alert.textContent = msg;
+            alert.style.display = 'block';
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+
+        // Fetch clips from API
+        async function loadClips() {
+            try {
+                const res = await fetch('/api/cutter/clips');
+                const data = await res.json();
+                
+                clipSelect.innerHTML = '<option value="">-- Wähle einen Clip aus --</option>';
+                
+                if (data.clips && data.clips.length > 0) {
+                    data.clips.forEach(clip => {
+                        const opt = document.createElement('option');
+                        opt.value = clip;
+                        opt.textContent = clip;
+                        clipSelect.appendChild(opt);
+                    });
+                } else {
+                    clipSelect.innerHTML = '<option value="">Keine Clips in /public/clips/ gefunden</option>';
+                }
+            } catch (err) {
+                showAlert('danger', 'Fehler beim Laden der Clips: ' + err.message);
+            }
+        }
+
+        // Upload custom clip to server
+        async function handleClipUpload(file) {
+            if (!file) return;
+            if (!file.name.endsWith('.mp4') && file.type !== 'video/mp4') {
+                showAlert('danger', 'Nur .mp4-Dateien erlaubt!');
+                return;
+            }
+            if (file.size > 200 * 1024 * 1024) {
+                showAlert('danger', 'Datei ist zu groß! Maximum: 200 MB');
+                return;
+            }
+
+            const progressDiv = document.getElementById('uploadProgress');
+            const progressBar = document.getElementById('uploadProgressBar');
+            const statusText = document.getElementById('uploadStatus');
+            progressDiv.style.display = 'block';
+            progressBar.style.width = '0%';
+            statusText.textContent = `Hochladen: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)...`;
+
+            const formData = new FormData();
+            formData.append('clip', file);
+
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/api/cutter/upload');
+
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        progressBar.style.width = pct + '%';
+                        statusText.textContent = `Hochladen: ${pct}% (${(e.loaded / 1024 / 1024).toFixed(1)} / ${(e.total / 1024 / 1024).toFixed(1)} MB)`;
+                    }
+                };
+
+                xhr.onload = async () => {
+                    if (xhr.status === 200) {
+                        const result = JSON.parse(xhr.responseText);
+                        progressBar.style.width = '100%';
+                        progressBar.style.background = 'var(--success)';
+                        statusText.textContent = `✅ ${result.filename} hochgeladen!`;
+                        showAlert('success', `Clip "${result.filename}" erfolgreich hochgeladen!`);
+
+                        // Reload clips dropdown and auto-select the uploaded file
+                        await loadClips();
+                        clipSelect.value = result.filename;
+                        clipSelect.dispatchEvent(new Event('change'));
+
+                        // Reset upload UI after 3 seconds
+                        setTimeout(() => {
+                            progressDiv.style.display = 'none';
+                            progressBar.style.width = '0%';
+                            progressBar.style.background = 'linear-gradient(90deg, var(--primary), var(--success))';
+                        }, 3000);
+                    } else {
+                        const err = JSON.parse(xhr.responseText);
+                        statusText.textContent = `❌ Fehler: ${err.error}`;
+                        showAlert('danger', 'Upload fehlgeschlagen: ' + err.error);
+                    }
+                };
+
+                xhr.onerror = () => {
+                    statusText.textContent = '❌ Netzwerkfehler';
+                    showAlert('danger', 'Upload fehlgeschlagen: Netzwerkfehler');
+                };
+
+                xhr.send(formData);
+            } catch (err) {
+                statusText.textContent = '❌ ' + err.message;
+                showAlert('danger', 'Upload fehlgeschlagen: ' + err.message);
+            }
+
+            // Reset the file input
+            document.getElementById('clipFileInput').value = '';
+        }
+
+        // Event Listeners setup
+        function setupEventListeners() {
+            // Handle Clip Change
+            clipSelect.addEventListener('change', () => {
+                const file = clipSelect.value;
+                if (!file) return;
+
+                // Load source video
+                videoSource.src = `/public/clips/${file}`;
+                rawVideo.load();
+                
+                // Guess streamer name and strip extensions / invalid characters
+                let guessedName = file.replace(/\.mp4$/i, '').replace(/^twitch_/, '');
+                guessedName = guessedName.replace(/[\.#$\[\]]/g, '');
+                streamerNameInput.value = guessedName;
+            });
+
+            // Sliders input listeners (real-time box update)
+            Object.keys(camSliders).forEach(key => {
+                camSliders[key].addEventListener('input', () => {
+                    camValues[key].textContent = camSliders[key].value;
+                    updateBoxesFromSliders();
+                });
+            });
+
+            Object.keys(gameSliders).forEach(key => {
+                gameSliders[key].addEventListener('input', () => {
+                    gameValues[key].textContent = gameSliders[key].value;
+                    updateBoxesFromSliders();
+                });
+            });
+
+            // Layout Format Change
+            layoutSelect.addEventListener('change', updateUIForLayout);
+
+            // Auto Detect Button
+            btnAutoDetect.addEventListener('click', runAutoDetect);
+
+            // Save to Firebase Button
+            btnSaveOverride.addEventListener('click', saveCoordinates);
+
+            // Render Test Button
+            btnRenderTest.addEventListener('click', startRenderTest);
+
+            // Setup drag & resize handlers on the overlay boxes
+            setupBoxDrags(boxWebcam, 'cam');
+            setupBoxDrags(boxGameplay, 'game');
+
+            // Initial UI state setup
+            updateUIForLayout();
+        }
+
+        // Update visual overlays and crop box labels based on selected layout
+        function updateUIForLayout() {
+            const layout = layoutSelect.value;
+            
+            // Remove any existing extra cams from 3-way layout
+            const extraCams = document.querySelectorAll('.crop-box.extra-cam');
+            extraCams.forEach(el => el.remove());
+
+            if (layout === 'blur-bg' || layout === 'blur-bg-logo') {
+                boxWebcam.style.display = 'none';
+                boxGameplay.style.display = 'block';
+                boxGameplay.style.borderColor = 'var(--success)';
+                boxGameplay.querySelector('.crop-label').textContent = 'GAMEPLAY (FULLSCREEN / BLUR)';
+            } else if (layout === '3-way') {
+                boxWebcam.style.display = 'block';
+                boxGameplay.style.display = 'none';
+                boxWebcam.querySelector('.crop-label').textContent = 'WEBCAM 1';
+                
+                // If we have detectedCam2 and detectedCam3 coordinates, draw them!
+                if (detectedCam2) {
+                    const box2 = document.createElement('div');
+                    box2.className = 'crop-box webcam extra-cam';
+                    box2.style.cssText = `position: absolute; border: 2px dashed #f59e0b; background: rgba(245, 158, 11, 0.15); left: ${detectedCam2.x}%; top: ${detectedCam2.y}%; width: ${detectedCam2.w}%; height: ${detectedCam2.h}%; pointer-events: none;`;
+                    box2.innerHTML = '<span class="crop-label" style="background:#f59e0b">WEBCAM 2</span>';
+                    document.getElementById('cropOverlay').appendChild(box2);
+                }
+                if (detectedCam3) {
+                    const box3 = document.createElement('div');
+                    box3.className = 'crop-box webcam extra-cam';
+                    box3.style.cssText = `position: absolute; border: 2px dashed #10b981; background: rgba(16, 185, 129, 0.15); left: ${detectedCam3.x}%; top: ${detectedCam3.y}%; width: ${detectedCam3.w}%; height: ${detectedCam3.h}%; pointer-events: none;`;
+                    box3.innerHTML = '<span class="crop-label" style="background:#10b981">WEBCAM 3</span>';
+                    document.getElementById('cropOverlay').appendChild(box3);
+                }
+            } else {
+                boxWebcam.style.display = 'block';
+                boxGameplay.style.display = 'block';
+                boxWebcam.querySelector('.crop-label').textContent = 'WEBCAM';
+                boxGameplay.querySelector('.crop-label').textContent = 'GAMEPLAY';
+                boxGameplay.style.borderColor = '#10b981';
+            }
+        }
+
+        // Apply Cam Crop presets
+        function applyCamPreset(presetName) {
+            if (presetName === 'bottom-right') {
+                setCamCrop(76, 68, 24, 32);
+            } else if (presetName === 'top-right') {
+                setCamCrop(76, 0, 24, 32);
+            } else if (presetName === 'bottom-left') {
+                setCamCrop(0, 68, 24, 32);
+            } else if (presetName === 'top-left') {
+                setCamCrop(0, 0, 24, 32);
+            }
+        }
+
+        function setCamCrop(x, y, w, h) {
+            camSliders.x.value = x; camValues.x.textContent = x;
+            camSliders.y.value = y; camValues.y.textContent = y;
+            camSliders.w.value = w; camValues.w.textContent = w;
+            camSliders.h.value = h; camValues.h.textContent = h;
+            updateBoxesFromSliders();
+        }
+
+        // Apply Game Crop presets
+        function applyGamePreset(presetName) {
+            if (presetName === 'center') {
+                setGameCrop(25, 0, 50, 100);
+            } else if (presetName === 'left') {
+                setGameCrop(0, 0, 50, 100);
+            } else if (presetName === 'right') {
+                setGameCrop(50, 0, 50, 100);
+            } else if (presetName === 'full') {
+                setGameCrop(0, 0, 100, 100);
+            }
+        }
+
+        function setGameCrop(x, y, w, h) {
+            gameSliders.x.value = x; gameValues.x.textContent = x;
+            gameSliders.y.value = y; gameValues.y.textContent = y;
+            gameSliders.w.value = w; gameValues.w.textContent = w;
+            gameSliders.h.value = h; gameValues.h.textContent = h;
+            updateBoxesFromSliders();
+        }
+
+        // Update CSS Box Position from Sliders
+        function updateBoxesFromSliders() {
+            const cx = camSliders.x.value;
+            const cy = camSliders.y.value;
+            const cw = camSliders.w.value;
+            const ch = camSliders.h.value;
+
+            boxWebcam.style.left = `${cx}%`;
+            boxWebcam.style.top = `${cy}%`;
+            boxWebcam.style.width = `${cw}%`;
+            boxWebcam.style.height = `${ch}%`;
+
+            const gx = gameSliders.x.value;
+            const gy = gameSliders.y.value;
+            const gw = gameSliders.w.value;
+            const gh = gameSliders.h.value;
+
+            boxGameplay.style.left = `${gx}%`;
+            boxGameplay.style.top = `${gy}%`;
+            boxGameplay.style.width = `${gw}%`;
+            boxGameplay.style.height = `${gh}%`;
+        }
+
+        // Setup dragging and resizing handlers using vanilla JS
+        function setupBoxDrags(box, typePrefix) {
+            const handle = box.querySelector('.resize-handle');
+            
+            box.addEventListener('mousedown', (e) => {
+                if (e.target === handle) return; // Ignore if clicking resize handle
+                e.preventDefault();
+                isDragging = true;
+                activeBox = { box, prefix: typePrefix };
+                dragMode = 'drag';
+                
+                startX = e.clientX;
+                startY = e.clientY;
+                
+                const left = parseFloat(box.style.left) || 0;
+                const top = parseFloat(box.style.top) || 0;
+                const w = parseFloat(box.style.width) || 0;
+                const h = parseFloat(box.style.height) || 0;
+                
+                startLeft = left;
+                startTop = top;
+                startWidth = w;
+                startHeight = h;
+                
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+            });
+
+            handle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                isDragging = true;
+                activeBox = { box, prefix: typePrefix };
+                dragMode = 'resize';
+                
+                startX = e.clientX;
+                startY = e.clientY;
+                
+                const w = parseFloat(box.style.width) || 0;
+                const h = parseFloat(box.style.height) || 0;
+                
+                startWidth = w;
+                startHeight = h;
+                
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+            });
+        }
+
+        function handleMouseMove(e) {
+            if (!isDragging || !activeBox) return;
+
+            const containerRect = videoWrapper.getBoundingClientRect();
+            const deltaX = ((e.clientX - startX) / containerRect.width) * 100;
+            const deltaY = ((e.clientY - startY) / containerRect.height) * 100;
+
+            const sliders = activeBox.prefix === 'cam' ? camSliders : gameSliders;
+            const values = activeBox.prefix === 'cam' ? camValues : gameValues;
+
+            if (dragMode === 'drag') {
+                let newLeft = Math.max(0, Math.min(100 - startWidth, startLeft + deltaX));
+                let newTop = Math.max(0, Math.min(100 - startHeight, startTop + deltaY));
+                
+                newLeft = Math.round(newLeft);
+                newTop = Math.round(newTop);
+
+                sliders.x.value = newLeft; values.x.textContent = newLeft;
+                sliders.y.value = newTop; values.y.textContent = newTop;
+            } else if (dragMode === 'resize') {
+                let newWidth = Math.max(5, Math.min(100, startWidth + deltaX));
+                let newHeight = Math.max(5, Math.min(100, startHeight + deltaY));
+                
+                newWidth = Math.round(newWidth);
+                newHeight = Math.round(newHeight);
+
+                sliders.w.value = newWidth; values.w.textContent = newWidth;
+                sliders.h.value = newHeight; values.h.textContent = newHeight;
+            }
+
+            updateBoxesFromSliders();
+        }
+
+        function handleMouseUp() {
+            isDragging = false;
+            activeBox = null;
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        }
+
+        // Run Mediapipe Auto Detect via backend API
+        async function runAutoDetect() {
+            const filename = clipSelect.value;
+            if (!filename) {
+                showAlert('danger', 'Bitte wähle zuerst einen Clip aus.');
+                return;
+            }
+
+            btnAutoDetect.disabled = true;
+            btnAutoDetect.textContent = 'Erkennung läuft...';
+            
+            try {
+                const res = await fetch('/api/cutter/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename })
+                });
+                
+                const result = await res.json();
+                btnAutoDetect.disabled = false;
+                btnAutoDetect.textContent = 'Auto-Erkennung (KI) ausführen';
+
+                if (result.error) {
+                    showAlert('danger', 'KI Erkennung fehlgeschlagen: ' + result.error);
+                    return;
+                }
+
+                if (result.layout === 'too-many-cams') {
+                    showAlert('danger', `Achtung: Mehr als 3 Facecams erkannt. Dieses Video wird beim automatischen Schneiden IGNORIERT!`);
+                    layoutSelect.value = 'too-many-cams';
+                    detectedCam2 = null;
+                    detectedCam3 = null;
+                    updateUIForLayout();
+                    return;
+                }
+
+                showAlert('success', `KI Erkennung erfolgreich! Layout: ${result.layout}`);
+                
+                // Save secondary cameras for 3-way layout
+                detectedCam2 = result.camCrop2 || null;
+                detectedCam3 = result.camCrop3 || null;
+
+                // 1. Show confidence score
+                const confidenceBox = document.getElementById('confidenceBox');
+                const confidenceValue = document.getElementById('confidenceValue');
+                if (result.confidence !== undefined && result.confidence > 0) {
+                    confidenceValue.textContent = Math.round(result.confidence * 100) + '%';
+                    confidenceBox.style.display = 'block';
+                } else {
+                    confidenceBox.style.display = 'none';
+                }
+
+                // 2. Show debug frames slider
+                const debugFramesCard = document.getElementById('debugFramesCard');
+                const debugSliderContainer = document.getElementById('debugSliderContainer');
+                if (result.debug_frames && result.debug_frames.length > 0) {
+                    debugSliderContainer.innerHTML = '';
+                    result.debug_frames.forEach((url, i) => {
+                        const thumb = document.createElement('div');
+                        thumb.className = 'debug-thumbnail';
+                        thumb.style.cssText = 'flex: 0 0 140px; aspect-ratio: 16/9; border-radius: 8px; overflow: hidden; border: 2px solid var(--border); cursor: pointer; transition: all 0.2s; position: relative;';
+                        thumb.innerHTML = `
+                            <img src="${url}" style="width: 100%; height: 100%; object-fit: cover;">
+                            <div style="position: absolute; bottom: 4px; left: 4px; background: rgba(0,0,0,0.6); color: white; padding: 2px 6px; font-size: 0.7rem; border-radius: 4px; font-family: monospace;">F${i+1}</div>
+                        `;
+                        thumb.onclick = () => showDebugModal(url);
+                        debugSliderContainer.appendChild(thumb);
+                    });
+                    debugFramesCard.style.display = 'block';
+                } else {
+                    debugFramesCard.style.display = 'none';
+                }
+
+                if (result.layout) {
+                    layoutSelect.value = result.layout;
+                    updateUIForLayout();
+                }
+
+                if (result.camCrop) {
+                    setCamCrop(
+                        Math.round(result.camCrop.x),
+                        Math.round(result.camCrop.y),
+                        Math.round(result.camCrop.w),
+                        Math.round(result.camCrop.h)
+                    );
+                }
+
+                if (result.gameCrop) {
+                    setGameCrop(
+                        Math.round(result.gameCrop.x),
+                        Math.round(result.gameCrop.y),
+                        Math.round(result.gameCrop.w),
+                        Math.round(result.gameCrop.h)
+                    );
+                }
+                
+                // 3. Show Candidate Debug Scores Console
+                const candidateScoresCard = document.getElementById('candidateScoresCard');
+                const debugConsoleArea = document.getElementById('debugConsoleArea');
+                
+                if (result.candidates_debug && result.candidates_debug.length > 0) {
+                    let consoleText = "=== KI-FACECAM-BEWERTUNG DEBUG REPORT ===\n\n";
+                    result.candidates_debug.forEach(dbg => {
+                        consoleText += `Kandidat ${dbg.corner} (${dbg.x}%x, ${dbg.y}%y, ${dbg.w}%w, ${dbg.h}%h) [Fallback: ${dbg.is_fallback}]:\n`;
+                        consoleText += `  Face Detection Score:   ${dbg.scores.face_detection.toFixed(1)} / 30\n`;
+                        consoleText += `  Person Detection Score: ${dbg.scores.person_detection.toFixed(1)} / 30\n`;
+                        consoleText += `  Movement Score:         ${dbg.scores.temporal_analysis.toFixed(1)} / 20\n`;
+                        consoleText += `  Position & Pattern:     ${dbg.scores.pattern_analysis.toFixed(1)} / 20\n`;
+                        consoleText += `  Gesamtscore:            ${dbg.scores.total_score.toFixed(1)} / 100\n`;
+                        consoleText += `  Status:                 ${dbg.status}\n`;
+                        consoleText += `  Ablehnungsgrund:        ${dbg.discard_reason || "Keiner"}\n\n`;
+                    });
+                    consoleText += "=========================================";
+                    debugConsoleArea.textContent = consoleText;
+                    candidateScoresCard.style.display = 'block';
+                } else {
+                    candidateScoresCard.style.display = 'none';
+                }
+            } catch (err) {
+                btnAutoDetect.disabled = false;
+                btnAutoDetect.textContent = 'Auto-Erkennung (KI) ausführen';
+                showAlert('danger', 'Fehler bei Auto-Erkennung: ' + err.message);
+            }
+        }
+
+        // Save override coordinates permanently to Firebase Realtime Database
+        async function saveCoordinates() {
+            const streamerName = streamerNameInput.value.trim();
+            if (!streamerName) {
+                showAlert('danger', 'Bitte trage einen Streamer-Namen ein.');
+                return;
+            }
+
+            const camCrop = {
+                x: parseInt(camSliders.x.value),
+                y: parseInt(camSliders.y.value),
+                w: parseInt(camSliders.w.value),
+                h: parseInt(camSliders.h.value)
+            };
+
+            const gameCrop = {
+                x: parseInt(gameSliders.x.value),
+                y: parseInt(gameSliders.y.value),
+                w: parseInt(gameSliders.w.value),
+                h: parseInt(gameSliders.h.value)
+            };
+
+            const layout = layoutSelect.value;
+
+            btnSaveOverride.disabled = true;
+            btnSaveOverride.textContent = 'Speichere...';
+
+            try {
+                const res = await fetch('/api/cutter/save-override', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ streamerName, layout, camCrop, gameCrop })
+                });
+
+                const data = await res.json();
+                btnSaveOverride.disabled = false;
+                btnSaveOverride.textContent = 'Koordinaten in Firebase speichern';
+
+                if (data.success) {
+                    showAlert('success', `Override Koordinaten für ${streamerName} erfolgreich in Firebase gespeichert!`);
+                } else {
+                    showAlert('danger', 'Fehler beim Speichern: ' + data.error);
+                }
+            } catch (err) {
+                btnSaveOverride.disabled = false;
+                btnSaveOverride.textContent = 'Koordinaten in Firebase speichern';
+                showAlert('danger', 'Netzwerkfehler beim Speichern: ' + err.message);
+            }
+        }
+
+        // Start manual render test
+        async function startRenderTest() {
+            const filename = clipSelect.value;
+            if (!filename) {
+                showAlert('danger', 'Bitte wähle zuerst einen Clip aus.');
+                return;
+            }
+
+            const camCrop = {
+                x: parseInt(camSliders.x.value),
+                y: parseInt(camSliders.y.value),
+                w: parseInt(camSliders.w.value),
+                h: parseInt(camSliders.h.value)
+            };
+
+            const gameCrop = {
+                x: parseInt(gameSliders.x.value),
+                y: parseInt(gameSliders.y.value),
+                w: parseInt(gameSliders.w.value),
+                h: parseInt(gameSliders.h.value)
+            };
+
+            const layout = layoutSelect.value;
+
+            btnRenderTest.disabled = true;
+            progressBox.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressPercent.textContent = '0%';
+            progressMessage.textContent = 'Starte Rendering...';
+
+            outputVideo.style.display = 'none';
+            outputPlaceholder.style.display = 'block';
+            outputDownloadContainer.style.display = 'none';
+
+            try {
+                const payload = {
+                    filename,
+                    start: 0,
+                    end: 3, // Render only 3 seconds for extremely fast local verification
+                    camCrop,
+                    gameCrop,
+                    layout
+                };
+                
+                if (layout === '3-way') {
+                    payload.camCrop2 = detectedCam2;
+                    payload.camCrop3 = detectedCam3;
+                }
+
+                const res = await fetch('/api/cutter/render', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (data.success && data.jobId) {
+                    // Poll status
+                    pollRenderStatus(data.jobId);
+                } else {
+                    btnRenderTest.disabled = false;
+                    progressBox.style.display = 'none';
+                    showAlert('danger', 'Rendering konnte nicht gestartet werden.');
+                }
+            } catch (err) {
+                btnRenderTest.disabled = false;
+                progressBox.style.display = 'none';
+                showAlert('danger', 'Fehler beim Starten des Renderings: ' + err.message);
+            }
+        }
+
+        // Poll render status from API
+        function pollRenderStatus(jobId) {
+            const interval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/cutter/render-status/${jobId}`);
+                    const job = await res.json();
+                    
+                    if (job.status === 'rendering' || job.status === 'downloading') {
+                        const progress = job.progress || 0;
+                        progressBar.style.width = `${progress}%`;
+                        progressPercent.textContent = `${progress}%`;
+                        progressMessage.textContent = 'Rendering läuft...';
+                    } else if (job.status === 'done') {
+                        clearInterval(interval);
+                        progressBar.style.width = '100%';
+                        progressPercent.textContent = '100%';
+                        progressMessage.textContent = 'Rendering abgeschlossen!';
+                        
+                        btnRenderTest.disabled = false;
+                        setTimeout(() => { progressBox.style.display = 'none'; }, 2000);
+
+                        showAlert('success', 'Test-Video erfolgreich gerendert!');
+
+                        // Load and play output video
+                        if (job.clip && job.clip.url) {
+                            outputPlaceholder.style.display = 'none';
+                            outputVideo.src = job.clip.url;
+                            outputVideo.style.display = 'block';
+                            outputVideo.load();
+                            outputVideo.play();
+                            
+                            downloadBtn.href = job.clip.url;
+                            outputDownloadContainer.style.display = 'block';
+                        }
+                    } else if (job.status === 'failed') {
+                        clearInterval(interval);
+                        btnRenderTest.disabled = false;
+                        progressBox.style.display = 'none';
+                        showAlert('danger', 'Rendering fehlgeschlagen: ' + (job.error || 'Unbekannter Fehler'));
+                    }
+                } catch (err) {
+                    console.error("Error polling render status:", err);
+                }
+            }, 1000);
+        }
+
+        // Show large modal with visual debug frame
+        function showDebugModal(url) {
+            document.getElementById('debugModalImg').src = url;
+            document.getElementById('debugModal').style.display = 'flex';
+        }
+
+        function copyDebugConsole() {
+            const text = document.getElementById('debugConsoleArea').textContent;
+            navigator.clipboard.writeText(text);
+            showAlert('success', 'Bewertungen in die Zwischenablage kopiert!');
+        }
+    </script>
+    
+    <!-- Debug Image Modal -->
+    <div id="debugModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 9999; align-items: center; justify-content: center; padding: 2rem;" onclick="this.style.display='none'">
+        <img id="debugModalImg" src="" style="max-width: 100%; max-height: 100%; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.15); box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+    </div>
+</body>
+</html>

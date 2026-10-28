@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Stream Subathon Timer Overlay</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="app-config.js"></script>
+    <script src="tmi.min.js"></script>
+
+    <style>
+        :root {
+            --scale: 1.0;
+            --border-radius: 12px;
+            --body-bg: rgba(10, 18, 15, 0.75);
+            --text-color: #e2f0e7;
+            --accent-color: #00e5ff;
+            --glow-color: rgba(0, 229, 255, 0.2);
+            --header-bg: linear-gradient(135deg, #00b4db 0%, #0083b0 100%);
+            --header-text-color: #ffffff;
+            --font-size: 15px;
+            --header-font-size: 18px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: transparent !important;
+            overflow: hidden;
+            font-family: 'Outfit', sans-serif;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Overlay Wrapper with custom positioning */
+        .overlay-wrapper {
+            position: absolute;
+            left: 40px;
+            top: 40px;
+            transform: scale(var(--scale));
+            transform-origin: top left;
+            transition: all 0.3s ease;
+            overflow: visible;
+        }
+
+        /* Ambient floating animation for card */
+        .card-bobber {
+            animation: cardBobbing 4s ease-in-out infinite alternate;
+            overflow: visible;
+        }
+        @keyframes cardBobbing {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-8px); }
+        }
+
+        /* Subathon Card Layout */
+        .subathon-card {
+            min-width: 320px;
+            width: 350px;
+            background: var(--body-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: var(--border-radius);
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.65),
+                0 0 30px var(--glow-color),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            overflow: visible;
+            animation: cardEntrance 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            opacity: 0;
+            transform: translateY(20px);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        @keyframes cardEntrance {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Header Style */
+        .card-header {
+            background: var(--header-bg);
+            padding: 14px 20px;
+            font-weight: 900;
+            font-size: var(--header-font-size);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--header-text-color);
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+            border-top-left-radius: inherit;
+            border-top-right-radius: inherit;
+        }
+
+        .card-header::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 50%, transparent 50.1%);
+            pointer-events: none;
+        }
+
+        /* Timer Display Section */
+        .timer-section {
+            padding: 24px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .timer-display {
+            font-size: 48px;
+            font-weight: 900;
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum";
+            color: var(--accent-color);
+            letter-spacing: -1px;
+            text-shadow: 0 0 15px var(--glow-color);
+            line-height: 1;
+        }
+
+        /* Goal Progress Section */
+        .goal-section {
+            padding: 16px 20px 20px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .goal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: var(--text-color);
+            opacity: 0.85;
+            text-transform: uppercase;
+        }
+
+        .goal-value {
+            font-weight: 900;
+            color: var(--accent-color);
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            overflow: visible;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 5px;
+            background: linear-gradient(90deg, var(--accent-color) 0%, var(--glow-color) 100%);
+            width: 0%;
+            position: relative;
+            transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+            box-shadow: 0 0 10px var(--glow-color);
+        }
+
+        /* Floating decoration tip */
+        .progress-tip {
+            position: absolute;
+            right: -8px;
+            top: -4px;
+            color: var(--accent-color);
+            text-shadow: 0 0 8px var(--accent-color);
+            font-size: 13px;
+            pointer-events: none;
+            animation: tipGlow 1.5s ease-in-out infinite alternate;
+        }
+        @keyframes tipGlow {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.3) rotate(20deg); }
+        }
+
+        /* Subathon Alert Box */
+        .alert-container {
+            position: absolute;
+            top: 105%;
+            left: 0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .sub-alert {
+            background: rgba(18, 12, 28, 0.9);
+            border: 1px solid var(--accent-color);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5), 0 0 15px var(--glow-color);
+            border-radius: 8px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: alertEnter 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            opacity: 0;
+            transform: scale(0.85) translateY(-10px);
+        }
+
+        @keyframes alertEnter {
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .sub-alert.hide {
+            animation: alertExit 0.5s ease-in forwards;
+        }
+        @keyframes alertExit {
+            to { opacity: 0; transform: scale(0.9) translateY(10px); }
+        }
+
+        .alert-user {
+            font-weight: 800;
+            color: #ffffff;
+            font-size: 14px;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+            max-width: 170px;
+        }
+
+        .alert-text {
+            color: var(--accent-color);
+            font-weight: 900;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* 🌸 FANTASY STYLE SPECIFICS 🌸 */
+        .subathon-card.theme-fantasy {
+            background: rgba(26, 14, 30, 0.65) !important;
+            border: 1px dashed rgba(255, 182, 193, 0.4) !important;
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.7),
+                0 0 25px rgba(255, 105, 180, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+        }
+
+        .subathon-card.theme-fantasy .card-header {
+            background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%) !important;
+            color: #ffffff !important;
+            font-family: 'Outfit', cursive, sans-serif;
+            letter-spacing: 3px;
+        }
+
+        .subathon-card.theme-fantasy .timer-display {
+            color: #ff55a3 !important;
+            text-shadow: 0 0 12px rgba(255, 85, 163, 0.4) !important;
+        }
+
+        .subathon-card.theme-fantasy .goal-value {
+            color: #ff55a3 !important;
+        }
+
+        .subathon-card.theme-fantasy .progress-bar-fill {
+            background: linear-gradient(90deg, #ff758c 0%, #ff7eb3 100%) !important;
+            box-shadow: 0 0 10px rgba(255, 117, 140, 0.5) !important;
+        }
+
+        .subathon-card.theme-fantasy .sub-alert {
+            background: rgba(36, 18, 42, 0.9) !important;
+            border: 1px dashed rgba(255, 117, 140, 0.6) !important;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5), 0 0 15px rgba(255, 117, 140, 0.3) !important;
+        }
+
+        .subathon-card.theme-fantasy .alert-text {
+            color: #ff758c !important;
+        }
+
+        /* Sakura blossom background effect */
+        .sakura {
+            position: absolute;
+            background: #ffb7c5;
+            border-radius: 150% 0 150% 150%;
+            pointer-events: none;
+            opacity: 0.8;
+            z-index: 1;
+            animation: fallAnimation 8s linear infinite;
+        }
+
+        @keyframes fallAnimation {
+            0% {
+                transform: translateY(-20px) rotate(0deg);
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateY(220px) rotate(360deg) translateX(40px);
+                opacity: 0;
+            }
+        }
+
+        /* 🦋 Butterfly and Sparkles alert decor */
+        .decor-star {
+            position: absolute;
+            font-size: 14px;
+            color: #ffd700;
+            text-shadow: 0 0 5px #ff7a00;
+            animation: sparkleGlow 1.2s ease-in-out infinite alternate;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .decor-butterfly {
+            position: absolute;
+            font-size: 18px;
+            animation: flapWings 0.15s ease-in-out infinite alternate, flyUp 2s linear forwards;
+            pointer-events: none;
+            z-index: 15;
+        }
+
+        @keyframes sparkleGlow {
+            0% { transform: scale(0.6) rotate(0deg); opacity: 0.4; }
+            100% { transform: scale(1.2) rotate(180deg); opacity: 1; }
+        }
+
+        @keyframes flapWings {
+            0% { transform: scaleX(1); }
+            100% { transform: scaleX(0.2) rotate(5deg); }
+        }
+
+        @keyframes flyUp {
+            0% { top: 120%; left: 10%; opacity: 0; }
+            15% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: -40%; left: 90%; opacity: 0; }
+        }
+
+        /* ⏱️ TIMER-ONLY LAYOUT OVERRIDES ⏱️ */
+        body .subathon-card.layout-timer-only {
+            background: transparent !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            min-width: 0 !important;
+            width: auto !important;
+            animation: none !important;
+            opacity: 1 !important;
+            transform: none !important;
+        }
+        body .subathon-card.layout-timer-only .card-header {
+            display: none !important;
+        }
+        body .subathon-card.layout-timer-only .timer-section {
+            padding: 0 !important;
+            background: transparent !important;
+            border: none !important;
+        }
+        body .subathon-card.layout-timer-only .timer-display {
+            font-size: 72px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            font-weight: 900;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="overlay-wrapper" id="overlayWrapper">
+        <div class="card-bobber">
+            <div class="subathon-card" id="subathonCard">
+                <div class="card-header" id="cardHeader">SUBATHON</div>
+                
+                <div class="timer-section">
+                    <div class="timer-display" id="timerDisplay">00:00:00</div>
+                </div>
+
+                <div class="goal-section" id="goalSection">
+                    <div class="goal-header">
+                        <span>SUB-GOAL</span>
+                        <div class="goal-status">
+                            <span id="lblCurrentSubs">0</span>
+                            <span>/</span>
+                            <span id="lblTargetSubs" class="goal-value">50</span>
+                        </div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" id="progressBarFill">
+                            <span class="progress-tip" id="progressTip">✦</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alert container for Twitch integrations -->
+                <div class="alert-container" id="alertContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const overlayWrapper = document.getElementById('overlayWrapper');
+        const subathonCard = document.getElementById('subathonCard');
+        const cardHeader = document.getElementById('cardHeader');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const lblCurrentSubs = document.getElementById('lblCurrentSubs');
+        const lblTargetSubs = document.getElementById('lblTargetSubs');
+        const progressBarFill = document.getElementById('progressBarFill');
+        const progressTip = document.getElementById('progressTip');
+        const alertContainer = document.getElementById('alertContainer');
+
+        let client = null;
+        let currentChannel = "";
+        let currentTheme = "";
+
+        // Subathon config & timer states
+        let running = false;
+        let startDuration = 3600; // 1 hour default
+        let addedTime = 0;
+        let accumulatedTime = 0;
+        let baseTime = 0;
+        let timeT1 = 30;
+        let timeT2 = 60;
+        let timeT3 = 120;
+        let timeGift = 30;
+        let maxTime = 0;
+        let subGoal = 50;
+        let totalSubs = 0;
+        let lastTestEventTimestamp = 0;
+
+        // Sakura petal loop timer
+        let sakuraInterval = null;
+
+        // Get stream ID from URL params
+        const streamId = new URLSearchParams(window.location.search).get('stream') || 'default-stream';
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(window.BINGO_CONFIG.firebaseConfig);
+        }
+        const db = firebase.database();
+
+        // Server-side database write helper to bypass client rules
+        let cachedGuestToken = null;
+        async function getGuestToken() {
+            if (cachedGuestToken) return cachedGuestToken;
+            
+            // Try url parameter first
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlToken = urlParams.get('token');
+            if (urlToken) {
+                cachedGuestToken = urlToken;
+                return cachedGuestToken;
+            }
+            
+            try {
+                const snap = await db.ref(`streams/${streamId}/meta/guestToken`).once('value');
+                cachedGuestToken = snap.val();
+            } catch (err) {
+                console.warn("Could not fetch token from Firebase (likely permission denied).");
+            }
+            return cachedGuestToken;
+        }
+
+        async function updateSubathonData(payload) {
+            try {
+                const token = await getGuestToken();
+                if (!token) {
+                    console.error("Guest token not found in meta. Cannot write to Firebase.");
+                    return;
+                }
+                const res = await fetch('/bot/api/scoreboard/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        streamId: streamId,
+                        token: token,
+                        path: 'subathon',
+                        value: payload
+                    })
+                });
+                return await res.json();
+            } catch (e) {
+                console.error("Failed to call backend update:", e);
+            }
+        }
+
+        // Subscribe to Subathon configuration & live state
+        db.ref(`streams/${streamId}/data/subathon`).on('value', (snap) => {
+            const val = snap.val();
+            if (val) {
+                running = !!val.running;
+                startDuration = parseInt(val.startDuration) || 3600;
+                addedTime = parseInt(val.addedTime) || 0;
+                accumulatedTime = parseInt(val.accumulatedTime) || 0;
+                baseTime = parseInt(val.baseTime) || 0;
+                timeT1 = parseInt(val.timeT1) ?? 30;
+                timeT2 = parseInt(val.timeT2) ?? 60;
+                timeT3 = parseInt(val.timeT3) ?? 120;
+                timeGift = parseInt(val.timeGift) ?? 30;
+                maxTime = parseInt(val.maxTime) || 0;
+                subGoal = parseInt(val.subGoal) || 50;
+                totalSubs = parseInt(val.totalSubs) || 0;
+
+                // Title & Style config
+                cardHeader.textContent = val.title || 'SUBATHON';
+                const nextTheme = val.theme || 'fantasy';
+                
+                if (nextTheme !== currentTheme) {
+                    currentTheme = nextTheme;
+                    updateThemeStyles(currentTheme);
+                }
+
+                // Custom style variables
+                const style = val.style || {};
+                const root = document.documentElement;
+                root.style.setProperty('--scale', style.scale ?? 1.0);
+                root.style.setProperty('--border-radius', `${style.borderRadius ?? 12}px`);
+
+                if (currentTheme !== 'fantasy') {
+                    if (style.bodyBg) root.style.setProperty('--body-bg', style.bodyBg);
+                    if (style.textColor) root.style.setProperty('--text-color', style.textColor);
+                    if (style.accentColor) root.style.setProperty('--accent-color', style.accentColor);
+                    if (style.glowColor) root.style.setProperty('--glow-color', style.glowColor);
+                    if (style.headerBg) root.style.setProperty('--header-bg', style.headerBg);
+                    if (style.headerTextColor) root.style.setProperty('--header-text-color', style.headerTextColor);
+                }
+
+                // Overlay positioning
+                overlayWrapper.style.left = `${style.posX ?? 40}px`;
+                overlayWrapper.style.top = `${style.posY ?? 40}px`;
+
+                // Toggle timer-only layout
+                if (val.timerOnly) {
+                    subathonCard.classList.add('layout-timer-only');
+                } else {
+                    subathonCard.classList.remove('layout-timer-only');
+                }
+
+                // Toggle sub-goal visibility
+                const goalContainer = document.querySelector('.goal-section');
+                if (goalContainer) {
+                    if (val.hideSubGoal) {
+                        goalContainer.style.display = 'none';
+                    } else {
+                        goalContainer.style.display = 'block';
+                    }
+                }
+
+                // Sub goal text & progress fill
+                lblCurrentSubs.textContent = totalSubs;
+                lblTargetSubs.textContent = subGoal;
+                const progressPct = Math.min(100, Math.round((totalSubs / subGoal) * 100));
+                progressBarFill.style.width = `${progressPct}%`;
+
+                // Update timer rendering immediately
+                updateTimerDisplay();
+
+                // Connect or Reconnect Twitch chat client
+                const nextChannel = (val.twitchChannel || "").trim().toLowerCase();
+                if (nextChannel !== currentChannel) {
+                    currentChannel = nextChannel;
+                    connectTwitchChat(currentChannel);
+                }
+
+                // Handle test simulation events
+                if (val.testEvent && val.testEvent.timestamp && val.testEvent.timestamp > lastTestEventTimestamp) {
+                    const elapsedSinceEvent = Date.now() - val.testEvent.timestamp;
+                    // Only trigger if the event was created in the last 10 seconds (to avoid triggering old events on page load)
+                    if (elapsedSinceEvent < 10000) {
+                        handleSubEvent(val.testEvent.username, val.testEvent.type === 'gift', { plan: val.testEvent.plan });
+                    }
+                    lastTestEventTimestamp = val.testEvent.timestamp;
+                }
+            } else {
+                console.log("Subathon state is empty. Please open Subathon Admin Panel to initialize.");
+            }
+        });
+
+        // Initialize default node inside Firebase if none exists
+        function initializeDefaultDbState() {
+            db.ref(`streams/${streamId}/data/subathon`).set({
+                running: false,
+                startDuration: 3600, // 1 hour
+                addedTime: 0,
+                accumulatedTime: 0,
+                baseTime: 0,
+                twitchChannel: "",
+                theme: "fantasy",
+                title: "SUBATHON",
+                timeT1: 30,
+                timeT2: 60,
+                timeT3: 120,
+                timeGift: 30,
+                maxTime: 0,
+                subGoal: 50,
+                totalSubs: 0,
+                style: {
+                    scale: 1.0,
+                    borderRadius: 12,
+                    posX: 40,
+                    posY: 40,
+                    colorBodyHex: "#0a0f0c",
+                    colorTextHex: "#e2f0e7",
+                    colorAccentHex: "#00e5ff",
+                    colorGlowHex: "#00e5ff",
+                    bodyOpacity: 75
+                }
+            });
+        }
+
+        // Apply theme rules dynamically
+        function updateThemeStyles(theme) {
+            clearInterval(sakuraInterval);
+            sakuraInterval = null;
+            document.querySelectorAll('.sakura, .decor-star').forEach(el => el.remove());
+
+            if (theme === 'fantasy') {
+                subathonCard.classList.add('theme-fantasy');
+                progressTip.textContent = '🦋';
+
+                // Spawn sakura petals falling
+                sakuraInterval = setInterval(() => {
+                    if (document.querySelectorAll('.sakura').length < 12) {
+                        spawnSakuraPetal();
+                    }
+                }, 1000);
+
+                // Spawn persistent stars on card header
+                for(let i=0; i<3; i++) {
+                    const star = document.createElement('div');
+                    star.className = 'decor-star';
+                    star.textContent = '✦';
+                    star.style.top = `${5 + Math.random() * 35}%`;
+                    star.style.left = `${5 + Math.random() * 90}%`;
+                    star.style.animationDelay = `${i * 300}ms`;
+                    subathonCard.appendChild(star);
+                }
+            } else {
+                subathonCard.classList.remove('theme-fantasy');
+                progressTip.textContent = '✦';
+            }
+        }
+
+        // Spawn sakura petal decoration
+        function spawnSakuraPetal() {
+            const petal = document.createElement('div');
+            petal.className = 'sakura';
+            petal.style.left = Math.random() * subathonCard.clientWidth + 'px';
+            const size = 5 + Math.random() * 8;
+            petal.style.width = size + 'px';
+            petal.style.height = size + 'px';
+            petal.style.animationDuration = (5 + Math.random() * 4) + 's';
+            subathonCard.appendChild(petal);
+            setTimeout(() => petal.remove(), 9000);
+        }
+
+        // Update the countdown time calculations
+        function updateTimerDisplay() {
+            const totalSec = startDuration + addedTime;
+            let elapsed = 0;
+
+            if (running && baseTime > 0) {
+                elapsed = (accumulatedTime + (Date.now() - baseTime)) / 1000;
+            } else {
+                elapsed = accumulatedTime / 1000;
+            }
+
+            let remaining = totalSec - elapsed;
+            if (remaining < 0) remaining = 0;
+
+            // Formatted string
+            const hrs = Math.floor(remaining / 3600);
+            const mins = Math.floor((remaining % 3600) / 60);
+            const secs = Math.floor(remaining % 60);
+
+            const pad = (n) => n < 10 ? '0' + n : n;
+            timerDisplay.textContent = `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+        }
+
+        // Listen every 150ms for smooth live updates of the timer clock
+        setInterval(() => {
+            if (running) {
+                updateTimerDisplay();
+            }
+        }, 150);
+
+        // Connect client to Twitch chat via tmi.js
+        function connectTwitchChat(channel) {
+            if (client) {
+                client.disconnect();
+                client = null;
+            }
+
+            if (!channel) return;
+
+            client = new tmi.Client({
+                connection: {
+                    secure: true,
+                    reconnect: true
+                },
+                channels: [channel]
+            });
+
+            client.connect().catch(console.error);
+
+            // Listen to standard subscriptions
+            client.on("subscription", (channel, username, method, message, userstate) => {
+                handleSubEvent(username, false, method);
+            });
+
+            // Listen to resubscriptions (sub renewal/extends)
+            client.on("resub", (channel, username, months, message, userstate, methods) => {
+                handleSubEvent(username, false, methods);
+            });
+
+            // Listen to gifted subscriptions
+            client.on("subgift", (channel, username, streakMonths, recipient, methods, userstate) => {
+                handleSubEvent(recipient, true, methods);
+            });
+
+            // Listen to anonymous gifted subscriptions
+            client.on("anonsubgift", (channel, streakMonths, recipient, methods, userstate) => {
+                handleSubEvent(recipient, true, methods);
+            });
+        }
+
+        // Core logic to parse and increment seconds on sub alerts
+        function handleSubEvent(username, isGift, method) {
+            const plan = (method && method.plan) || "1000";
+            let addedSeconds = 0;
+
+            if (isGift) {
+                addedSeconds = timeGift;
+            } else {
+                if (plan === "2000") {
+                    addedSeconds = timeT2;
+                } else if (plan === "3000") {
+                    addedSeconds = timeT3;
+                } else {
+                    addedSeconds = timeT1;
+                }
+            }
+
+            if (addedSeconds <= 0) return;
+
+            // Trigger notifications
+            showAlert(username, isGift ? 'gift' : 'sub', addedSeconds);
+
+            // Write transactional increment to Firebase via backend API
+            let newAdded = (addedTime || 0) + addedSeconds;
+            
+            // Cap the addedTime if it exceeds maxTime limit
+            if (maxTime > 0) {
+                const start = parseInt(startDuration) || 3600;
+                const total = start + newAdded;
+                let elapsed = 0;
+                if (running) {
+                    elapsed = ((accumulatedTime || 0) + (Date.now() - (baseTime || 0))) / 1000;
+                } else {
+                    elapsed = (accumulatedTime || 0) / 1000;
+                }
+                const remaining = total - elapsed;
+                
+                if (remaining > maxTime) {
+                    newAdded = maxTime + elapsed - start;
+                }
+            }
+            
+            const nextTotalSubs = (totalSubs || 0) + 1;
+            
+            updateSubathonData({
+                addedTime: newAdded,
+                totalSubs: nextTotalSubs
+            });
+        }
+
+        // Show sub alerts
+        function showAlert(username, type, seconds) {
+            // Disabled per user request (only naked timer shown)
+            return;
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'sub-alert';
+
+            let text = '';
+            if (type === 'gift') {
+                text = `🎁 Gift Sub! +${seconds}s`;
+            } else {
+                text = `⭐ Sub! +${seconds}s`;
+            }
+
+            alertDiv.innerHTML = `
+                <div class="alert-user">${escapeHtml(username)}</div>
+                <div class="alert-text">${text}</div>
+            `;
+            alertContainer.appendChild(alertDiv);
+
+            // Synth Audio Alert
+            playSynthChime();
+
+            // Spawn animated butterfly if fantasy theme
+            if (currentTheme === 'fantasy') {
+                const butterfly = document.createElement('div');
+                butterfly.className = 'decor-butterfly';
+                butterfly.textContent = '🦋';
+                subathonCard.appendChild(butterfly);
+                setTimeout(() => butterfly.remove(), 2100);
+            }
+
+            setTimeout(() => {
+                alertDiv.classList.add('hide');
+                setTimeout(() => alertDiv.remove(), 600);
+            }, 5000);
+        }
+
+        // Audio synth chime
+        function playSynthChime() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+                osc.frequency.exponentialRampToValueAtTime(783.99, ctx.currentTime + 0.12); // G5
+                osc.frequency.exponentialRampToValueAtTime(1046.50, ctx.currentTime + 0.25); // C6
+
+                gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+
+                osc.start();
+                osc.stop(ctx.currentTime + 0.6);
+            } catch (e) {
+                console.log("Audio not allowed or blocked:", e);
+            }
+        }
+
+        function escapeHtml(str) {
+            return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>

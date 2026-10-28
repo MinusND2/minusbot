@@ -4,56 +4,157 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Twitch Modstats</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0b1020;
-      color: #ecf1ff;
+      font-family: 'Outfit', sans-serif;
+      background: #050505;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
       padding: 24px;
+      position: relative;
     }
+    
+    /* Animated grid background */
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      background-image: 
+        linear-gradient(rgba(245, 197, 24, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(245, 197, 24, 0.015) 1px, transparent 1px);
+      background-size: 60px 60px;
+      z-index: 0;
+    }
+
+    /* Gold glow orbs */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      z-index: 0;
+      opacity: 0.5;
+    }
+    .orb-1 { width: 500px; height: 500px; background: rgba(245, 197, 24, 0.06); top: -150px; right: -100px; }
+    .orb-2 { width: 450px; height: 450px; background: rgba(167, 129, 4, 0.04); bottom: -100px; left: -80px; }
+
     .card {
+      position: relative;
+      z-index: 2;
+      width: 100%;
       max-width: 900px;
       margin: 0 auto;
-      border: 1px solid #2b3658;
-      border-radius: 12px;
-      background: #121a33;
-      padding: 16px;
+      border: 1px solid rgba(245, 197, 24, 0.15);
+      border-radius: 20px;
+      background: #0c0c0e;
+      padding: 32px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.02);
     }
+    
+    .card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(95deg, #f5c518 0%, #a78104 100%);
+    }
+
+    h2 {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 6px;
+      background: linear-gradient(135deg, #f5c518 0%, #a78104 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
     .row {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 10px;
+      gap: 12px;
+      margin-bottom: 12px;
     }
-    input, button {
-      min-height: 40px;
-      border-radius: 8px;
-      border: 1px solid #3a4770;
-      background: #0f1630;
-      color: #ecf1ff;
-      padding: 8px 10px;
+    
+    input {
+      font-family: inherit;
+      min-height: 44px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.03);
+      color: #fff;
+      padding: 10px 14px;
+      font-size: 14px;
+      transition: all 0.2s;
     }
+    
+    input:focus {
+      outline: none;
+      border-color: #f5c518;
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 0 10px rgba(245, 197, 24, 0.1);
+    }
+
     button {
-      background: #3b82f6;
+      font-family: inherit;
+      min-height: 44px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #f5c518, #a78104);
+      color: #000;
       border: none;
       cursor: pointer;
       font-weight: 700;
+      padding: 10px 24px;
+      transition: all 0.2s;
     }
+    
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 15px rgba(245, 197, 24, 0.3);
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 14px;
+      margin-top: 20px;
     }
+    
     th, td {
       text-align: left;
-      padding: 10px;
-      border-bottom: 1px solid #253055;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 14px;
     }
-    .muted { color: #9db0de; }
+    
+    th {
+      font-weight: 700;
+      color: #71717a;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+    
+    td {
+      color: #e4e4e7;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .muted { 
+      color: #a1a1aa; 
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
   </style>
 </head>
 <body>
+  <div class="bg-grid"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
   <div class="card">
     <h2 style="margin-top:0;">Twitch Modstats</h2>
     <p class="muted">Zeigt Timeouts/Bans pro Moderator. API-Quelle ist der Bot-Server.</p>

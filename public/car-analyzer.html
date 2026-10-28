@@ -1,0 +1,2351 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auto-Preis-Leistungs-Analysator | MinusND.de</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07080a;
+      --bg-card: #0e1117;
+      --bg-elevated: #151a23;
+      --bg-glass: rgba(14, 17, 23, 0.75);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-hover: rgba(255, 255, 255, 0.16);
+      --text: #f4f5f7;
+      --text-muted: #9ba1ad;
+      --accent: #f5c518;
+      --accent-glow: rgba(245, 197, 24, 0.25);
+      --accent-green: #10b981;
+      --accent-green-bg: rgba(16, 185, 129, 0.12);
+      --accent-blue: #3b82f6;
+      --accent-purple: #8b5cf6;
+      --accent-red: #ef4444;
+      --accent-red-bg: rgba(239, 68, 68, 0.12);
+      --accent-yellow: #f59e0b;
+      --accent-yellow-bg: rgba(245, 158, 11, 0.12);
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --font: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+      padding-bottom: 80px;
+      overflow-x: hidden;
+    }
+
+    /* Ambient background glowing orbs */
+    .bg-glow {
+      position: fixed;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      filter: blur(140px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.15;
+    }
+    .glow-top-left { top: -150px; left: -100px; background: #3b82f6; }
+    .glow-bottom-right { bottom: -100px; right: -100px; background: #f5c518; }
+
+    .container {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 24px 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header & Navigation */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+    .brand-badge {
+      background: linear-gradient(135deg, #f5c518, #ffb700);
+      color: #000;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+    .brand-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    /* Hero Section */
+    .hero {
+      text-align: center;
+      padding: 20px 0 36px 0;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      color: var(--accent);
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+    .hero h1 {
+      font-size: 40px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+      background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 17px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* Input Card */
+    .input-card {
+      background: var(--bg-glass);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin-bottom: 32px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+    .input-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .url-input {
+      flex: 1;
+      min-width: 280px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      color: #fff;
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    .url-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .btn {
+      padding: 14px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      border-radius: var(--radius-md);
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #f5c518 0%, #ffb700 100%);
+      color: #000;
+      box-shadow: 0 4px 14px rgba(245, 197, 24, 0.35);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(245, 197, 24, 0.5);
+    }
+    .btn-secondary {
+      background: var(--bg-elevated);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--border-hover);
+      transform: translateY(-1px);
+    }
+    .btn-sm {
+      padding: 8px 14px;
+      font-size: 13px;
+      border-radius: var(--radius-sm);
+    }
+    .btn-success {
+      background: #10b981;
+      color: #fff;
+    }
+    .btn-danger {
+      background: transparent;
+      color: var(--accent-red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .btn-danger:hover {
+      background: var(--accent-red-bg);
+    }
+
+    .quick-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    /* Staging Vehicle Pool */
+    .pool-section {
+      margin-bottom: 36px;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge-count {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    .pool-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .pool-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+    .pool-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+    }
+    .pool-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .pool-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .pool-price {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+    .pool-specs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .spec-pill {
+      background: var(--bg-elevated);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      color: var(--text-muted);
+    }
+    .pool-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .quality-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .quality-high { background: var(--accent-green-bg); color: #34d399; }
+    .quality-medium { background: var(--accent-yellow-bg); color: #fbbf24; }
+    .quality-low { background: var(--accent-red-bg); color: #f87171; }
+
+    /* Control Bar for Analysis */
+    .analysis-controls {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+    .slider-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .slider-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .slider-val {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--accent);
+      min-width: 90px;
+    }
+    input[type=range] {
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    /* Ranking Section */
+    .ranking-section {
+      margin-top: 40px;
+    }
+    .rank-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+    .rank-card:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .rank-winner {
+      border-color: rgba(245, 197, 24, 0.4);
+      background: linear-gradient(145deg, rgba(245, 197, 24, 0.04) 0%, rgba(14, 17, 23, 0.95) 100%);
+      box-shadow: 0 15px 40px rgba(245, 197, 24, 0.12);
+    }
+
+    .rank-badge-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .medal-icon {
+      font-size: 32px;
+      line-height: 1;
+    }
+    .rank-position {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .winner-tag {
+      background: linear-gradient(135deg, #f5c518, #ffb700);
+      color: #000;
+      font-weight: 800;
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .rank-header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      align-items: start;
+      margin-bottom: 20px;
+    }
+    .rank-car-title {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .rank-car-specs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    .spec-tag {
+      background: var(--bg-elevated);
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .rank-score-box {
+      text-align: right;
+    }
+    .score-main-val {
+      font-size: 42px;
+      font-weight: 900;
+      line-height: 1;
+      color: var(--accent);
+      letter-spacing: -1px;
+    }
+    .score-main-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Key Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .metric-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px;
+    }
+    .metric-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .metric-val {
+      font-size: 18px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .metric-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .text-green { color: #34d399 !important; }
+    .text-yellow { color: #fbbf24 !important; }
+    .text-red { color: #f87171 !important; }
+
+    /* "Warum auf Platz X?" Explanation Box */
+    .explanation-box {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .explanation-header {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+    .explanation-text {
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+    .factors-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 768px) {
+      .factors-grid { grid-template-columns: 1fr; }
+      .rank-header { grid-template-columns: 1fr; }
+      .rank-score-box { text-align: left; }
+    }
+    .factor-col h4 {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .factor-list {
+      list-style: none;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .factor-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      line-height: 1.4;
+    }
+    .warnings-container {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .warning-alert {
+      background: var(--accent-yellow-bg);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #fde68a;
+      font-size: 13px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Accordion / Details */
+    .details-toggle {
+      width: 100%;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 16px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+    .details-toggle:hover {
+      color: #fff;
+      border-color: var(--border-hover);
+    }
+    .details-content {
+      display: none;
+      padding-top: 20px;
+    }
+    .subscores-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .subscore-item {
+      background: var(--bg-elevated);
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+    .subscore-title {
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .subscore-bar-bg {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .subscore-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 3px;
+    }
+
+    /* Comparison Table */
+    .table-container {
+      overflow-x: auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-top: 36px;
+    }
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      text-align: left;
+    }
+    .compare-table th, .compare-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .compare-table th {
+      color: var(--text-muted);
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .compare-table td {
+      color: #fff;
+    }
+    .best-val {
+      color: #34d399;
+      font-weight: 700;
+    }
+
+    /* 1-vs-1 Duell & Preisbegründung */
+    .same-model-banner {
+      background: linear-gradient(90deg, rgba(245, 197, 24, 0.12), rgba(59, 130, 246, 0.12));
+      border: 1px solid rgba(245, 197, 24, 0.35);
+      border-radius: var(--radius-md);
+      padding: 16px 22px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      animation: fadeIn 0.4s ease;
+    }
+    .duell-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin-top: 36px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
+    }
+    .duell-selectors {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .duell-selector-box {
+      flex: 1;
+      min-width: 260px;
+      background: var(--bg-elevated);
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+    }
+    .duell-selector-box label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .duell-vs-badge {
+      font-weight: 800;
+      font-size: 18px;
+      color: var(--accent);
+      padding: 10px 14px;
+      background: rgba(245, 197, 24, 0.1);
+      border-radius: 50%;
+      border: 1px solid rgba(245, 197, 24, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .duell-verdict-banner {
+      background: var(--bg-elevated);
+      border-radius: var(--radius-md);
+      border-left: 5px solid var(--accent);
+      padding: 22px;
+      margin-bottom: 28px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    }
+    .duell-verdict-title {
+      font-size: 19px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .duell-verdict-badge {
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-weight: 700;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+    .badge-justified { background: var(--accent-green-bg); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.35); }
+    .badge-overpriced { background: var(--accent-red-bg); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.35); }
+    .badge-fair { background: var(--accent-yellow-bg); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.35); }
+    
+    .equipment-diff-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .equipment-col {
+      background: var(--bg-elevated);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      padding: 18px;
+    }
+    .col-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .col-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .equipment-badge-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 380px;
+      overflow-y: auto;
+    }
+    .equipment-item-badge {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .badge-bonus {
+      font-weight: 700;
+      color: var(--accent-green);
+      font-size: 12px;
+      background: rgba(16, 185, 129, 0.15);
+      padding: 2px 7px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .price-justification-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin-top: 16px;
+    }
+    .price-justification-table th, .price-justification-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .price-justification-table th {
+      color: var(--text-muted);
+      font-weight: 600;
+      text-align: left;
+    }
+    .win-a { color: #34d399; font-weight: 600; }
+    .win-b { color: #60a5fa; font-weight: 600; }
+    .win-equal { color: var(--text-muted); }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Modals */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 600px;
+      padding: 28px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-title { font-size: 20px; font-weight: 700; }
+    .close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text-muted);
+    }
+    .form-input, .form-textarea, .form-select {
+      width: 100%;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      color: #fff;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+    }
+    .form-textarea { resize: vertical; min-height: 120px; }
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* Loading Spinner */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(0,0,0,0.2);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast Notification */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      padding: 12px 20px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 1000;
+      display: none;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-glow glow-top-left"></div>
+  <div class="bg-glow glow-bottom-right"></div>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <a href="/" class="brand">
+        <span class="brand-badge">MINUSND</span>
+        <span class="brand-title">Auto-Preis-Leistungs-Analysator</span>
+      </a>
+      <div class="header-actions">
+        <a class="btn btn-secondary btn-sm" href="/public/car-deals.html" style="text-decoration:none">🔥 BMW 4er Deal-Finder</a>
+        <button class="btn btn-secondary btn-sm" onclick="openWeightsModal()">⚙️ Gewichtung & Admin</button>
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-tag">✨ Datenbasiertes & Statistisches Ranking</div>
+      <h1>Finde objektiv das beste Auto für dein Budget</h1>
+      <p>Keine subjektiven Meinungen oder Bauchentscheidungen. Unser Algorithmus analysiert Marktpreise, Kfz-Steuer nach KraftStG, Unterhaltskosten (TCO), TÜV-Zuverlässigkeitsdaten, Wertverlust und Ausstattung für einen transparenten Preis-Leistungs-Score.</p>
+    </div>
+
+    <!-- Input Box -->
+    <div class="input-card">
+      <div class="input-bar">
+        <input type="text" id="urlInput" class="url-input" placeholder="Mobile.de-Link einfügen (z. B. https://suchen.mobile.de/fahrzeuge/...)" onkeydown="if(event.key==='Enter') addVehicleFromInput()">
+        <button class="btn btn-primary" id="addBtn" onclick="addVehicleFromInput()">
+          <span id="btnText">+ Fahrzeug hinzufügen</span>
+        </button>
+      </div>
+      <div class="quick-actions">
+        <span>Schnell-Aktionen:</span>
+        <button class="btn btn-secondary btn-sm" style="color: var(--accent); font-weight: 700; border-color: rgba(245, 197, 24, 0.4);" onclick="loadSameModelDemo()">⚔️ Demo: Gleiches Modell (2x BMW 320i)</button>
+        <button class="btn btn-secondary btn-sm" onclick="openMultiLinksModal()">🔗 Mehrere Links einfügen</button>
+        <button class="btn btn-secondary btn-sm" onclick="openTextPasteModal()">📋 Text / Inserat einfügen</button>
+        <button class="btn btn-secondary btn-sm" onclick="openManualModal()">✏️ Manuell erfassen</button>
+        <button class="btn btn-secondary btn-sm" style="margin-left: auto;" onclick="loadDemoFleet()">🚀 4er Flotte laden</button>
+      </div>
+    </div>
+
+    <!-- Vehicle Staging Pool -->
+    <div class="pool-section" id="poolSection" style="display: none;">
+      <div class="section-header">
+        <div class="section-title">
+          Fahrzeuge im Vergleich
+          <span class="badge-count" id="poolCount">0</span>
+        </div>
+        <div>
+          <button class="btn btn-danger btn-sm" onclick="clearFleet()">Alle entfernen</button>
+        </div>
+      </div>
+      <div class="pool-grid" id="poolGrid"></div>
+
+      <!-- Controls for Analysis -->
+      <div class="analysis-controls">
+        <div class="slider-group">
+          <span class="slider-label">Jährliche Fahrleistung:</span>
+          <input type="range" id="annualKmRange" min="5000" max="40000" step="2500" value="15000" oninput="updateKmDisplay(this.value)">
+          <span class="slider-val" id="annualKmDisplay">15.000 km</span>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-primary" onclick="runAnalysis()">
+            🏆 Preis-Leistungs-Ranking berechnen
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ranking Results -->
+    <div class="ranking-section" id="rankingSection" style="display: none;">
+      <div class="section-header">
+        <div class="section-title">
+          🏆 Preis-Leistungs-Ranking
+          <span class="badge-count" id="rankedCount">0 Fahrzeuge</span>
+        </div>
+        <div style="font-size: 13px; color: var(--text-muted);" id="lastCalculated"></div>
+      </div>
+
+      <!-- Gleiches Modell Alert-Banner -->
+      <div id="sameModelAlert" class="same-model-banner" style="display: none;">
+        <div>
+          <div style="font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+            <span>⚔️</span> Gleiches Modell im Vergleich erkannt!
+          </div>
+          <div id="sameModelAlertText" style="font-size: 14px; color: var(--text-muted);">
+            Mehrere Fahrzeuge des gleichen Modells mit unterschiedlicher Ausstattung und Preisen gefunden.
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="scrollToDuell()">
+          ⚔️ Zum 1-vs-1 Duell & Preis-Check
+        </button>
+      </div>
+
+      <div id="rankingList"></div>
+
+      <!-- 1-vs-1 Duell & Preis-Begründung -->
+      <div class="duell-section" id="duellSection" style="display: none;">
+        <div class="section-header">
+          <div>
+            <h3 style="font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+              <span>⚔️</span> 1-vs-1 Modell-Duell: Warum ist eins teurer als das andere?
+            </h3>
+            <p style="font-size: 14px; color: var(--text-muted); margin-top: 4px;">
+              Detaillierter Ausstattungs-Abgleich, Mehrausstattungswert, Kilometer-/Altersbewertung & ROI des Aufpreises.
+            </p>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-secondary btn-sm" onclick="swapDuellCars()">🔄 Fahrzeuge tauschen</button>
+          </div>
+        </div>
+
+        <!-- Fahrzeug-Auswahl -->
+        <div class="duell-selectors">
+          <div class="duell-selector-box">
+            <label>Fahrzeug A (z. B. teurer / besser ausgestattet):</label>
+            <select id="duellSelectA" class="form-select" onchange="runDuellComparison()"></select>
+          </div>
+          <div class="duell-vs-badge">VS</div>
+          <div class="duell-selector-box">
+            <label>Fahrzeug B (z. B. günstiger / Basis):</label>
+            <select id="duellSelectB" class="form-select" onchange="runDuellComparison()"></select>
+          </div>
+        </div>
+
+        <!-- Duell-Ergebnis Container -->
+        <div id="duellResultContainer">
+          <!-- Dynamisch generiert -->
+        </div>
+      </div>
+
+      <!-- Side-by-Side Comparison Matrix -->
+      <div class="table-container" id="compareTableWrap">
+        <h3 style="margin-bottom: 16px; font-size: 18px; font-weight: 700;">📊 Side-by-Side Vergleichsmatrix</h3>
+        <table class="compare-table" id="compareTable">
+          <!-- Dynamisch generiert -->
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Mehrere Links einfügen -->
+  <div class="modal-backdrop" id="multiLinksModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">Mehrere Mobile.de-Links einfügen</h3>
+        <button class="close-btn" onclick="closeModal('multiLinksModal')">✕</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Pro Zeile einen Inserats-Link einfügen:</label>
+        <textarea id="multiLinksText" class="form-textarea" placeholder="https://suchen.mobile.de/fahrzeuge/details.html?id=...&#10;https://suchen.mobile.de/fahrzeuge/details.html?id=..."></textarea>
+      </div>
+      <div style="text-align: right;">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('multiLinksModal')">Abbrechen</button>
+        <button class="btn btn-primary btn-sm" onclick="processMultiLinks()">Links importieren</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Inseratstext / HTML einfügen -->
+  <div class="modal-backdrop" id="textPasteModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">Inseratstext / HTML einfügen</h3>
+        <button class="close-btn" onclick="closeModal('textPasteModal')">✕</button>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+        Kopiere den Text der Anzeige (z. B. Titel, Preis, KM, PS, Ausstattung) aus Mobile.de oder einer anderen Plattform hier hinein. Unser Text-Parser extrahiert alle technischen Daten automatisch.
+      </p>
+      <div class="form-group">
+        <textarea id="rawAdTextArea" class="form-textarea" placeholder="BMW 320i M Sport Automatik&#10;Preis: 22.490 €&#10;Kilometer: 72.000 km&#10;Erstzulassung: 06/2020&#10;Leistung: 135 kW (184 PS)&#10;Ausstattung: M-Sportpaket, Matrix LED, Panorama, Head-Up Display..."></textarea>
+      </div>
+      <div style="text-align: right;">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('textPasteModal')">Abbrechen</button>
+        <button class="btn btn-primary btn-sm" onclick="processTextPaste()">Daten parsen & übernehmen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Manuell erfassen -->
+  <div class="modal-backdrop" id="manualModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">Fahrzeug manuell erfassen</h3>
+        <button class="close-btn" onclick="closeModal('manualModal')">✕</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Titel / Bezeichnung *</label>
+        <input type="text" id="manTitle" class="form-input" placeholder="z. B. BMW 320i M Sport">
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Marke *</label>
+          <input type="text" id="manMake" class="form-input" placeholder="BMW">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Modell *</label>
+          <input type="text" id="manModel" class="form-input" placeholder="320i">
+        </div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Angebotspreis (€) *</label>
+          <input type="number" id="manPrice" class="form-input" placeholder="22490">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kilometerstand (km) *</label>
+          <input type="number" id="manMileage" class="form-input" placeholder="72000">
+        </div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Erstzulassung (MM/JJJJ) *</label>
+          <input type="text" id="manEZ" class="form-input" placeholder="06/2020">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Leistung in PS *</label>
+          <input type="number" id="manPS" class="form-input" placeholder="184">
+        </div>
+      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Kraftstoff *</label>
+          <select id="manFuel" class="form-select">
+            <option value="Benzin">Benzin</option>
+            <option value="Diesel">Diesel</option>
+            <option value="Hybrid">Hybrid</option>
+            <option value="Elektro">Elektro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Getriebe *</label>
+          <select id="manTrans" class="form-select">
+            <option value="Automatik">Automatik</option>
+            <option value="Doppelkupplung">Doppelkupplung (DSG/DKG)</option>
+            <option value="Schaltgetriebe">Schaltgetriebe</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sonderausstattung (Kommagetrennt oder Stichworte)</label>
+        <input type="text" id="manFeatures" class="form-input" placeholder="M-Paket, Matrix LED, Panorama, Head-Up, ACC, Sitzheizung">
+      </div>
+      <div style="text-align: right; margin-top: 20px;">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('manualModal')">Abbrechen</button>
+        <button class="btn btn-primary btn-sm" onclick="saveManualVehicle()">Fahrzeug hinzufügen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Gewichtungen & Admin -->
+  <div class="modal-backdrop" id="weightsModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">⚙️ Score-Gewichtung & Einstellungen</h3>
+        <button class="close-btn" onclick="closeModal('weightsModal')">✕</button>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+        Passe die Kriterien nach deinen persönlichen Prioritäten an. Die Summe wird automatisch auf 100 % normiert.
+      </p>
+
+      <div style="margin-bottom: 16px;">
+        <label class="form-label">Vordefinierte Profile:</label>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-secondary btn-sm" onclick="applyPreset('standard')">Ausgewogen</button>
+          <button class="btn btn-secondary btn-sm" onclick="applyPreset('commuter')">Sparsamer Pendler</button>
+          <button class="btn btn-secondary btn-sm" onclick="applyPreset('sport')">Fahrspaß & Sport</button>
+          <button class="btn btn-secondary btn-sm" onclick="applyPreset('reliability')">Zuverlässigkeit</button>
+          <button class="btn btn-secondary btn-sm" onclick="applyPreset('budget')">Budget / Günstig</button>
+        </div>
+      </div>
+
+      <div id="weightsSlidersContainer">
+        <!-- Generiert via JS -->
+      </div>
+
+      <div style="text-align: right; margin-top: 20px;">
+        <button class="btn btn-secondary btn-sm" onclick="resetDefaultWeights()">Standard wiederherstellen</button>
+        <button class="btn btn-primary btn-sm" onclick="closeModal('weightsModal'); runAnalysis();">Speichern & Aktualisieren</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    // -------------------------------------------------------------
+    // App State
+    // -------------------------------------------------------------
+    let vehiclePool = [];
+    let lastRankedResults = [];
+    let currentAnnualKm = 15000;
+    let customWeights = {
+      price: 20,
+      reliability: 20,
+      runningCosts: 15,
+      depreciation: 10,
+      equipment: 10,
+      performance: 10,
+      mileage: 5,
+      age: 5,
+      safety: 5
+    };
+
+    const weightLabels = {
+      price: 'Preis / Marktvergleich',
+      reliability: 'Zuverlässigkeit & Mängelfreiheit',
+      runningCosts: 'Laufende Kosten (Sprit/Steuer/Wartung)',
+      depreciation: 'Wertverlust & Werterhalt',
+      equipment: 'Ausstattungswert',
+      performance: 'Leistung (PS/Drehmoment)',
+      mileage: 'Kilometerstand',
+      age: 'Baujahr / Alter',
+      safety: 'Sicherheit & Assistenz'
+    };
+
+    // -------------------------------------------------------------
+    // Init
+    // -------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      loadStoredFleet();
+      renderWeightsSliders();
+    });
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 3500);
+    }
+
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function openMultiLinksModal() { openModal('multiLinksModal'); }
+    function openTextPasteModal() { openModal('textPasteModal'); }
+    function openManualModal() { openModal('manualModal'); }
+    function openWeightsModal() { openModal('weightsModal'); }
+
+    function updateKmDisplay(val) {
+      currentAnnualKm = parseInt(val, 10);
+      document.getElementById('annualKmDisplay').textContent = `${parseInt(val, 10).toLocaleString('de-DE')} km`;
+      if (lastRankedResults.length > 0) {
+        runAnalysis();
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Demo Fleet
+    // -------------------------------------------------------------
+    function loadDemoFleet() {
+      const demoFleet = [
+        {
+          id: 'demo_bmw_320i',
+          title: 'BMW 320i M Sport Steptronic',
+          make: 'BMW',
+          model: '320i',
+          year: 2020,
+          mileage: 72000,
+          powerHp: 184,
+          powerKw: 135,
+          fuelType: 'Benzin',
+          price: 22490,
+          features: ['M Sportpaket', 'Matrix LED Scheinwerfer', 'Panorama-Glasdach', 'Head-Up Display', 'ACC Abstandsregeltempomat', 'Harman Kardon Soundsystem', 'Sitzheizung', 'Rückfahrkamera'],
+          serviceHistoryComplete: true,
+          isImport: false
+        },
+        {
+          id: 'demo_bmw_318i',
+          title: 'BMW 318i Advantage Steptronic',
+          make: 'BMW',
+          model: '318i',
+          year: 2019,
+          mileage: 95000,
+          powerHp: 156,
+          powerKw: 115,
+          fuelType: 'Benzin',
+          price: 21900,
+          features: ['Parksensoren', 'Sitzheizung', 'Klimaautomatik', 'LED Scheinwerfer'],
+          serviceHistoryComplete: true,
+          isImport: false
+        },
+        {
+          id: 'demo_audi_a4',
+          title: 'Audi A4 40 TFSI S line S-tronic',
+          make: 'Audi',
+          model: 'A4',
+          year: 2020,
+          mileage: 80000,
+          powerHp: 190,
+          powerKw: 140,
+          fuelType: 'Benzin',
+          price: 24500,
+          features: ['S line Sportpaket', 'Matrix LED', 'Virtual Cockpit', 'ACC', 'MMI Navigation Plus', '360° Kamera'],
+          serviceHistoryComplete: true,
+          isImport: false
+        },
+        {
+          id: 'demo_merc_c200',
+          title: 'Mercedes-Benz C 200 AMG Line 9G-Tronic',
+          make: 'Mercedes-Benz',
+          model: 'C 200',
+          year: 2020,
+          mileage: 68000,
+          powerHp: 197,
+          powerKw: 145,
+          fuelType: 'Benzin',
+          price: 25900,
+          features: ['AMG Line', 'Multibeam LED', 'Widescreen Cockpit', 'Burmester Sound', 'Panoramadach', 'Memory Sitze'],
+          serviceHistoryComplete: true,
+          isImport: false
+        }
+      ];
+
+      // Per Backend extract/standardize aufbereiten
+      fetch('/api/car-analyzer/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ manualData: demoFleet[0] })
+      })
+      .then(() => {
+        vehiclePool = demoFleet;
+        saveFleetToStorage();
+        renderPool();
+        runAnalysis();
+        showToast('🚀 4 realistische Test-Fahrzeuge geladen & analysiert!');
+      })
+      .catch(err => {
+        vehiclePool = demoFleet;
+        saveFleetToStorage();
+        renderPool();
+        runAnalysis();
+      });
+    }
+
+    // -------------------------------------------------------------
+    // Same Model Demo (2x BMW 320i: Teurer vs. Günstiger)
+    // -------------------------------------------------------------
+    function loadSameModelDemo() {
+      const sameModelFleet = [
+        {
+          id: 'demo_bmw_320i_msport',
+          title: 'BMW 320i M Sport Steptronic',
+          make: 'BMW',
+          model: '320i',
+          year: 2021,
+          firstRegistration: '05/2021',
+          mileage: 60000,
+          powerHp: 184,
+          powerKw: 135,
+          fuelType: 'Benzin',
+          transmission: 'Automatik',
+          price: 25500,
+          features: [
+            'M Sportpaket',
+            'Matrix LED Scheinwerfer',
+            'Panorama-Glasdach',
+            'Head-Up Display',
+            'Harman Kardon Soundsystem',
+            'ACC Abstandsregeltempomat',
+            'Leder Vernasca',
+            'Rückfahrkamera',
+            'Spurhalteassistent',
+            'Sitzheizung',
+            'Klimaautomatik',
+            'Keyless Go',
+            'Ambientebeleuchtung'
+          ],
+          serviceHistoryComplete: true,
+          isImport: false
+        },
+        {
+          id: 'demo_bmw_320i_advantage',
+          title: 'BMW 320i Advantage Steptronic',
+          make: 'BMW',
+          model: '320i',
+          year: 2019,
+          firstRegistration: '03/2019',
+          mileage: 95000,
+          powerHp: 184,
+          powerKw: 135,
+          fuelType: 'Benzin',
+          transmission: 'Automatik',
+          price: 21900,
+          features: [
+            'LED Scheinwerfer',
+            'Parksensoren vorn & hinten (PDC)',
+            'Sitzheizung',
+            'Klimaautomatik',
+            'Anhängerkupplung'
+          ],
+          serviceHistoryComplete: true,
+          isImport: false
+        }
+      ];
+
+      vehiclePool = sameModelFleet;
+      saveFleetToStorage();
+      renderPool();
+      runAnalysis();
+      showToast('⚔️ Gleiches Modell geladen: 2x BMW 320i (25.500 € vs. 21.900 €)!');
+    }
+
+    // -------------------------------------------------------------
+    // Add Vehicle from URL or Text
+    // -------------------------------------------------------------
+    async function addVehicleFromInput() {
+      const urlInput = document.getElementById('urlInput');
+      const val = urlInput.value.trim();
+      if (!val) {
+        showToast('⚠️ Bitte zuerst einen Mobile.de-Link oder Fahrzeugtext eingeben.');
+        return;
+      }
+
+      const btn = document.getElementById('addBtn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<div class="spinner"></div> Analysiere Inserat...';
+      btn.disabled = true;
+
+      // Erkennt automatisch: URL oder direkt kopierter Anzeigentext / Snippet
+      const isUrl = val.startsWith('http://') || val.startsWith('https://');
+      const payload = isUrl ? { url: val } : { rawText: val };
+
+      try {
+        const res = await fetch('/api/car-analyzer/extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+
+        if (json.success && json.vehicle) {
+          vehiclePool.push(json.vehicle);
+          urlInput.value = '';
+          saveFleetToStorage();
+          renderPool();
+          showToast(`✅ ${json.vehicle.title} hinzugefügt!`);
+          runAnalysis();
+        } else if (json.blocked) {
+          // Bot-Schutz von Mobile.de griff ein -> Öffne Text-Paste Dialog mit Vorausfüllung
+          showToast('⚠️ Mobile.de schützt Seiten vor Serverabrufen. Bitte Inseratstext einfügen!');
+          document.getElementById('rawAdTextArea').value = '';
+          openTextPasteModal();
+        } else {
+          showToast('❌ Inserat konnte nicht ausgelesen werden: ' + (json.error || 'Fehler'));
+        }
+      } catch (e) {
+        showToast('❌ Serverfehler beim Abruf: ' + e.message);
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Text-Paste Import
+    // -------------------------------------------------------------
+    async function processTextPaste() {
+      const text = document.getElementById('rawAdTextArea').value.trim();
+      if (!text) return;
+
+      try {
+        const res = await fetch('/api/car-analyzer/extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rawText: text })
+        });
+        const json = await res.json();
+        if (json.success && json.vehicle) {
+          vehiclePool.push(json.vehicle);
+          closeModal('textPasteModal');
+          document.getElementById('rawAdTextArea').value = '';
+          saveFleetToStorage();
+          renderPool();
+          showToast(`✅ ${json.vehicle.title} per Text-Extraktion erfasst!`);
+          runAnalysis();
+        } else {
+          showToast('❌ Konnte keine Fahrzeugdaten aus dem Text erkennen.');
+        }
+      } catch (e) {
+        showToast('❌ Fehler: ' + e.message);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Multi Links Import
+    // -------------------------------------------------------------
+    async function processMultiLinks() {
+      const text = document.getElementById('multiLinksText').value.trim();
+      if (!text) return;
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 5);
+      closeModal('multiLinksModal');
+
+      showToast(`Lese ${lines.length} Inserate ein...`);
+      for (const line of lines) {
+        try {
+          const res = await fetch('/api/car-analyzer/extract', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: line })
+          });
+          const json = await res.json();
+          if (json.vehicle) {
+            vehiclePool.push(json.vehicle);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      saveFleetToStorage();
+      renderPool();
+      runAnalysis();
+    }
+
+    // -------------------------------------------------------------
+    // Manual Vehicle Input
+    // -------------------------------------------------------------
+    async function saveManualVehicle() {
+      const title = document.getElementById('manTitle').value.trim();
+      const make = document.getElementById('manMake').value.trim();
+      const model = document.getElementById('manModel').value.trim();
+      const price = parseInt(document.getElementById('manPrice').value, 10);
+      const mileage = parseInt(document.getElementById('manMileage').value, 10);
+      const ez = document.getElementById('manEZ').value.trim();
+      const ps = parseInt(document.getElementById('manPS').value, 10);
+      const fuel = document.getElementById('manFuel').value;
+      const trans = document.getElementById('manTrans').value;
+      const features = document.getElementById('manFeatures').value;
+
+      if (!title || !price || !mileage || !ez || !ps) {
+        showToast('⚠️ Bitte alle Pflichtfelder (*) ausfüllen.');
+        return;
+      }
+
+      const raw = {
+        title,
+        make: make || title.split(' ')[0],
+        model: model || title.split(' ')[1] || '',
+        price,
+        mileage,
+        firstRegistration: ez,
+        powerHp: ps,
+        fuelType: fuel,
+        transmission: trans,
+        features: features.split(',').map(s => s.trim()),
+        serviceHistoryComplete: true
+      };
+
+      try {
+        const res = await fetch('/api/car-analyzer/extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ manualData: raw })
+        });
+        const json = await res.json();
+        if (json.vehicle) {
+          vehiclePool.push(json.vehicle);
+          closeModal('manualModal');
+          saveFleetToStorage();
+          renderPool();
+          showToast(`✅ ${title} erfolgreich hinzugefügt!`);
+          runAnalysis();
+        }
+      } catch (e) {
+        showToast('❌ Fehler: ' + e.message);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Render Pool
+    // -------------------------------------------------------------
+    function renderPool() {
+      const poolSec = document.getElementById('poolSection');
+      const countBadge = document.getElementById('poolCount');
+      const grid = document.getElementById('poolGrid');
+
+      if (vehiclePool.length === 0) {
+        poolSec.style.display = 'none';
+        document.getElementById('rankingSection').style.display = 'none';
+        return;
+      }
+
+      poolSec.style.display = 'block';
+      countBadge.textContent = vehiclePool.length;
+      grid.innerHTML = '';
+
+      vehiclePool.forEach((v, idx) => {
+        const vData = v.vehicle_data || v;
+        const eData = v.engine_data || v;
+        const pData = v.price_data || v;
+        const qData = v.data_quality || { level: 'medium', text: 'Daten erfasst' };
+
+        const card = document.createElement('div');
+        card.className = 'pool-card';
+        card.innerHTML = `
+          <div class="pool-card-header">
+            <div>
+              <div class="pool-title">${v.title || (vData.make + ' ' + vData.model)}</div>
+              <div style="font-size: 12px; color: var(--text-muted);">${vData.generation || ''}</div>
+            </div>
+            <div class="pool-price">${(pData.askingPrice || pData.price || 0).toLocaleString('de-DE')} €</div>
+          </div>
+          <div class="pool-specs">
+            <span class="spec-pill">📅 ${vData.firstRegistration || vData.year}</span>
+            <span class="spec-pill">🛣️ ${(vData.mileage || 0).toLocaleString('de-DE')} km</span>
+            <span class="spec-pill">⚡ ${eData.powerHp || 0} PS</span>
+            <span class="spec-pill">⛽ ${eData.fuelType || 'Benzin'}</span>
+            <span class="spec-pill">🕹️ ${eData.transmission || 'Automatik'}</span>
+          </div>
+          <div class="pool-footer">
+            <span class="quality-badge quality-${qData.level}">
+              ${qData.level === 'high' ? '🟢 Vollständig' : (qData.level === 'low' ? '🔴 Geringe Datenbasis' : '🟡 Schätzwerte')}
+            </span>
+            <button class="btn btn-danger btn-sm" onclick="removeVehicle(${idx})">Löschen</button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function removeVehicle(index) {
+      vehiclePool.splice(index, 1);
+      saveFleetToStorage();
+      renderPool();
+      if (vehiclePool.length > 0) {
+        runAnalysis();
+      } else {
+        document.getElementById('rankingSection').style.display = 'none';
+      }
+    }
+
+    function clearFleet() {
+      vehiclePool = [];
+      lastRankedResults = [];
+      saveFleetToStorage();
+      renderPool();
+      document.getElementById('rankingSection').style.display = 'none';
+    }
+
+    // -------------------------------------------------------------
+    // Main Analysis Execution
+    // -------------------------------------------------------------
+    async function runAnalysis() {
+      if (vehiclePool.length === 0) return;
+
+      try {
+        const res = await fetch('/api/car-analyzer/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            vehicles: vehiclePool,
+            options: {
+              annualKm: currentAnnualKm,
+              customWeights: customWeights
+            }
+          })
+        });
+        const json = await res.json();
+
+        if (json.success && json.ranking) {
+          lastRankedResults = json.ranking;
+          renderRanking(json.ranking);
+          renderComparisonTable(json.ranking);
+          handleSameModelDetection(json.sameModelPairs || []);
+          populateDuellSelectors(json.ranking);
+          document.getElementById('lastCalculated').textContent = `Berechnet am: ${new Date(json.calculatedAt).toLocaleTimeString('de-DE')}`;
+        }
+      } catch (e) {
+        showToast('❌ Analysefehler: ' + e.message);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Render Ranking Cards
+    // -------------------------------------------------------------
+    function renderRanking(rankedList) {
+      const section = document.getElementById('rankingSection');
+      const listEl = document.getElementById('rankingList');
+      const countEl = document.getElementById('rankedCount');
+
+      section.style.display = 'block';
+      countEl.textContent = `${rankedList.length} Fahrzeuge analysiert`;
+      listEl.innerHTML = '';
+
+      rankedList.forEach(item => {
+        const isWinner = item.ranking.isWinner;
+        const v = item.vehicle_data;
+        const e = item.engine_data;
+        const p = item.price_data;
+        const scores = item.scores;
+        const market = item.market_analysis;
+        const costs = item.running_costs;
+        const depr = item.depreciation;
+        const expl = item.explanation;
+        const risk = item.risk;
+
+        const card = document.createElement('div');
+        card.className = `rank-card ${isWinner ? 'rank-winner' : ''}`;
+        card.id = `card_${item.id}`;
+
+        // Plus & Minuspunkte generieren
+        const posHtml = expl.positiveFactors.map(f => `<li><span style="color: #34d399;">✓</span> ${f}</li>`).join('');
+        const negHtml = expl.negativeFactors.map(f => `<li><span style="color: #f87171;">•</span> ${f}</li>`).join('');
+
+        // Warnungen generieren
+        const warnHtml = expl.warnings.map(w => `<div class="warning-alert">${w}</div>`).join('');
+
+        card.innerHTML = `
+          <div class="rank-badge-banner">
+            <span class="medal-icon">${item.ranking.medal}</span>
+            <span class="rank-position">Platz ${item.ranking.rank}</span>
+            ${isWinner ? '<span class="winner-tag">🏆 Bestes Preis-Leistungs-Verhältnis</span>' : ''}
+          </div>
+
+          <div class="rank-header">
+            <div>
+              <div class="rank-car-title">${item.title}</div>
+              <div class="rank-car-specs">
+                <span class="spec-tag">💰 <strong>${p.askingPrice.toLocaleString('de-DE')} €</strong></span>
+                <span class="spec-tag">📅 EZ ${v.firstRegistration} (${v.ageYears} Jahre)</span>
+                <span class="spec-tag">🛣️ ${v.mileage.toLocaleString('de-DE')} km</span>
+                <span class="spec-tag">⚡ ${e.powerHp} PS (${e.powerKw} kW)</span>
+                <span class="spec-tag">🕹️ ${e.transmission}</span>
+                <span class="spec-tag">⛽ ${e.consumptionCombined} l/100km</span>
+              </div>
+              <div style="margin-top: 10px; display: flex; gap: 8px;">
+                <button class="btn btn-secondary btn-sm" style="font-size: 12px; font-weight: 700; color: var(--accent); border-color: rgba(245, 197, 24, 0.4);" onclick="startDuellWith('${item.id}')">
+                  ⚔️ 1-vs-1 Duell mit anderem Auto starten
+                </button>
+              </div>
+            </div>
+            <div class="rank-score-box">
+              <div class="score-main-val">${scores.overall.toFixed(1)}</div>
+              <div class="score-main-label">Preis-Leistungs-Score / 100</div>
+            </div>
+          </div>
+
+          <!-- Key Metrics Grid -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-title">Deal Score</div>
+              <div class="metric-val ${scores.dealScore >= 80 ? 'text-green' : (scores.dealScore >= 60 ? 'text-yellow' : 'text-red')}">
+                ${scores.dealScore} <span style="font-size: 13px;">/ 100</span>
+              </div>
+              <div class="metric-sub">${market.dealRating}</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-title">Geschätzter Marktwert</div>
+              <div class="metric-val">${market.estimatedMarketPrice.toLocaleString('de-DE')} €</div>
+              <div class="metric-sub ${market.priceDeviationPercent <= 0 ? 'text-green' : 'text-red'}">
+                ${market.priceDeviationPercent <= 0 ? `ca. ${Math.abs(market.priceDeviationPercent)}% günstiger` : `ca. ${market.priceDeviationPercent}% über Markt`}
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-title">Fair-Price Spanne</div>
+              <div class="metric-val" style="font-size: 15px;">${market.fairPriceMin.toLocaleString('de-DE')} € – ${market.fairPriceMax.toLocaleString('de-DE')} €</div>
+              <div class="metric-sub">Statistischer Vergleichsbereich</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-title">Laufende Kosten (TCO)</div>
+              <div class="metric-val">${costs.totalAnnualCost.toLocaleString('de-DE')} € <span style="font-size: 12px; color: var(--text-muted);">/ Jahr</span></div>
+              <div class="metric-sub">ca. ${costs.monthlyCost} € / Monat @ ${(costs.annualKm/1000).toFixed(0)}tkm</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-title">Zuverlässigkeit</div>
+              <div class="metric-val ${item.reliability.score >= 80 ? 'text-green' : 'text-yellow'}">
+                ${item.reliability.score} <span style="font-size: 13px;">/ 100</span>
+              </div>
+              <div class="metric-sub">${item.reliability.confidence === 'high' ? '🟢 Geprüfte Motorendaten' : '🟡 Marken-Referenz'}</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-title">Risiko-Einstufung</div>
+              <div class="metric-val ${risk.level === 'niedrig' ? 'text-green' : (risk.level === 'mittel' ? 'text-yellow' : 'text-red')}">
+                ${risk.level.toUpperCase()}
+              </div>
+              <div class="metric-sub">Risiko-Score: ${risk.score}/100</div>
+            </div>
+          </div>
+
+          <!-- Warum auf diesem Platz? Box -->
+          <div class="explanation-box">
+            <div class="explanation-header">
+              <span>💡</span> Warum belegt dieses Fahrzeug Platz ${item.ranking.rank}?
+            </div>
+            <div class="explanation-text">${expl.summary}</div>
+
+            <div class="factors-grid">
+              <div class="factor-col">
+                <h4 style="color: #34d399;">🟢 Positive Faktoren</h4>
+                <ul class="factor-list">
+                  ${posHtml || '<li>Keine außergewöhnlichen Pluspunkte</li>'}
+                </ul>
+              </div>
+              <div class="factor-col">
+                <h4 style="color: #f87171;">🔴 Negative Faktoren / Folgekosten</h4>
+                <ul class="factor-list">
+                  ${negHtml || '<li>Keine gravierenden Minuspunkte identifiziert</li>'}
+                </ul>
+              </div>
+            </div>
+
+            ${warnHtml ? `<div class="warnings-container">${warnHtml}</div>` : ''}
+          </div>
+
+          <!-- Accordion Toggle für Details -->
+          <button class="details-toggle" onclick="toggleDetails('${item.id}')">
+            <span>🔍 Vollständige Berechnung, Kfz-Steuer, Wertverlust & Datenquellen anzeigen</span>
+            <span id="toggleIcon_${item.id}">▼</span>
+          </button>
+
+          <div class="details-content" id="details_${item.id}">
+            <h4 style="margin-bottom: 12px; font-size: 14px; text-transform: uppercase; color: var(--accent);">
+              📊 Aufschlüsselung der 9 Sub-Scores
+            </h4>
+            <div class="subscores-list">
+              ${Object.entries(scores.subScores).map(([key, val]) => `
+                <div class="subscore-item">
+                  <div class="subscore-title">
+                    <span>${weightLabels[key] || key}</span>
+                    <strong style="color: #fff;">${val}/100</strong>
+                  </div>
+                  <div class="subscore-bar-bg">
+                    <div class="subscore-bar-fill" style="width: ${val}%;"></div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+
+            <!-- TCO Details & Kfz-Steuer -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+              <div style="background: var(--bg-elevated); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                <h5 style="margin-bottom: 8px; font-size: 13px; color: #fff;">💶 Jährliche Kostenposten:</h5>
+                <ul style="list-style: none; font-size: 13px; display: flex; flex-direction: column; gap: 4px;">
+                  ${costs.breakdown.map(b => `
+                    <li style="display: flex; justify-content: space-between;">
+                      <span style="color: var(--text-muted);">${b.item}:</span>
+                      <strong>${b.annualEur.toLocaleString('de-DE')} €</strong>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+
+              <div style="background: var(--bg-elevated); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                <h5 style="margin-bottom: 8px; font-size: 13px; color: #fff;">📉 Wertverlust-Prognose (3 Jahre):</h5>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">
+                  Geschätzter Restwert in 3 Jahren: <strong style="color: #fff;">${depr.estimatedValue3Years.toLocaleString('de-DE')} €</strong> (${depr.residualPercentage3Years}% vom heutigen Wert).
+                </p>
+                <p style="font-size: 13px; color: var(--text-muted);">
+                  Erwarteter Wertverlust: <strong style="color: var(--accent);">${depr.projectedLoss3YearsEur.toLocaleString('de-DE')} €</strong> (ca. ${depr.projectedLossPerYearEur.toLocaleString('de-DE')} €/Jahr).
+                </p>
+              </div>
+            </div>
+
+            <!-- Quellen & Transparenz -->
+            <div style="font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 10px;">
+              <strong>Verwendete Datenquellen:</strong> ${item.reliability.source} | Kfz-Steuer § 9 KraftStG | Kraftstoffpreis: ${costs.fuelPriceUsed.toFixed(2)} €/Einheit | DAT/Schwacke Marktwertkurve.
+            </div>
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+    }
+
+    function toggleDetails(id) {
+      const el = document.getElementById(`details_${id}`);
+      const icon = document.getElementById(`toggleIcon_${id}`);
+      if (el.style.display === 'block') {
+        el.style.display = 'none';
+        icon.textContent = '▼';
+      } else {
+        el.style.display = 'block';
+        icon.textContent = '▲';
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Comparison Table Render
+    // -------------------------------------------------------------
+    function renderComparisonTable(rankedList) {
+      const table = document.getElementById('compareTable');
+      if (rankedList.length === 0) return;
+
+      const metrics = [
+        { label: 'Platzierung', key: r => `${r.ranking.medal} Platz ${r.ranking.rank}` },
+        { label: 'Preis-Leistungs-Score', key: r => `<strong>${r.scores.overall.toFixed(1)} / 100</strong>`, highlightHigh: true },
+        { label: 'Angebotspreis', key: r => `${r.price_data.askingPrice.toLocaleString('de-DE')} €`, highlightLow: true },
+        { label: 'Fair-Price Spanne', key: r => `${r.market_analysis.fairPriceMin.toLocaleString('de-DE')} – ${r.market_analysis.fairPriceMax.toLocaleString('de-DE')} €` },
+        { label: 'Deal Score', key: r => `${r.scores.dealScore} / 100`, highlightHigh: true },
+        { label: 'Erstzulassung', key: r => r.vehicle_data.firstRegistration },
+        { label: 'Kilometerstand', key: r => `${r.vehicle_data.mileage.toLocaleString('de-DE')} km`, highlightLow: true },
+        { label: 'Leistung (PS)', key: r => `${r.engine_data.powerHp} PS`, highlightHigh: true },
+        { label: 'Kraftstoff', key: r => r.engine_data.fuelType },
+        { label: 'Verbrauch (komb.)', key: r => `${r.engine_data.consumptionCombined} l`, highlightLow: true },
+        { label: 'Laufende Kosten / Jahr', key: r => `${r.running_costs.totalAnnualCost.toLocaleString('de-DE')} €`, highlightLow: true },
+        { label: 'Zuverlässigkeit', key: r => `${r.reliability.score} / 100`, highlightHigh: true },
+        { label: 'Risiko-Score', key: r => `${r.scores.riskScore} (${r.scores.riskLevel})`, highlightLow: true }
+      ];
+
+      let html = '<thead><tr><th>Vergleichs-Merkmal</th>';
+      rankedList.forEach(r => {
+        html += `<th>${r.title}</th>`;
+      });
+      html += '</tr></thead><tbody>';
+
+      metrics.forEach(m => {
+        html += `<tr><td><strong>${m.label}</strong></td>`;
+        rankedList.forEach(r => {
+          html += `<td>${m.key(r)}</td>`;
+        });
+        html += '</tr>';
+      });
+
+      html += '</tbody>';
+      table.innerHTML = html;
+    }
+
+    // -------------------------------------------------------------
+    // 1-vs-1 Duell & Preisbegründung Controller
+    // -------------------------------------------------------------
+    function handleSameModelDetection(sameModelPairs) {
+      const alertEl = document.getElementById('sameModelAlert');
+      const alertText = document.getElementById('sameModelAlertText');
+      if (!alertEl) return;
+
+      if (sameModelPairs && sameModelPairs.length > 0) {
+        const pair = sameModelPairs[0];
+        alertEl.style.display = 'flex';
+        alertText.innerHTML = `Identisches Modell erkannt: <strong>${pair.titleA}</strong> vs <strong>${pair.titleB}</strong>. Vergleiche jetzt Mehrausstattung und warum das eine teurer ist als das andere!`;
+        preselectDuellCars(pair.idA, pair.idB);
+      } else if (vehiclePool.length >= 2) {
+        alertEl.style.display = 'flex';
+        alertText.innerHTML = `Es befinden sich ${vehiclePool.length} Fahrzeuge im Vergleich. Starte den direkten Ausstattungs- und Preis-Check!`;
+      } else {
+        alertEl.style.display = 'none';
+      }
+    }
+
+    function preselectDuellCars(idA, idB) {
+      const selectA = document.getElementById('duellSelectA');
+      const selectB = document.getElementById('duellSelectB');
+      if (selectA && selectB) {
+        selectA.value = idA;
+        selectB.value = idB;
+        runDuellComparison();
+      }
+    }
+
+    function populateDuellSelectors(rankedList) {
+      const duellSec = document.getElementById('duellSection');
+      const selectA = document.getElementById('duellSelectA');
+      const selectB = document.getElementById('duellSelectB');
+
+      if (!rankedList || rankedList.length < 2) {
+        duellSec.style.display = 'none';
+        return;
+      }
+
+      duellSec.style.display = 'block';
+
+      const prevValA = selectA.value;
+      const prevValB = selectB.value;
+
+      selectA.innerHTML = '';
+      selectB.innerHTML = '';
+
+      rankedList.forEach(r => {
+        const optA = document.createElement('option');
+        optA.value = r.id;
+        optA.textContent = `${r.title} (${r.price_data.askingPrice.toLocaleString('de-DE')} €)`;
+        selectA.appendChild(optA);
+
+        const optB = document.createElement('option');
+        optB.value = r.id;
+        optB.textContent = `${r.title} (${r.price_data.askingPrice.toLocaleString('de-DE')} €)`;
+        selectB.appendChild(optB);
+      });
+
+      if (prevValA && rankedList.some(r => r.id === prevValA)) {
+        selectA.value = prevValA;
+      } else {
+        selectA.value = rankedList[0].id;
+      }
+
+      if (prevValB && rankedList.some(r => r.id === prevValB) && prevValB !== selectA.value) {
+        selectB.value = prevValB;
+      } else {
+        selectB.value = rankedList[1].id;
+      }
+
+      runDuellComparison();
+    }
+
+    function swapDuellCars() {
+      const selectA = document.getElementById('duellSelectA');
+      const selectB = document.getElementById('duellSelectB');
+      const temp = selectA.value;
+      selectA.value = selectB.value;
+      selectB.value = temp;
+      runDuellComparison();
+    }
+
+    function scrollToDuell() {
+      const el = document.getElementById('duellSection');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    function startDuellWith(carId) {
+      const selectA = document.getElementById('duellSelectA');
+      const selectB = document.getElementById('duellSelectB');
+      if (selectA && selectB && lastRankedResults.length >= 2) {
+        selectA.value = carId;
+        const other = lastRankedResults.find(r => r.id !== carId);
+        if (other) selectB.value = other.id;
+        scrollToDuell();
+        runDuellComparison();
+      }
+    }
+
+    async function runDuellComparison() {
+      const selectA = document.getElementById('duellSelectA');
+      const selectB = document.getElementById('duellSelectB');
+      const container = document.getElementById('duellResultContainer');
+
+      if (!selectA || !selectB || !container) return;
+
+      const idA = selectA.value;
+      const idB = selectB.value;
+
+      if (!idA || !idB || idA === idB) {
+        container.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 15px;">⚠️ Bitte wähle zwei unterschiedliche Fahrzeuge oben in den Auswahllisten aus.</div>';
+        return;
+      }
+
+      const carA = lastRankedResults.find(r => r.id === idA) || vehiclePool.find(r => r.id === idA);
+      const carB = lastRankedResults.find(r => r.id === idB) || vehiclePool.find(r => r.id === idB);
+
+      if (!carA || !carB) return;
+
+      container.innerHTML = '<div style="padding: 30px; text-align: center;"><div class="spinner" style="margin: 0 auto 12px auto;"></div>Berechne Ausstattungs-Differenz & Preisbegründung...</div>';
+
+      try {
+        const res = await fetch('/api/car-analyzer/compare', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            vehicleA: carA,
+            vehicleB: carB,
+            options: { annualKm: currentAnnualKm, customWeights: customWeights }
+          })
+        });
+
+        const data = await res.json();
+        if (data.success && data.comparison) {
+          renderDuellResult(data);
+        } else {
+          container.innerHTML = `<div style="color: var(--accent-red); padding: 20px;">Fehler beim Vergleich: ${data.error || 'Unbekannt'}</div>`;
+        }
+      } catch (e) {
+        container.innerHTML = `<div style="color: var(--accent-red); padding: 20px;">Verbindungsfehler: ${e.message}</div>`;
+      }
+    }
+
+    function renderDuellResult(data) {
+      const container = document.getElementById('duellResultContainer');
+      const comp = data.comparison;
+      const vA = data.vehicleA;
+      const vB = data.vehicleB;
+      const eq = comp.equipment;
+      const verdict = comp.verdict;
+
+      let badgeClass = 'badge-fair';
+      if (verdict.type === 'HIGHLY_JUSTIFIED' || verdict.type === 'SAME_PRICE_A_BETTER' || verdict.type === 'SAME_PRICE_B_BETTER') {
+        badgeClass = 'badge-justified';
+      } else if (verdict.type === 'OVERPRICED' || verdict.type === 'PARTIALLY_JUSTIFIED') {
+        badgeClass = 'badge-overpriced';
+      }
+
+      // 1. Exklusive Ausstattung A
+      const onlyAHtml = eq.onlyInA.length > 0
+        ? eq.onlyInA.map(e => `
+            <div class="equipment-item-badge">
+              <div>
+                <strong>${e.name}</strong>
+                <div style="font-size: 11px; color: var(--text-muted);">${e.category}</div>
+              </div>
+              <span class="badge-bonus">+${e.marketBonusEur.toLocaleString('de-DE')} €</span>
+            </div>
+          `).join('')
+        : '<div style="color: var(--text-muted); font-size: 13px; padding: 12px;">Keine exklusiven Extras vorhanden</div>';
+
+      // 2. Exklusive Ausstattung B
+      const onlyBHtml = eq.onlyInB.length > 0
+        ? eq.onlyInB.map(e => `
+            <div class="equipment-item-badge">
+              <div>
+                <strong>${e.name}</strong>
+                <div style="font-size: 11px; color: var(--text-muted);">${e.category}</div>
+              </div>
+              <span class="badge-bonus" style="color: #60a5fa; background: rgba(59, 130, 246, 0.15);">+${e.marketBonusEur.toLocaleString('de-DE')} €</span>
+            </div>
+          `).join('')
+        : '<div style="color: var(--text-muted); font-size: 13px; padding: 12px;">Keine exklusiven Extras vorhanden</div>';
+
+      // 3. Gemeinsame Ausstattung
+      const commonHtml = eq.common.length > 0
+        ? eq.common.map(e => `
+            <div class="equipment-item-badge" style="opacity: 0.85;">
+              <div>
+                <span>✓ <strong>${e.name}</strong></span>
+                <span style="font-size: 11px; color: var(--text-muted); margin-left: 6px;">(${e.category})</span>
+              </div>
+            </div>
+          `).join('')
+        : '<div style="color: var(--text-muted); font-size: 13px; padding: 12px;">Keine gemeinsamen Sonderausstattungen</div>';
+
+      // 4. Tabellenzeilen
+      const rowsHtml = comp.breakdownRows.map(r => {
+        let advClass = 'win-equal';
+        let advLabel = '–';
+        if (r.advantage === 'A') {
+          advClass = 'win-a';
+          advLabel = `✓ ${vA.title}`;
+        } else if (r.advantage === 'B') {
+          advClass = 'win-b';
+          advLabel = `✓ ${vB.title}`;
+        }
+        return `
+          <tr>
+            <td>
+              <strong>${r.label}</strong>
+              <div style="font-size: 11px; color: var(--text-muted);">${r.category}</div>
+            </td>
+            <td>${r.carAValue}</td>
+            <td>${r.carBValue}</td>
+            <td><strong>${r.deltaText}</strong></td>
+            <td class="${advClass}">${advLabel}</td>
+          </tr>
+        `;
+      }).join('');
+
+      // Bullets
+      const bulletsHtml = verdict.summaryBulletPoints && verdict.summaryBulletPoints.length > 0
+        ? `<ul style="margin-top: 14px; padding-left: 20px; font-size: 14px; color: #cbd5e1; display: flex; flex-direction: column; gap: 6px;">
+            ${verdict.summaryBulletPoints.map(b => `<li>${b}</li>`).join('')}
+           </ul>`
+        : '';
+
+      container.innerHTML = `
+        <!-- Großes Urteil-Banner -->
+        <div class="duell-verdict-banner">
+          <div class="duell-verdict-badge ${badgeClass}">${verdict.badge}</div>
+          <div class="duell-verdict-title">${verdict.title}</div>
+          <div style="font-size: 15px; color: #f4f5f7; line-height: 1.6; margin-bottom: 12px;">
+            ${verdict.recommendation}
+          </div>
+
+          <!-- Finanzielle ROI Gegenüberstellung -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+            <div style="background: rgba(0,0,0,0.25); padding: 12px; border-radius: 8px;">
+              <div style="font-size: 12px; color: var(--text-muted);">Tatsächlicher Preisunterschied</div>
+              <div style="font-size: 18px; font-weight: 800; color: #fff;">
+                ${comp.priceDeltaAbs > 0 ? (comp.priceDelta > 0 ? `+${comp.priceDelta.toLocaleString('de-DE')} € (A teurer)` : `+${comp.priceDeltaAbs.toLocaleString('de-DE')} € (B teurer)`) : '0 € (Gleich)'}
+              </div>
+            </div>
+
+            <div style="background: rgba(0,0,0,0.25); padding: 12px; border-radius: 8px;">
+              <div style="font-size: 12px; color: var(--text-muted);">Rechnerischer Mehrwert von Auto A</div>
+              <div style="font-size: 18px; font-weight: 800; color: ${comp.totalJustifiedValueForA >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'};">
+                ${comp.totalJustifiedValueForA >= 0 ? `+${comp.totalJustifiedValueForA.toLocaleString('de-DE')} €` : `${comp.totalJustifiedValueForA.toLocaleString('de-DE')} €`}
+              </div>
+            </div>
+
+            <div style="background: rgba(0,0,0,0.25); padding: 12px; border-radius: 8px;">
+              <div style="font-size: 12px; color: var(--text-muted);">Mehrwert-Deckung des Aufpreises</div>
+              <div style="font-size: 18px; font-weight: 800; color: ${comp.coverageRatio >= 100 ? 'var(--accent-green)' : 'var(--accent-yellow)'};">
+                ${comp.coverageRatio} %
+              </div>
+            </div>
+
+            <div style="background: rgba(0,0,0,0.25); padding: 12px; border-radius: 8px;">
+              <div style="font-size: 12px; color: var(--text-muted);">Käufer-Nettonutzen (Vorteil)</div>
+              <div style="font-size: 18px; font-weight: 800; color: var(--accent);">
+                ${comp.netSurplusForExpensive >= 0 ? `+${comp.netSurplusForExpensive.toLocaleString('de-DE')} €` : `${comp.netSurplusForExpensive.toLocaleString('de-DE')} €`}
+              </div>
+            </div>
+          </div>
+
+          ${bulletsHtml}
+        </div>
+
+        <!-- 3 Säulen: Was hat das Auto für Sachen drinnen im Vergleich -->
+        <h4 style="font-size: 17px; font-weight: 800; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+          <span>📦</span> Ausstattungs-Vergleich: Was hat das Auto für Sachen drinnen?
+        </h4>
+
+        <div class="equipment-diff-grid">
+          <!-- Nur in A -->
+          <div class="equipment-col" style="border-top: 3px solid #34d399;">
+            <div class="col-header">
+              <div class="col-title" style="color: #34d399;">
+                <span>🟢</span> Nur in ${vA.title}
+              </div>
+              <span class="badge-bonus">+${eq.bonusOnlyInA.toLocaleString('de-DE')} €</span>
+            </div>
+            <div class="equipment-badge-list">
+              ${onlyAHtml}
+            </div>
+          </div>
+
+          <!-- Nur in B -->
+          <div class="equipment-col" style="border-top: 3px solid #60a5fa;">
+            <div class="col-header">
+              <div class="col-title" style="color: #60a5fa;">
+                <span>🔵</span> Nur in ${vB.title}
+              </div>
+              <span class="badge-bonus" style="color: #60a5fa; background: rgba(59, 130, 246, 0.15);">+${eq.bonusOnlyInB.toLocaleString('de-DE')} €</span>
+            </div>
+            <div class="equipment-badge-list">
+              ${onlyBHtml}
+            </div>
+          </div>
+
+          <!-- In beiden -->
+          <div class="equipment-col" style="border-top: 3px solid #94a3b8;">
+            <div class="col-header">
+              <div class="col-title" style="color: #cbd5e1;">
+                <span>⚪</span> In beiden Autos vorhanden
+              </div>
+              <span style="font-size: 12px; color: var(--text-muted);">${eq.common.length} Merkmale</span>
+            </div>
+            <div class="equipment-badge-list">
+              ${commonHtml}
+            </div>
+          </div>
+        </div>
+
+        <!-- Detaillierte Gegenüberstellungs-Tabelle -->
+        <h4 style="font-size: 17px; font-weight: 800; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+          <span>📊</span> Warum ist eins teurer als das andere? Fakten & Daten im Detail
+        </h4>
+
+        <div style="background: var(--bg-elevated); border-radius: var(--radius-md); border: 1px solid var(--border); overflow-x: auto;">
+          <table class="price-justification-table">
+            <thead>
+              <tr>
+                <th>Merkmal</th>
+                <th>${vA.title}</th>
+                <th>${vB.title}</th>
+                <th>Differenz</th>
+                <th>Besseres Angebot</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    // -------------------------------------------------------------
+    // Weighting & Profile Presets
+    // -------------------------------------------------------------
+    function renderWeightsSliders() {
+      const container = document.getElementById('weightsSlidersContainer');
+      container.innerHTML = '';
+
+      Object.keys(customWeights).forEach(k => {
+        const row = document.createElement('div');
+        row.className = 'form-group';
+        row.innerHTML = `
+          <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
+            <span>${weightLabels[k] || k}</span>
+            <strong id="w_val_${k}" style="color: var(--accent);">${customWeights[k]} %</strong>
+          </div>
+          <input type="range" min="0" max="40" step="5" value="${customWeights[k]}" style="width: 100%;" oninput="onWeightChange('${k}', this.value)">
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function onWeightChange(key, val) {
+      customWeights[key] = parseInt(val, 10);
+      document.getElementById(`w_val_${key}`).textContent = `${val} %`;
+    }
+
+    function applyPreset(name) {
+      if (name === 'commuter') {
+        customWeights = { price: 25, reliability: 20, runningCosts: 25, depreciation: 10, equipment: 5, performance: 5, mileage: 5, age: 5, safety: 0 };
+      } else if (name === 'sport') {
+        customWeights = { price: 15, reliability: 15, runningCosts: 5, depreciation: 10, equipment: 20, performance: 25, mileage: 5, age: 5, safety: 0 };
+      } else if (name === 'reliability') {
+        customWeights = { price: 15, reliability: 35, runningCosts: 15, depreciation: 15, equipment: 5, performance: 5, mileage: 5, age: 5, safety: 0 };
+      } else if (name === 'budget') {
+        customWeights = { price: 35, reliability: 20, runningCosts: 20, depreciation: 5, equipment: 5, performance: 5, mileage: 5, age: 5, safety: 0 };
+      } else {
+        resetDefaultWeights();
+        return;
+      }
+      renderWeightsSliders();
+      showToast('Profil angewendet!');
+    }
+
+    function resetDefaultWeights() {
+      customWeights = { price: 20, reliability: 20, runningCosts: 15, depreciation: 10, equipment: 10, performance: 10, mileage: 5, age: 5, safety: 5 };
+      renderWeightsSliders();
+    }
+
+    // -------------------------------------------------------------
+    // LocalStorage Fleet Persistence
+    // -------------------------------------------------------------
+    function saveFleetToStorage() {
+      try {
+        localStorage.setItem('minus_car_pool', JSON.stringify(vehiclePool));
+      } catch (e) {}
+    }
+
+    function loadStoredFleet() {
+      try {
+        const stored = localStorage.getItem('minus_car_pool');
+        if (stored) {
+          vehiclePool = JSON.parse(stored);
+          renderPool();
+          if (vehiclePool.length > 0) {
+            runAnalysis();
+          }
+        }
+      } catch (e) {}
+    }
+  </script>
+</body>
+</html>

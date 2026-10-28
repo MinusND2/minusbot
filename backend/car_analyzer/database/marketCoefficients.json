@@ -1,0 +1,102 @@
+{
+  "defaultWeights": {
+    "price": 20,
+    "reliability": 20,
+    "runningCosts": 15,
+    "depreciation": 10,
+    "equipment": 10,
+    "performance": 10,
+    "mileage": 5,
+    "age": 5,
+    "safety": 5
+  },
+  "defaultFuelPrices": {
+    "Benzin": 1.75,
+    "Diesel": 1.65,
+    "SuperPlus": 1.85,
+    "Hybrid": 1.75,
+    "Elektro": 0.38,
+    "Autogas": 1.05,
+    "Erdgas": 1.25
+  },
+  "annualKmBenchmark": 15000,
+  "kfzSteuer": {
+    "ottoPer100ccm": 2.0,
+    "dieselPer100ccm": 9.5,
+    "co2BaseAllowance": 95,
+    "co2TaxRates": [
+      { "from": 96, "to": 115, "ratePerGram": 2.0 },
+      { "from": 116, "to": 135, "ratePerGram": 2.2 },
+      { "from": 136, "to": 155, "ratePerGram": 2.5 },
+      { "from": 156, "to": 175, "ratePerGram": 2.9 },
+      { "from": 176, "to": 195, "ratePerGram": 3.4 },
+      { "from": 196, "to": 9999, "ratePerGram": 4.0 }
+    ],
+    "electricExemptYears": 10
+  },
+  "equipmentWeights": {
+    "sportpaket": { "name": "Sportpaket (M-Paket / S-Line / AMG-Line)", "points": 18, "marketBonusEur": 1500, "category": "Optik & Fahrwerk" },
+    "led_matrix": { "name": "Matrix LED / Laser / Adaptive Scheinwerfer", "points": 14, "marketBonusEur": 1100, "category": "Licht & Sicht" },
+    "led_standard": { "name": "LED-Scheinwerfer", "points": 8, "marketBonusEur": 500, "category": "Licht & Sicht" },
+    "xenon": { "name": "Xenonscheinwerfer", "points": 5, "marketBonusEur": 250, "category": "Licht & Sicht" },
+    "panorama": { "name": "Panorama-Glasdach / Schiebedach", "points": 12, "marketBonusEur": 900, "category": "Komfort" },
+    "acc": { "name": "Abstandstempomat (ACC / Distronic)", "points": 13, "marketBonusEur": 850, "category": "Sicherheit & Assistenz" },
+    "lane_assist": { "name": "Spurhalte- / Spurführungsassistent", "points": 6, "marketBonusEur": 300, "category": "Sicherheit & Assistenz" },
+    "blind_spot": { "name": "Totwinkel-Assistent (Blind Spot)", "points": 7, "marketBonusEur": 400, "category": "Sicherheit & Assistenz" },
+    "brake_assist": { "name": "Notbremsassistent (Front Assist)", "points": 8, "marketBonusEur": 400, "category": "Sicherheit & Assistenz" },
+    "camera_360": { "name": "360° Surround-View Kamera", "points": 10, "marketBonusEur": 650, "category": "Parken & Rangieren" },
+    "camera_rear": { "name": "Rückfahrkamera", "points": 7, "marketBonusEur": 350, "category": "Parken & Rangieren" },
+    "park_sensors": { "name": "Parksensoren vorn & hinten (PDC)", "points": 5, "marketBonusEur": 250, "category": "Parken & Rangieren" },
+    "headup": { "name": "Head-Up Display (HUD)", "points": 10, "marketBonusEur": 700, "category": "Infotainment" },
+    "digital_cockpit": { "name": "Volldigitales Kombiinstrument", "points": 8, "marketBonusEur": 500, "category": "Infotainment" },
+    "navigation": { "name": "Navigationssystem Professional / MMI", "points": 8, "marketBonusEur": 600, "category": "Infotainment" },
+    "carplay_android": { "name": "Apple CarPlay / Android Auto", "points": 8, "marketBonusEur": 350, "category": "Infotainment" },
+    "sound_premium": { "name": "Premium-Soundsystem (Harman Kardon / Bose / B&O / Burmester)", "points": 11, "marketBonusEur": 800, "category": "Multimedia" },
+    "standheizung": { "name": "Standheizung mit Fernbedienung/App", "points": 12, "marketBonusEur": 950, "category": "Komfort" },
+    "seats_heated": { "name": "Sitzheizung vorn", "points": 7, "marketBonusEur": 350, "category": "Komfort" },
+    "seats_heated_rear": { "name": "Sitzheizung hinten", "points": 4, "marketBonusEur": 200, "category": "Komfort" },
+    "steering_heated": { "name": "Lenkradheizung", "points": 5, "marketBonusEur": 250, "category": "Komfort" },
+    "seats_electric_memory": { "name": "Elektrische Sitze mit Memory", "points": 9, "marketBonusEur": 600, "category": "Komfort" },
+    "seats_sport": { "name": "Sportsitze", "points": 8, "marketBonusEur": 500, "category": "Interieur" },
+    "leather": { "name": "Volllederausstattung", "points": 10, "marketBonusEur": 750, "category": "Interieur" },
+    "trailer_hitch": { "name": "Anhängerkupplung (schwenkbar/abnehmbar)", "points": 9, "marketBonusEur": 650, "category": "Nutzen" },
+    "aircon_auto": { "name": "Klimaautomatik (2/3/4-Zonen)", "points": 6, "marketBonusEur": 300, "category": "Komfort" },
+    "allrad": { "name": "Allradantrieb (xDrive / quattro / 4Matic)", "points": 14, "marketBonusEur": 1400, "category": "Antrieb & Fahrwerk" },
+    "keyless": { "name": "Keyless Go / Komfortzugang", "points": 6, "marketBonusEur": 350, "category": "Komfort" },
+    "ambient_light": { "name": "Ambientebeleuchtung", "points": 5, "marketBonusEur": 250, "category": "Interieur" },
+    "adaptive_suspension": { "name": "Adaptives Fahrwerk / Luftfederung / DCC", "points": 12, "marketBonusEur": 950, "category": "Antrieb & Fahrwerk" },
+    "highbeam_assist": { "name": "Fernlichtassistent", "points": 5, "marketBonusEur": 200, "category": "Licht & Sicht" },
+    "wireless_charging": { "name": "Induktionsladen für Smartphones", "points": 4, "marketBonusEur": 180, "category": "Infotainment" },
+    "alarm_system": { "name": "Alarmanlage", "points": 5, "marketBonusEur": 250, "category": "Sicherheit & Assistenz" },
+    "traffic_sign": { "name": "Verkehrszeichenerkennung", "points": 5, "marketBonusEur": 200, "category": "Sicherheit & Assistenz" },
+    "seats_ventilated": { "name": "Sitzbelüftung / klimatisierte Sitze", "points": 9, "marketBonusEur": 600, "category": "Komfort" },
+    "privacy_glass": { "name": "Abgedunkelte Verglasung (Privacy Glass)", "points": 4, "marketBonusEur": 200, "category": "Optik & Fahrwerk" },
+    "extra_wheels": { "name": "8-fach bereift (Sommer- & Winterräder)", "points": 8, "marketBonusEur": 600, "category": "Nutzen" }
+  },
+  "depreciationRates": {
+    "segments": {
+      "kleinwagen": { "initialMsrp": 22000, "year1": 0.22, "subsequentPerYear": 0.08, "kmFactor": 0.00035 },
+      "kompakt": { "initialMsrp": 34000, "year1": 0.25, "subsequentPerYear": 0.09, "kmFactor": 0.00038 },
+      "mittelklasse": { "initialMsrp": 48000, "year1": 0.28, "subsequentPerYear": 0.10, "kmFactor": 0.00042 },
+      "obere_mittelklasse": { "initialMsrp": 68000, "year1": 0.32, "subsequentPerYear": 0.11, "kmFactor": 0.00045 },
+      "suv": { "initialMsrp": 45000, "year1": 0.24, "subsequentPerYear": 0.085, "kmFactor": 0.00037 },
+      "sportwagen": { "initialMsrp": 75000, "year1": 0.22, "subsequentPerYear": 0.075, "kmFactor": 0.00040 }
+    }
+  },
+  "insuranceEstimates": {
+    "kleinwagen": { "liabilityAnnual": 320, "comprehensiveAnnual": 380 },
+    "kompakt": { "liabilityAnnual": 360, "comprehensiveAnnual": 460 },
+    "mittelklasse": { "liabilityAnnual": 410, "comprehensiveAnnual": 590 },
+    "obere_mittelklasse": { "liabilityAnnual": 480, "comprehensiveAnnual": 750 },
+    "suv": { "liabilityAnnual": 420, "comprehensiveAnnual": 620 },
+    "sportwagen": { "liabilityAnnual": 520, "comprehensiveAnnual": 950 }
+  },
+  "maintenanceCostPer10000Km": {
+    "kleinwagen": 380,
+    "kompakt": 460,
+    "mittelklasse": 580,
+    "obere_mittelklasse": 780,
+    "suv": 620,
+    "sportwagen": 950
+  }
+}

@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sozialstunden Timer - Stream Overlay</title>
+
+  <!-- Google Fonts: Minecraft & Modern Pixel Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@600;800;900&family=VT323&display=swap" rel="stylesheet">
+
+  <!-- Optional Firebase SDKs for Cross-Device Sync -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="app-config.js"></script>
+
+  <style>
+    :root {
+      --neon-yellow: #facc15;
+      --neon-green: #bef264;
+      --warn-orange: #fb923c;
+      --reflective-silver: #f1f5f9;
+      --dark-glass: rgba(12, 14, 18, 0.82);
+      --scale: 1.0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      image-rendering: pixelated;
+    }
+
+    body {
+      background: transparent !important;
+      overflow: hidden;
+      font-family: 'Press Start 2P', monospace;
+      color: #ffffff;
+      user-select: none;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+      padding: 24px;
+    }
+
+    /* Vorschau-Hintergrund falls ?preview=1 */
+    body.preview-mode {
+      background: #0f1217 !important;
+      background-image: radial-gradient(circle at 50% 50%, rgba(250, 204, 21, 0.08) 0%, transparent 60%);
+    }
+
+    /* Schlankes, hübsches Floating-Widget OHNE klobigen Rahmen */
+    .sozial-container {
+      position: relative;
+      transform: scale(var(--scale));
+      transform-origin: top left;
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 20px;
+      background: var(--dark-glass);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 14px;
+      border: 1px solid rgba(250, 204, 21, 0.28);
+      box-shadow: 
+        0 16px 36px -8px rgba(0, 0, 0, 0.7),
+        0 0 24px rgba(250, 204, 21, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .sozial-container:hover {
+      box-shadow: 
+        0 20px 44px -6px rgba(0, 0, 0, 0.8),
+        0 0 32px rgba(250, 204, 21, 0.22);
+    }
+
+    /* Leuchtende Warnweste (Badge links) */
+    .vest-wrapper {
+      position: relative;
+      width: 58px;
+      height: 58px;
+      background: rgba(250, 204, 21, 0.1);
+      border: 1px solid rgba(250, 204, 21, 0.35);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 0 16px rgba(250, 204, 21, 0.25);
+      animation: vestGlow 3s infinite ease-in-out alternate;
+    }
+
+    @keyframes vestGlow {
+      0% { box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); }
+      100% { box-shadow: 0 0 22px rgba(250, 204, 21, 0.45); }
+    }
+
+    .pixel-vest-svg {
+      width: 44px;
+      height: 44px;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    }
+
+    /* Müllzangen Snapping-Animation wenn gezählt wird */
+    .grabber-badge {
+      position: absolute;
+      bottom: -6px;
+      right: -6px;
+      width: 24px;
+      height: 24px;
+      background: #18191e;
+      border: 1px solid #475569;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+      transition: transform 0.15s ease;
+    }
+
+    .grabber-snap {
+      animation: grabberSnapAnim 0.3s ease;
+    }
+
+    @keyframes grabberSnapAnim {
+      0% { transform: scale(1) rotate(0deg); }
+      40% { transform: scale(1.3) rotate(-18deg); }
+      70% { transform: scale(0.9) rotate(8deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+
+    /* Hauptinhalt rechts */
+    .content-area {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    /* Obere Statuszeile */
+    .top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .title-tag {
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      color: var(--neon-yellow);
+      text-shadow: 1px 1px 0 #000, 0 0 8px rgba(250, 204, 21, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-transform: uppercase;
+    }
+
+    .status-pill {
+      font-size: 8px;
+      padding: 3px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      text-shadow: 1px 1px 0 #000;
+    }
+
+    .status-pill.working {
+      background: rgba(34, 197, 94, 0.2);
+      color: #86efac;
+      border: 1px solid rgba(34, 197, 94, 0.4);
+    }
+
+    .status-pill.break {
+      background: rgba(249, 115, 22, 0.25);
+      color: #fdba74;
+      border: 1px solid rgba(249, 115, 22, 0.5);
+      animation: breakBlink 1.2s infinite ease-in-out;
+    }
+
+    .status-pill.paused {
+      background: rgba(148, 163, 184, 0.15);
+      color: #cbd5e1;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
+    .status-pill.finished {
+      background: rgba(56, 189, 248, 0.2);
+      color: #7dd3fc;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+
+    @keyframes breakBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* Großer eleganter Timer */
+    .timer-row {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    .timer-digits {
+      font-size: 34px;
+      line-height: 1.05;
+      color: #ffffff;
+      text-shadow: 
+        2px 2px 0 #000,
+        0 0 16px rgba(255, 255, 255, 0.3);
+      letter-spacing: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .timer-digits.break-active {
+      color: #fed7aa;
+      text-shadow: 2px 2px 0 #7c2d12, 0 0 20px rgba(251, 146, 60, 0.5);
+    }
+
+    .mode-sub {
+      font-size: 8px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Untere Zeile: Aufgabe & feiner Fortschrittsbalken */
+    .bottom-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .task-info {
+      font-size: 8px;
+      color: #cbd5e1;
+      text-shadow: 1px 1px 0 #000;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 280px;
+    }
+
+    .slim-progress-outer {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .slim-progress-inner {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #facc15, #bef264);
+      border-radius: 2px;
+      box-shadow: 0 0 8px rgba(250, 204, 21, 0.6);
+      transition: width 0.3s ease;
+    }
+
+    /* Mittagspause Banner Modus */
+    .break-indicator {
+      display: none;
+      font-size: 8px;
+      color: #fdba74;
+      text-shadow: 1px 1px 0 #000;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Feierabend Toast / Banner */
+    .done-banner {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.95);
+      border-radius: 14px;
+      border: 1px solid #38bdf8;
+      box-shadow: 0 0 24px rgba(56, 189, 248, 0.4);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      z-index: 10;
+      animation: donePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes donePop {
+      0% { transform: scale(0.9); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .done-title {
+      font-size: 13px;
+      color: #38bdf8;
+      text-shadow: 0 0 10px #38bdf8;
+    }
+
+    .done-subtitle {
+      font-size: 8px;
+      color: #e2e8f0;
+    }
+
+    /* Versteckter Admin-Link (erscheint nur dezent bei Mouse-Hover) */
+    .quick-admin-link {
+      position: absolute;
+      top: -24px;
+      right: 0;
+      font-size: 8px;
+      color: #94a3b8;
+      text-decoration: none;
+      background: rgba(0,0,0,0.6);
+      padding: 3px 8px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .sozial-container:hover .quick-admin-link {
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Schlanker, rahmenloser Container -->
+  <div class="sozial-container" id="sozialContainer">
+    
+    <!-- Linke Seite: Neon-Warnweste & Müllzange -->
+    <div class="vest-wrapper" id="vestWrapper">
+      <!-- Detailgetreue Pixel-Art Warnweste SVG -->
+      <svg class="pixel-vest-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Schultern / Träger (Neon-Gelb) -->
+        <rect x="5" y="3" width="4" height="4" fill="#facc15"/>
+        <rect x="15" y="3" width="4" height="4" fill="#facc15"/>
+        <rect x="9" y="3" width="6" height="2" fill="#1e293b"/> <!-- Kragen-Ausschnitt -->
+        
+        <!-- Brustbereich Neon-Gelb -->
+        <rect x="4" y="7" width="6" height="4" fill="#facc15"/>
+        <rect x="14" y="7" width="6" height="4" fill="#facc15"/>
+        <rect x="10" y="5" width="4" height="6" fill="#1e293b"/> <!-- Reißverschluss / Mitte -->
+
+        <!-- OBERER SILBERNER REFLEXSTREIFEN (Reflective Stripe) -->
+        <rect x="3" y="11" width="7" height="2" fill="#f8fafc"/>
+        <rect x="14" y="11" width="7" height="2" fill="#f8fafc"/>
+        <rect x="10" y="11" width="4" height="2" fill="#1e293b"/>
+
+        <!-- Mittelteil Neon-Gelb -->
+        <rect x="3" y="13" width="7" height="3" fill="#eab308"/>
+        <rect x="14" y="13" width="7" height="3" fill="#eab308"/>
+        <rect x="10" y="13" width="4" height="3" fill="#1e293b"/>
+
+        <!-- UNTERER SILBERNER REFLEXSTREIFEN -->
+        <rect x="3" y="16" width="7" height="2" fill="#f8fafc"/>
+        <rect x="14" y="16" width="7" height="2" fill="#f8fafc"/>
+        <rect x="10" y="16" width="4" height="2" fill="#1e293b"/>
+
+        <!-- Bund / Saum Unten -->
+        <rect x="3" y="18" width="18" height="3" fill="#facc15"/>
+        <rect x="3" y="21" width="18" height="1" fill="#ca8a04"/>
+      </svg>
+
+      <!-- Kleines Müllzangen-Icon -->
+      <div class="grabber-badge" id="grabberBadge" title="Müllzange aktiv">
+        🗜️
+      </div>
+    </div>
+
+    <!-- Rechte Seite: Timer & Infos -->
+    <div class="content-area">
+      <!-- Obere Zeile: Titel & Status -->
+      <div class="top-row">
+        <div class="title-tag">
+          <span id="titleText">SOZIALSTUNDEN</span>
+        </div>
+        <div class="status-pill working" id="statusPill">
+          IM DIENST
+        </div>
+      </div>
+
+      <!-- Mittlere Zeile: Timer-Ziffern -->
+      <div class="timer-row">
+        <div class="timer-digits" id="timerDigits">01:00:00</div>
+        <div class="mode-sub" id="modeSub">RESTZEIT</div>
+      </div>
+
+      <!-- Untere Zeile: Aufgabe & Fortschrittsbalken -->
+      <div class="bottom-row">
+        <div class="task-info" id="taskText">
+          🗜️ Müll sammeln & Park reinigen
+        </div>
+        <div class="slim-progress-outer">
+          <div class="slim-progress-inner" id="progressInner"></div>
+        </div>
+        <div class="break-indicator" id="breakIndicator">
+          <span>🥪</span>
+          <span id="breakText">Mittagspause aktiv</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fertig / Feierabend Popup -->
+    <div class="done-banner" id="doneBanner">
+      <div style="font-size: 22px;">🦺 ✅ 🗑️</div>
+      <div class="done-title">SOZIALSTUNDEN ABGELEISTET!</div>
+      <div class="done-subtitle">Schicht beendet. Gute Arbeit!</div>
+    </div>
+
+    <!-- Diskreter Admin-Link -->
+    <a href="minecraft-baustelle-admin.html" target="_blank" class="quick-admin-link">⚙️ Admin</a>
+  </div>
+
+  <script>
+    // --- State & Config ---
+    const STORAGE_KEY = 'minecraft_baustelle_timer_state';
+    const CHANNEL_NAME = 'minecraft_baustelle_channel';
+    const params = new URLSearchParams(window.location.search);
+    const streamId = params.get('stream') || (window.BINGO_CONFIG && window.BINGO_CONFIG.streamId) || 'default-stream';
+
+    if (params.get('preview') === '1') {
+      document.body.classList.add('preview-mode');
+    }
+
+    const defaultState = {
+      mode: 'countdown',
+      status: 'working',
+      isRunning: false,
+      targetSeconds: 3600,
+      remainingSeconds: 3600,
+      elapsedSeconds: 0,
+      breakDurationSeconds: 1800,
+      breakRemainingSeconds: 1800,
+      isBreakActive: false,
+      title: 'SOZIALSTUNDEN',
+      task: 'Müll sammeln & Park reinigen',
+      workerName: 'MinusND',
+      scale: 1.0,
+      soundEnabled: true,
+      volume: 0.7,
+      lastUpdated: Date.now(),
+      version: 1
+    };
+
+    let state = { ...defaultState };
+
+    // --- Web Audio Synthesizer: Echter Müllzangen-Sound (Klack / Schnapp) ---
+    let audioCtx = null;
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) audioCtx = new AudioContext();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playGrabberSound() {
+      if (!state.soundEnabled) return;
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const vol = (state.volume || 0.7) * 0.45;
+      const now = ctx.currentTime;
+
+      try {
+        // Trigger visual grabber snap animation
+        const badge = document.getElementById('grabberBadge');
+        if (badge) {
+          badge.classList.remove('grabber-snap');
+          void badge.offsetWidth;
+          badge.classList.add('grabber-snap');
+        }
+
+        // Phase 1: Metallischer Griff-Klick (Squeeze click)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'triangle';
+        osc1.frequency.setValueAtTime(1600, now);
+        osc1.frequency.exponentialRampToValueAtTime(350, now + 0.03);
+        gain1.gain.setValueAtTime(vol * 0.9, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.035);
+
+        // Phase 2: Zangenbacken schnappen zusammen (Mechanical Clamp Snap)
+        const t2 = now + 0.03;
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(580, t2);
+        osc2.frequency.exponentialRampToValueAtTime(140, t2 + 0.06);
+        gain2.gain.setValueAtTime(vol * 0.75, t2);
+        gain2.gain.exponentialRampToValueAtTime(0.001, t2 + 0.06);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(t2);
+        osc2.stop(t2 + 0.07);
+
+        // Rauschen für den Müll-Greif-Effekt
+        const bufferSize = ctx.sampleRate * 0.04;
+        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1;
+        }
+        const whiteNoise = ctx.createBufferSource();
+        whiteNoise.buffer = noiseBuffer;
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 1200;
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.setValueAtTime(vol * 0.4, t2);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, t2 + 0.04);
+        whiteNoise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(ctx.destination);
+        whiteNoise.start(t2);
+        whiteNoise.stop(t2 + 0.045);
+      } catch (err) {
+        console.warn('Grabber sound error:', err);
+      }
+    }
+
+    function playSound(type) {
+      if (type === 'grabber' || type === 'click') {
+        playGrabberSound();
+        return;
+      }
+      if (!state.soundEnabled) return;
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const vol = (state.volume || 0.7) * 0.4;
+      const now = ctx.currentTime;
+
+      try {
+        if (type === 'eat') {
+          // Pause / Essen
+          [0, 0.1, 0.2].forEach(d => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(260 + Math.random() * 50, now + d);
+            gain.gain.setValueAtTime(vol * 0.5, now + d);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + d + 0.06);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + d);
+            osc.stop(now + d + 0.07);
+          });
+        } else if (type === 'bell' || type === 'levelup') {
+          // Schichtende Fanfare
+          [0, 0.08, 0.16, 0.24].forEach((d, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime([523.25, 659.25, 783.99, 1046.50][i], now + d);
+            gain.gain.setValueAtTime(vol * 0.7, now + d);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + d + 0.25);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + d);
+            osc.stop(now + d + 0.3);
+          });
+        }
+      } catch (e) {}
+    }
+
+    // --- DOM Elements ---
+    const titleText = document.getElementById('titleText');
+    const statusPill = document.getElementById('statusPill');
+    const timerDigits = document.getElementById('timerDigits');
+    const modeSub = document.getElementById('modeSub');
+    const taskText = document.getElementById('taskText');
+    const progressInner = document.getElementById('progressInner');
+    const breakIndicator = document.getElementById('breakIndicator');
+    const breakText = document.getElementById('breakText');
+    const doneBanner = document.getElementById('doneBanner');
+
+    function formatTime(totalSeconds) {
+      const s = Math.max(0, Math.floor(totalSeconds));
+      const hours = Math.floor(s / 3600);
+      const minutes = Math.floor((s % 3600) / 60);
+      const seconds = s % 60;
+      const pad = (n) => String(n).padStart(2, '0');
+
+      if (hours > 0) {
+        return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+      }
+      return `${pad(minutes)}:${pad(seconds)}`;
+    }
+
+    let lastBreakState = false;
+    let lastStatusState = null;
+
+    function renderUI() {
+      // Skalierung
+      document.documentElement.style.setProperty('--scale', state.scale || 1.0);
+
+      // Titel & Aufgabe
+      titleText.textContent = (state.title || 'SOZIALSTUNDEN').toUpperCase();
+      taskText.textContent = `🗜️ ${state.task || 'Müll sammeln & Park reinigen'}`;
+
+      // Status
+      if (state.isBreakActive) {
+        statusPill.className = 'status-pill break';
+        statusPill.textContent = 'MITTAGSPAUSE';
+        modeSub.textContent = 'PAUSENZEIT';
+        timerDigits.classList.add('break-active');
+        timerDigits.textContent = formatTime(state.breakRemainingSeconds);
+        breakIndicator.style.display = 'flex';
+        breakText.textContent = `Pause läuft: noch ${formatTime(state.breakRemainingSeconds)}`;
+      } else {
+        timerDigits.classList.remove('break-active');
+        breakIndicator.style.display = 'none';
+
+        if (state.mode === 'countup') {
+          modeSub.textContent = 'GELEISTET (HOCH)';
+          timerDigits.textContent = formatTime(state.elapsedSeconds);
+        } else {
+          modeSub.textContent = 'RESTZEIT (RUNTER)';
+          timerDigits.textContent = formatTime(state.remainingSeconds);
+        }
+
+        if (state.status === 'finished') {
+          statusPill.className = 'status-pill finished';
+          statusPill.textContent = 'ABGELEISTET';
+        } else if (state.isRunning) {
+          statusPill.className = 'status-pill working';
+          statusPill.textContent = 'IM DIENST';
+        } else {
+          statusPill.className = 'status-pill paused';
+          statusPill.textContent = 'PAUSIERT';
+        }
+      }
+
+      // Feiner Fortschrittsbalken
+      let pct = 0;
+      if (state.mode === 'countdown') {
+        const total = Math.max(1, state.targetSeconds);
+        pct = Math.min(100, Math.max(0, ((total - state.remainingSeconds) / total) * 100));
+      } else {
+        pct = Math.min(100, ((state.elapsedSeconds % 3600) / 3600) * 100);
+      }
+      progressInner.style.width = `${pct.toFixed(1)}%`;
+
+      // Done Banner
+      if (state.status === 'finished') {
+        doneBanner.style.display = 'flex';
+      } else {
+        doneBanner.style.display = 'none';
+      }
+
+      // Sounds
+      if (lastBreakState !== state.isBreakActive) {
+        if (state.isBreakActive) playSound('eat');
+        else if (lastBreakState === true) playGrabberSound();
+        lastBreakState = state.isBreakActive;
+      }
+      if (lastStatusState !== state.status) {
+        if (state.status === 'finished') playSound('levelup');
+        lastStatusState = state.status;
+      }
+    }
+
+    // Tick Loop
+    let lastTickTime = Date.now();
+    setInterval(() => {
+      const now = Date.now();
+      const delta = (now - lastTickTime) / 1000;
+      lastTickTime = now;
+
+      if (state.isBreakActive && state.isRunning) {
+        state.breakRemainingSeconds -= delta;
+        if (state.breakRemainingSeconds <= 0) {
+          state.breakRemainingSeconds = 0;
+          state.isBreakActive = false;
+          playSound('bell');
+        }
+        renderUI();
+      } else if (state.isRunning) {
+        if (state.mode === 'countdown') {
+          state.remainingSeconds -= delta;
+          if (state.remainingSeconds <= 0) {
+            state.remainingSeconds = 0;
+            state.isRunning = false;
+            state.status = 'finished';
+            playSound('levelup');
+          }
+        } else {
+          state.elapsedSeconds += delta;
+        }
+        renderUI();
+      }
+    }, 200);
+
+    // Sync via BroadcastChannel & LocalStorage
+    const bc = ('BroadcastChannel' in window) ? new BroadcastChannel(CHANNEL_NAME) : null;
+    if (bc) {
+      bc.onmessage = (e) => {
+        if (e.data && e.data.type === 'STATE_UPDATE') {
+          state = { ...state, ...e.data.state };
+          renderUI();
+        } else if (e.data && e.data.type === 'PLAY_SOUND') {
+          playSound(e.data.sound);
+        }
+      };
+    }
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          state = { ...state, ...JSON.parse(e.newValue) };
+          renderUI();
+        } catch (err) {}
+      }
+    });
+
+    // Firebase Listener falls online
+    if (window.BINGO_CONFIG && window.BINGO_CONFIG.firebaseConfig) {
+      try {
+        if (!firebase.apps.length) firebase.initializeApp(window.BINGO_CONFIG.firebaseConfig);
+        firebase.database().ref(`streams/${streamId}/minecraft_timer`).on('value', snap => {
+          const d = snap.val();
+          if (d) { state = { ...state, ...d }; renderUI(); }
+        });
+      } catch (e) {}
+    }
+
+    // Init
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) state = { ...defaultState, ...JSON.parse(raw) };
+    } catch (e) {}
+    renderUI();
+
+    // Sound unlock
+    window.addEventListener('click', () => { getAudioContext(); }, { once: true });
+  </script>
+</body>
+</html>

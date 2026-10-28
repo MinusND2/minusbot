@@ -1,0 +1,1968 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deutschland-Quiz Chat-Spiel Admin Panel</title>
+    <!-- BINGO/MINUS default styles override -->
+    <link rel="stylesheet" href="../public/style.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+        
+        :root {
+            --bg: #050508;
+            --bg-card: #0c0c14;
+            --bg-elevated: #131322;
+            --border: rgba(255, 255, 255, 0.05);
+            --border-hover: rgba(255, 255, 255, 0.1);
+            --border-active: rgba(0, 242, 254, 0.25);
+            --text: #f4f4f9;
+            --text-muted: #9ca3af;
+            --accent: #00f2fe;
+            --accent-purple: #9d4edd;
+            --accent-grad: linear-gradient(135deg, #00f2fe 0%, #9d4edd 100%);
+            --radius: 16px;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * { box-sizing: border-box; }
+        
+        body {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            position: relative;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .ambient-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(140px);
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.35;
+        }
+        .orb-blue { width: 400px; height: 400px; background: rgba(0, 242, 254, 0.08); top: -100px; right: -50px; }
+        .orb-purple { width: 350px; height: 350px; background: rgba(157, 78, 221, 0.06); bottom: -50px; left: 100px; }
+
+        .app-wrap {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Sidebar Navigation styling matching default panel.html */
+        .sidebar {
+            width: 260px;
+            background: #07070c;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 32px 20px;
+            z-index: 10;
+            flex-shrink: 0;
+        }
+        
+        .logo { margin-bottom: 40px; padding: 0 8px; display: flex; align-items: center; gap: 12px; }
+        .logo-text {
+            font-size: 20px; font-weight: 800; letter-spacing: 3px;
+            text-transform: uppercase;
+            background: var(--accent-grad);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-menu { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        
+        .nav-btn {
+            background: transparent; border: none; color: var(--text-muted);
+            padding: 12px 16px; font-size: 14px; font-weight: 600;
+            text-align: left; border-radius: 8px; cursor: pointer;
+            transition: all 0.2s; font-family: inherit;
+            display: flex; align-items: center; gap: 10px;
+            text-decoration: none;
+        }
+        .nav-btn:hover { color: var(--text); background: var(--bg-elevated); }
+        .nav-btn.active {
+            color: var(--accent);
+            background: rgba(0, 242, 254, 0.06);
+            border: 1px solid var(--border-active);
+        }
+
+        /* Main Content Layout */
+        .main-content {
+            flex: 1;
+            padding: 40px 48px;
+            overflow-y: auto;
+        }
+
+        .view-header {
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .view-title { font-size: 28px; font-weight: 800; color: #fff; margin: 0 0 4px 0; }
+        .view-subtitle { color: var(--text-muted); margin: 0; font-size: 14px; }
+
+        .btn-back {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: var(--text);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-back:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateX(-2px);
+        }
+
+        /* Card Layout System */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 12px;
+        }
+
+        /* Active Map Target Display */
+        .active-target-display {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            border: 1px dashed rgba(0, 242, 254, 0.2);
+        }
+
+        .admin-city-badge {
+            font-size: 32px;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            text-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+        }
+
+        .admin-coord-pill {
+            display: inline-block;
+            background: rgba(0, 242, 254, 0.1);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: 800;
+            font-size: 18px;
+            letter-spacing: 1px;
+        }
+
+        /* Config Form Elements */
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;}
+        .form-input {
+            width: 100%;
+            background: rgba(0,0,0,0.25);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 14px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* Buttons styles */
+        .btn-action {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            border: none;
+        }
+        
+        .btn-primary {
+            background: var(--accent);
+            color: #050508;
+        }
+        .btn-primary:hover {
+            filter: brightness(1.1);
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.06);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(255,255,255,0.2);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .btn-danger:hover {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        /* Overlay Link Box */
+        .link-box {
+            background: rgba(0, 242, 254, 0.03);
+            border: 1px solid rgba(0, 242, 254, 0.15);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .link-text {
+            flex: 1;
+            font-family: monospace;
+            font-size: 12px;
+            color: var(--accent);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .btn-copy {
+            background: rgba(0, 242, 254, 0.15);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            color: var(--accent);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-copy:hover {
+            background: var(--accent);
+            color: #000;
+        }
+
+        /* Leaderboard table */
+        .score-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .score-table th {
+            text-align: left;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .score-table td {
+            padding: 10px 12px;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+        .score-rank { font-weight: 800; color: var(--accent); width: 30px; }
+        .score-user { font-weight: 600; }
+        .score-pts { font-weight: 800; text-align: right; color: #fff; }
+
+        /* Toast notification */
+        #toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #10b981;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 1000;
+        }
+        #toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    </style>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+    <script src="../public/app-config.js"></script>
+    <script src="../public/realtime-store.js?v=9"></script>
+</head>
+<body>
+    <div class="ambient-orb orb-blue"></div>
+    <div class="ambient-orb orb-purple"></div>
+
+    <div class="app-wrap">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="logo-text">MINUSBOT</span>
+            </div>
+            <nav class="nav-menu">
+                <a href="/protected/panel.html" class="nav-btn">
+                    <span>📊 Dashboard</span>
+                </a>
+                <a href="/protected/wordgame-admin.html" class="nav-btn">
+                    <span>🔤 Worträtsel</span>
+                </a>
+                <a href="/protected/flaggame-admin.html" class="nav-btn">
+                    <span>🚩 Flaggen-Spiel</span>
+                </a>
+                <a href="/protected/mapgame-admin.html" class="nav-btn active">
+                    <span>📍 Deutschland-Quiz</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Admin Content Area -->
+        <main class="main-content">
+            <div class="view-header">
+                <div>
+                    <h1 class="view-title">Deutschland-Quiz Steuerung</h1>
+                    <p class="view-subtitle">Verwalte das interaktive Twitch Koordinaten-Ratespiel in Echtzeit</p>
+                </div>
+                <button class="btn-back" onclick="window.location.href='/protected/panel.html'">
+                    ← Zurück zum Dashboard
+                </button>
+            </div>
+
+            <!-- OBS Browser Source Link Box -->
+            <div class="card">
+                <div class="card-title">
+                    <span>🎥 OBS Browser-Quelle Link</span>
+                </div>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
+                    Füge diesen Link als Browser-Quelle in OBS hinzu (Empfohlene Auflösung: <strong>720 x 940</strong> oder <strong>1080 x 1920</strong>):
+                </p>
+                <div class="link-box">
+                    <span class="link-text" id="obs-link-text">Lade URL...</span>
+                    <button class="btn-copy" id="btn-copy-url">Kopieren</button>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Left Column: Active Game Status & Live Controls -->
+                <div>
+                    <!-- Active Target Status -->
+                    <div class="card">
+                        <div class="card-title">
+                            <span>🎯 Aktuelle Zielstadt</span>
+                            <span id="game-status-badge" style="margin-left: auto; font-size: 12px; padding: 4px 10px; border-radius: 20px; background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4);">
+                                AKTIV
+                            </span>
+                        </div>
+
+                        <div class="active-target-display">
+                            <div class="admin-city-badge" id="active-city-title">BERLIN</div>
+                            <div class="admin-coord-pill" id="active-coord-badge">Feld: J5</div>
+                            <div style="font-size: 13px; color: var(--text-muted); margin-top: 12px;" id="round-indicator">
+                                Runde 1 von 10
+                            </div>
+                        </div>
+
+                        <!-- Game Action Buttons -->
+                        <div class="actions-grid">
+                            <button class="btn-action btn-primary" id="btn-next-round">
+                                ⏭️ Nächste Stadt
+                            </button>
+                            <button class="btn-action btn-secondary" id="btn-toggle-pause">
+                                ⏸️ Pause / Weiter
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Live Guesses Feed -->
+                    <div class="card">
+                        <div class="card-title">
+                            <span>💬 Letzte Chat-Tipps</span>
+                        </div>
+                        <div id="guesses-container" style="display: flex; flex-direction: column; gap: 8px;">
+                            <div style="color: var(--text-muted); font-size: 13px; font-style: italic;">Noch keine Tipps eingegangen...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Settings & Live Scoreboard -->
+                <div>
+                    <!-- Settings Card -->
+                    <div class="card">
+                        <div class="card-title">
+                            <span>⚙️ Spiel-Einstellungen</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Twitch-Kanal Name</label>
+                            <input type="text" id="cfg-twitch-channel" class="form-input" placeholder="z. B. minusnd">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Zeit pro Runde (Sekunden)</label>
+                            <input type="number" id="cfg-round-time" class="form-input" value="45" min="10" max="180">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Runden pro Match</label>
+                            <input type="number" id="cfg-total-rounds" class="form-input" value="10" min="1" max="50">
+                        </div>
+
+                        <button class="btn-action btn-primary" id="btn-save-settings">
+                            💾 Einstellungen Speichern
+                        </button>
+                    </div>
+
+                    <!-- Leaderboard Management -->
+                    <div class="card">
+                        <div class="card-title">
+                            <span>🏆 Rangliste</span>
+                            <button class="btn-copy" id="btn-reset-scores" style="margin-left: auto; background: rgba(239,68,68,0.15); color: #ef4444; border-color: rgba(239,68,68,0.3);">
+                                Reset
+                            </button>
+                        </div>
+
+                        <table class="score-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Zuschauer</th>
+                                    <th style="text-align: right;">Punkte</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scores-body">
+                                <tr>
+                                    <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Noch keine Punkte vorhanden</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="toast">Gespeichert!</div>
+
+    <script>
+        const GERMAN_CITIES = [
+          {
+                    "name": "Berlin",
+                    "coord": "J5",
+                    "alt": [
+                              "I4",
+                              "I5",
+                              "I6",
+                              "J4",
+                              "J6",
+                              "K4",
+                              "K5",
+                              "K6"
+                    ]
+          },
+          {
+                    "name": "Hamburg",
+                    "coord": "G4",
+                    "alt": [
+                              "F3",
+                              "F4",
+                              "F5",
+                              "G3",
+                              "G5",
+                              "H3",
+                              "H4",
+                              "H5"
+                    ]
+          },
+          {
+                    "name": "München",
+                    "coord": "I13",
+                    "alt": [
+                              "H12",
+                              "H13",
+                              "H14",
+                              "I12",
+                              "I14",
+                              "J12",
+                              "J13",
+                              "J14"
+                    ]
+          },
+          {
+                    "name": "Köln",
+                    "coord": "D8",
+                    "alt": [
+                              "C7",
+                              "C8",
+                              "C9",
+                              "D7",
+                              "D9",
+                              "E7",
+                              "E8",
+                              "E9"
+                    ]
+          },
+          {
+                    "name": "Frankfurt am Main",
+                    "coord": "F9",
+                    "alt": [
+                              "E8",
+                              "E9",
+                              "E10",
+                              "F8",
+                              "F10",
+                              "G8",
+                              "G9",
+                              "G10"
+                    ]
+          },
+          {
+                    "name": "Stuttgart",
+                    "coord": "F12",
+                    "alt": [
+                              "E11",
+                              "E12",
+                              "E13",
+                              "F11",
+                              "F13",
+                              "G11",
+                              "G12",
+                              "G13"
+                    ]
+          },
+          {
+                    "name": "Düsseldorf",
+                    "coord": "D8",
+                    "alt": [
+                              "C7",
+                              "C8",
+                              "C9",
+                              "D7",
+                              "D9",
+                              "E7",
+                              "E8",
+                              "E9"
+                    ]
+          },
+          {
+                    "name": "Dortmund",
+                    "coord": "D7",
+                    "alt": [
+                              "C6",
+                              "C7",
+                              "C8",
+                              "D6",
+                              "D8",
+                              "E6",
+                              "E7",
+                              "E8"
+                    ]
+          },
+          {
+                    "name": "Essen",
+                    "coord": "D7",
+                    "alt": [
+                              "C6",
+                              "C7",
+                              "C8",
+                              "D6",
+                              "D8",
+                              "E6",
+                              "E7",
+                              "E8"
+                    ]
+          },
+          {
+                    "name": "Leipzig",
+                    "coord": "I7",
+                    "alt": [
+                              "H6",
+                              "H7",
+                              "H8",
+                              "I6",
+                              "I8",
+                              "J6",
+                              "J7",
+                              "J8"
+                    ]
+          },
+          {
+                    "name": "Bremen",
+                    "coord": "F4",
+                    "alt": [
+                              "E3",
+                              "E4",
+                              "E5",
+                              "F3",
+                              "F5",
+                              "G3",
+                              "G4",
+                              "G5"
+                    ]
+          },
+          {
+                    "name": "Dresden",
+                    "coord": "K8",
+                    "alt": [
+                              "J7",
+                              "J8",
+                              "J9",
+                              "K7",
+                              "K9",
+                              "L7",
+                              "L8",
+                              "L9"
+                    ]
+          },
+          {
+                    "name": "Hannover",
+                    "coord": "G6",
+                    "alt": [
+                              "F5",
+                              "F6",
+                              "F7",
+                              "G5",
+                              "G7",
+                              "H5",
+                              "H6",
+                              "H7"
+                    ]
+          },
+          {
+                    "name": "Nürnberg",
+                    "coord": "H10",
+                    "alt": [
+                              "G9",
+                              "G10",
+                              "G11",
+                              "H9",
+                              "H11",
+                              "I9",
+                              "I10",
+                              "I11"
+                    ]
+          },
+          {
+                    "name": "Duisburg",
+                    "coord": "D7",
+                    "alt": [
+                              "C6",
+                              "C7",
+                              "C8",
+                              "D6",
+                              "D8",
+                              "E6",
+                              "E7",
+                              "E8"
+                    ]
+          },
+          {
+                    "name": "Bochum",
+                    "coord": "D7",
+                    "alt": [
+                              "C6",
+                              "C7",
+                              "C8",
+                              "D6",
+                              "D8",
+                              "E6",
+                              "E7",
+                              "E8"
+                    ]
+          },
+          {
+                    "name": "Wuppertal",
+                    "coord": "D7",
+                    "alt": [
+                              "C6",
+                              "C7",
+                              "C8",
+                              "D6",
+                              "D8",
+                              "E6",
+                              "E7",
+                              "E8"
+                    ]
+          },
+          {
+                    "name": "Bielefeld",
+                    "coord": "E6",
+                    "alt": [
+                              "D5",
+                              "D6",
+                              "D7",
+                              "E5",
+                              "E7",
+                              "F5",
+                              "F6",
+                              "F7"
+                    ]
+          },
+          {
+                    "name": "Bonn",
+                    "coord": "D8",
+                    "alt": [
+                              "C7",
+                              "C8",
+                              "C9",
+                              "D7",
+                              "D9",
+                              "E7",
+                              "E8",
+                              "E9"
+                    ]
+          },
+          {
+                    "name": "Münster",
+                    "coord": "E6",
+                    "alt": [
+                              "D5",
+                              "D6",
+                              "D7",
+                              "E5",
+                              "E7",
+                              "F5",
+                              "F6",
+                              "F7"
+                    ]
+          },
+          {
+                    "name": "Karlsruhe",
+                    "coord": "E11",
+                    "alt": [
+                              "D10",
+                              "D11",
+                              "D12",
+                              "E10",
+                              "E12",
+                              "F10",
+                              "F11",
+                              "F12"
+                    ]
+          },
+          {
+                    "name": "Mannheim",
+                    "coord": "E10",
+                    "alt": [
+                              "D9",
+                              "D10",
+                              "D11",
+                              "E9",
+                              "E11",
+                              "F9",
+                              "F10",
+                              "F11"
+                    ]
+          },
+          {
+                    "name": "Augsburg",
+                    "coord": "H12",
+                    "alt": [
+                              "G11",
+                              "G12",
+                              "G13",
+                              "H11",
+                              "H13",
+                              "I11",
+                              "I12",
+                              "I13"
+                    ]
+          },
+          {
+                    "name": "Wiesbaden",
+                    "coord": "E9",
+                    "alt": [
+                              "D8",
+                              "D9",
+                              "D10",
+                              "E8",
+                              "E10",
+                              "F8",
+                              "F9",
+                              "F10"
+                    ]
+          },
+          {
+                    "name": "Mönchengladbach",
+                    "coord": "C8",
+                    "alt": [
+                              "B7",
+                              "B8",
+                              "B9",
+                              "C7",
+                              "C9",
+                              "D7",
+                              "D8",
+                              "D9"
+                    ]
+          },
+          {
+                    "name": "Gelsenkirchen",
+                    "coord": "D7",
+                    "alt": [
+                              "C6",
+                              "C7",
+                              "C8",
+                              "D6",
+                              "D8",
+                              "E6",
+                              "E7",
+                              "E8"
+                    ]
+          },
+          {
+                    "name": "Aachen",
+                    "coord": "C8",
+                    "alt": [
+                              "B7",
+                              "B8",
+                              "B9",
+                              "C7",
+                              "C9",
+                              "D7",
+                              "D8",
+                              "D9"
+                    ]
+          },
+          {
+                    "name": "Braunschweig",
+                    "coord": "H6",
+                    "alt": [
+                              "G5",
+                              "G6",
+                              "G7",
+                              "H5",
+                              "H7",
+                              "I5",
+                              "I6",
+                              "I7"
+                    ]
+          },
+          {
+                    "name": "Chemnitz",
+                    "coord": "J8",
+                    "alt": [
+                              "I7",
+                              "I8",
+                              "I9",
+                              "J7",
+                              "J9",
+                              "K7",
+                              "K8",
+                              "K9"
+                    ]
+          },
+          {
+                    "name": "Kiel",
+                    "coord": "G2",
+                    "alt": [
+                              "F1",
+                              "F2",
+                              "F3",
+                              "G1",
+                              "G3",
+                              "H1",
+                              "H2",
+                              "H3"
+                    ]
+          },
+          {
+                    "name": "Halle (Saale)",
+                    "coord": "I7",
+                    "alt": [
+                              "H6",
+                              "H7",
+                              "H8",
+                              "I6",
+                              "I8",
+                              "J6",
+                              "J7",
+                              "J8"
+                    ]
+          },
+          {
+                    "name": "Magdeburg",
+                    "coord": "I6",
+                    "alt": [
+                              "H5",
+                              "H6",
+                              "H7",
+                              "I5",
+                              "I7",
+                              "J5",
+                              "J6",
+                              "J7"
+                    ]
+          },
+          {
+                    "name": "Freiburg",
+                    "coord": "E13",
+                    "alt": [
+                              "D12",
+                              "D13",
+                              "D14",
+                              "E12",
+                              "E14",
+                              "F12",
+                              "F13",
+                              "F14"
+                    ]
+          },
+          {
+                    "name": "Krefeld",
+                    "coord": "C7",
+                    "alt": [
+                              "B6",
+                              "B7",
+                              "B8",
+                              "C6",
+                              "C8",
+                              "D6",
+                              "D7",
+                              "D8"
+                    ]
+          },
+          {
+                    "name": "Mainz",
+                    "coord": "E10",
+                    "alt": [
+                              "D9",
+                              "D10",
+                              "D11",
+                              "E9",
+                              "E11",
+                              "F9",
+                              "F10",
+                              "F11"
+                    ]
+          },
+          {
+                    "name": "Lübeck",
+                    "coord": "H3",
+                    "alt": [
+                              "G2",
+                              "G3",
+                              "G4",
+                              "H2",
+                              "H4",
+                              "I2",
+                              "I3",
+                              "I4"
+                    ]
+          },
+          {
+                    "name": "Erfurt",
+                    "coord": "H8",
+                    "alt": [
+                              "G7",
+                              "G8",
+                              "G9",
+                              "H7",
+                              "H9",
+                              "I7",
+                              "I8",
+                              "I9"
+                    ]
+          },
+          {
+                    "name": "Oberhausen",
+                    "coord": "D7",
+                    "alt": [
+                              "C6",
+                              "C7",
+                              "C8",
+                              "D6",
+                              "D8",
+                              "E6",
+                              "E7",
+                              "E8"
+                    ]
+          },
+          {
+                    "name": "Rostock",
+                    "coord": "I3",
+                    "alt": [
+                              "H2",
+                              "H3",
+                              "H4",
+                              "I2",
+                              "I4",
+                              "J2",
+                              "J3",
+                              "J4"
+                    ]
+          },
+          {
+                    "name": "Kassel",
+                    "coord": "F7",
+                    "alt": [
+                              "E6",
+                              "E7",
+                              "E8",
+                              "F6",
+                              "F8",
+                              "G6",
+                              "G7",
+                              "G8"
+                    ]
+          },
+          {
+                    "name": "Hagen",
+                    "coord": "D7",
+                    "alt": [
+                              "C6",
+                              "C7",
+                              "C8",
+                              "D6",
+                              "D8",
+                              "E6",
+                              "E7",
+                              "E8"
+                    ]
+          },
+          {
+                    "name": "Potsdam",
+                    "coord": "J6",
+                    "alt": [
+                              "I5",
+                              "I6",
+                              "I7",
+                              "J5",
+                              "J7",
+                              "K5",
+                              "K6",
+                              "K7"
+                    ]
+          },
+          {
+                    "name": "Saarbrücken",
+                    "coord": "D11",
+                    "alt": [
+                              "C10",
+                              "C11",
+                              "C12",
+                              "D10",
+                              "D12",
+                              "E10",
+                              "E11",
+                              "E12"
+                    ]
+          },
+          {
+                    "name": "Hamm",
+                    "coord": "E7",
+                    "alt": [
+                              "D6",
+                              "D7",
+                              "D8",
+                              "E6",
+                              "E8",
+                              "F6",
+                              "F7",
+                              "F8"
+                    ]
+          },
+          {
+                    "name": "Ludwigshafen",
+                    "coord": "E10",
+                    "alt": [
+                              "D9",
+                              "D10",
+                              "D11",
+                              "E9",
+                              "E11",
+                              "F9",
+                              "F10",
+                              "F11"
+                    ]
+          },
+          {
+                    "name": "Oldenburg",
+                    "coord": "E4",
+                    "alt": [
+                              "D3",
+                              "D4",
+                              "D5",
+                              "E3",
+                              "E5",
+                              "F3",
+                              "F4",
+                              "F5"
+                    ]
+          },
+          {
+                    "name": "Osnabrück",
+                    "coord": "E6",
+                    "alt": [
+                              "D5",
+                              "D6",
+                              "D7",
+                              "E5",
+                              "E7",
+                              "F5",
+                              "F6",
+                              "F7"
+                    ]
+          },
+          {
+                    "name": "Leverkusen",
+                    "coord": "D8",
+                    "alt": [
+                              "C7",
+                              "C8",
+                              "C9",
+                              "D7",
+                              "D9",
+                              "E7",
+                              "E8",
+                              "E9"
+                    ]
+          },
+          {
+                    "name": "Heidelberg",
+                    "coord": "F11",
+                    "alt": [
+                              "E10",
+                              "E11",
+                              "E12",
+                              "F10",
+                              "F12",
+                              "G10",
+                              "G11",
+                              "G12"
+                    ]
+          },
+          {
+                    "name": "Darmstadt",
+                    "coord": "F10",
+                    "alt": [
+                              "E9",
+                              "E10",
+                              "E11",
+                              "F9",
+                              "F11",
+                              "G9",
+                              "G10",
+                              "G11"
+                    ]
+          },
+          {
+                    "name": "Solingen",
+                    "coord": "D8",
+                    "alt": [
+                              "C7",
+                              "C8",
+                              "C9",
+                              "D7",
+                              "D9",
+                              "E7",
+                              "E8",
+                              "E9"
+                    ]
+          },
+          {
+                    "name": "Regensburg",
+                    "coord": "I11",
+                    "alt": [
+                              "H10",
+                              "H11",
+                              "H12",
+                              "I10",
+                              "I12",
+                              "J10",
+                              "J11",
+                              "J12"
+                    ]
+          },
+          {
+                    "name": "Ingolstadt",
+                    "coord": "H12",
+                    "alt": [
+                              "G11",
+                              "G12",
+                              "G13",
+                              "H11",
+                              "H13",
+                              "I11",
+                              "I12",
+                              "I13"
+                    ]
+          },
+          {
+                    "name": "Würzburg",
+                    "coord": "G10",
+                    "alt": [
+                              "F9",
+                              "F10",
+                              "F11",
+                              "G9",
+                              "G11",
+                              "H9",
+                              "H10",
+                              "H11"
+                    ]
+          },
+          {
+                    "name": "Ulm",
+                    "coord": "G12",
+                    "alt": [
+                              "F11",
+                              "F12",
+                              "F13",
+                              "G11",
+                              "G13",
+                              "H11",
+                              "H12",
+                              "H13"
+                    ]
+          },
+          {
+                    "name": "Pforzheim",
+                    "coord": "F11",
+                    "alt": [
+                              "E10",
+                              "E11",
+                              "E12",
+                              "F10",
+                              "F12",
+                              "G10",
+                              "G11",
+                              "G12"
+                    ]
+          },
+          {
+                    "name": "Wolfsburg",
+                    "coord": "H6",
+                    "alt": [
+                              "G5",
+                              "G6",
+                              "G7",
+                              "H5",
+                              "H7",
+                              "I5",
+                              "I6",
+                              "I7"
+                    ]
+          },
+          {
+                    "name": "Göttingen",
+                    "coord": "G7",
+                    "alt": [
+                              "F6",
+                              "F7",
+                              "F8",
+                              "G6",
+                              "G8",
+                              "H6",
+                              "H7",
+                              "H8"
+                    ]
+          },
+          {
+                    "name": "Reutlingen",
+                    "coord": "F12",
+                    "alt": [
+                              "E11",
+                              "E12",
+                              "E13",
+                              "F11",
+                              "F13",
+                              "G11",
+                              "G12",
+                              "G13"
+                    ]
+          },
+          {
+                    "name": "Koblenz",
+                    "coord": "E9",
+                    "alt": [
+                              "D8",
+                              "D9",
+                              "D10",
+                              "E8",
+                              "E10",
+                              "F8",
+                              "F9",
+                              "F10"
+                    ]
+          },
+          {
+                    "name": "Bremerhaven",
+                    "coord": "F4",
+                    "alt": [
+                              "E3",
+                              "E4",
+                              "E5",
+                              "F3",
+                              "F5",
+                              "G3",
+                              "G4",
+                              "G5"
+                    ]
+          },
+          {
+                    "name": "Jena",
+                    "coord": "I8",
+                    "alt": [
+                              "H7",
+                              "H8",
+                              "H9",
+                              "I7",
+                              "I9",
+                              "J7",
+                              "J8",
+                              "J9"
+                    ]
+          },
+          {
+                    "name": "Erlangen",
+                    "coord": "H10",
+                    "alt": [
+                              "G9",
+                              "G10",
+                              "G11",
+                              "H9",
+                              "H11",
+                              "I9",
+                              "I10",
+                              "I11"
+                    ]
+          },
+          {
+                    "name": "Siegen",
+                    "coord": "E8",
+                    "alt": [
+                              "D7",
+                              "D8",
+                              "D9",
+                              "E7",
+                              "E9",
+                              "F7",
+                              "F8",
+                              "F9"
+                    ]
+          },
+          {
+                    "name": "Hildesheim",
+                    "coord": "G6",
+                    "alt": [
+                              "F5",
+                              "F6",
+                              "F7",
+                              "G5",
+                              "G7",
+                              "H5",
+                              "H6",
+                              "H7"
+                    ]
+          },
+          {
+                    "name": "Salzgitter",
+                    "coord": "G6",
+                    "alt": [
+                              "F5",
+                              "F6",
+                              "F7",
+                              "G5",
+                              "G7",
+                              "H5",
+                              "H6",
+                              "H7"
+                    ]
+          },
+          {
+                    "name": "Kaiserslautern",
+                    "coord": "E10",
+                    "alt": [
+                              "D9",
+                              "D10",
+                              "D11",
+                              "E9",
+                              "E11",
+                              "F9",
+                              "F10",
+                              "F11"
+                    ]
+          },
+          {
+                    "name": "Schwerin",
+                    "coord": "H4",
+                    "alt": [
+                              "G3",
+                              "G4",
+                              "G5",
+                              "H3",
+                              "H5",
+                              "I3",
+                              "I4",
+                              "I5"
+                    ]
+          },
+          {
+                    "name": "Gera",
+                    "coord": "I8",
+                    "alt": [
+                              "H7",
+                              "H8",
+                              "H9",
+                              "I7",
+                              "I9",
+                              "J7",
+                              "J8",
+                              "J9"
+                    ]
+          },
+          {
+                    "name": "Zwickau",
+                    "coord": "J8",
+                    "alt": [
+                              "I7",
+                              "I8",
+                              "I9",
+                              "J7",
+                              "J9",
+                              "K7",
+                              "K8",
+                              "K9"
+                    ]
+          },
+          {
+                    "name": "Tübingen",
+                    "coord": "F12",
+                    "alt": [
+                              "E11",
+                              "E12",
+                              "E13",
+                              "F11",
+                              "F13",
+                              "G11",
+                              "G12",
+                              "G13"
+                    ]
+          },
+          {
+                    "name": "Flensburg",
+                    "coord": "F2",
+                    "alt": [
+                              "E1",
+                              "E2",
+                              "E3",
+                              "F1",
+                              "F3",
+                              "G1",
+                              "G2",
+                              "G3"
+                    ]
+          },
+          {
+                    "name": "Konstanz",
+                    "coord": "F13",
+                    "alt": [
+                              "E12",
+                              "E13",
+                              "E14",
+                              "F12",
+                              "F14",
+                              "G12",
+                              "G13",
+                              "G14"
+                    ]
+          },
+          {
+                    "name": "Worms",
+                    "coord": "E10",
+                    "alt": [
+                              "D9",
+                              "D10",
+                              "D11",
+                              "E9",
+                              "E11",
+                              "F9",
+                              "F10",
+                              "F11"
+                    ]
+          },
+          {
+                    "name": "Bamberg",
+                    "coord": "H10",
+                    "alt": [
+                              "G9",
+                              "G10",
+                              "G11",
+                              "H9",
+                              "H11",
+                              "I9",
+                              "I10",
+                              "I11"
+                    ]
+          },
+          {
+                    "name": "Marburg",
+                    "coord": "F8",
+                    "alt": [
+                              "E7",
+                              "E8",
+                              "E9",
+                              "F7",
+                              "F9",
+                              "G7",
+                              "G8",
+                              "G9"
+                    ]
+          },
+          {
+                    "name": "Wilhelmshaven",
+                    "coord": "E4",
+                    "alt": [
+                              "D3",
+                              "D4",
+                              "D5",
+                              "E3",
+                              "E5",
+                              "F3",
+                              "F4",
+                              "F5"
+                    ]
+          },
+          {
+                    "name": "Landshut",
+                    "coord": "I12",
+                    "alt": [
+                              "H11",
+                              "H12",
+                              "H13",
+                              "I11",
+                              "I13",
+                              "J11",
+                              "J12",
+                              "J13"
+                    ]
+          },
+          {
+                    "name": "Bayreuth",
+                    "coord": "I10",
+                    "alt": [
+                              "H9",
+                              "H10",
+                              "H11",
+                              "I9",
+                              "I11",
+                              "J9",
+                              "J10",
+                              "J11"
+                    ]
+          },
+          {
+                    "name": "Fulda",
+                    "coord": "G9",
+                    "alt": [
+                              "F8",
+                              "F9",
+                              "F10",
+                              "G8",
+                              "G10",
+                              "H8",
+                              "H9",
+                              "H10"
+                    ]
+          },
+          {
+                    "name": "Kempten",
+                    "coord": "G13",
+                    "alt": [
+                              "F12",
+                              "F13",
+                              "F14",
+                              "G12",
+                              "G14",
+                              "H12",
+                              "H13",
+                              "H14"
+                    ]
+          },
+          {
+                    "name": "Cottbus",
+                    "coord": "K7",
+                    "alt": [
+                              "J6",
+                              "J7",
+                              "J8",
+                              "K6",
+                              "K8",
+                              "L6",
+                              "L7",
+                              "L8"
+                    ]
+          },
+          {
+                    "name": "Trier",
+                    "coord": "D10",
+                    "alt": [
+                              "C9",
+                              "C10",
+                              "C11",
+                              "D9",
+                              "D11",
+                              "E9",
+                              "E10",
+                              "E11"
+                    ]
+          },
+          {
+                    "name": "Passau",
+                    "coord": "K12",
+                    "alt": [
+                              "J11",
+                              "J12",
+                              "J13",
+                              "K11",
+                              "K13",
+                              "L11",
+                              "L12",
+                              "L13"
+                    ]
+          },
+          {
+                    "name": "Stralsund",
+                    "coord": "J2",
+                    "alt": [
+                              "I1",
+                              "I2",
+                              "I3",
+                              "J1",
+                              "J3",
+                              "K1",
+                              "K2",
+                              "K3"
+                    ]
+          },
+          {
+                    "name": "Görlitz",
+                    "coord": "L8",
+                    "alt": [
+                              "K7",
+                              "K8",
+                              "K9",
+                              "L7",
+                              "L9",
+                              "M7",
+                              "M8",
+                              "M9"
+                    ]
+          },
+          {
+                    "name": "Rosenheim",
+                    "coord": "I13",
+                    "alt": [
+                              "H12",
+                              "H13",
+                              "H14",
+                              "I12",
+                              "I14",
+                              "J12",
+                              "J13",
+                              "J14"
+                    ]
+          },
+          {
+                    "name": "Friedrichshafen",
+                    "coord": "F13",
+                    "alt": [
+                              "E12",
+                              "E13",
+                              "E14",
+                              "F12",
+                              "F14",
+                              "G12",
+                              "G13",
+                              "G14"
+                    ]
+          },
+          {
+                    "name": "Berchtesgaden",
+                    "coord": "J13",
+                    "alt": [
+                              "I12",
+                              "I13",
+                              "I14",
+                              "J12",
+                              "J14",
+                              "K12",
+                              "K13",
+                              "K14"
+                    ]
+          }
+];
+
+        // Stream ID & Auth
+        const streamId = BingoStore.getActiveStreamId();
+        let db = null;
+        let currentGameState = null;
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        // Setup OBS Link Display
+        const fullObsUrl = `${window.location.origin}/public/mapgame.html?stream=${encodeURIComponent(streamId)}`;
+        document.getElementById('obs-link-text').textContent = fullObsUrl;
+
+        document.getElementById('btn-copy-url').addEventListener('click', () => {
+            navigator.clipboard.writeText(fullObsUrl);
+            showToast("OBS URL in die Zwischenablage kopiert!");
+        });
+
+        // Auth guard matching panel.html & flaggame-admin.html
+        BingoStore.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = "/protected/panel.html";
+                return;
+            }
+            try {
+                await BingoStore.requireOwner(streamId, user.uid);
+                await BingoStore.ensureInitialized(streamId);
+                initializeDbSync();
+            } catch (err) {
+                console.error("Auth guard error:", err);
+                alert(err.message || "Zugriff verweigert.");
+                window.location.href = "/protected/panel.html";
+            }
+        });
+
+        function initializeDbSync() {
+            db = firebase.database();
+            const gameRef = db.ref(`streams/${streamId}/data/mapgame`);
+
+            gameRef.on('value', (snap) => {
+                const state = snap.val();
+                if (!state) {
+                    // Initialize defaults
+                    const defaultCity = GERMAN_CITIES[Math.floor(Math.random() * GERMAN_CITIES.length)];
+                    gameRef.set({
+                        cityName: defaultCity.name,
+                        targetCoord: defaultCity.coord,
+                        currentRound: 1,
+                        totalRoundsMax: 10,
+                        roundTimeSec: 45,
+                        nextTimeoutTime: Date.now() + 45000,
+                        gameStatus: 'guessing',
+                        paused: false,
+                        pauseTimeRemaining: 45,
+                        scores: {},
+                        lastGuesses: []
+                    });
+                    return;
+                }
+
+                currentGameState = state;
+
+                // Update UI
+                document.getElementById('active-city-title').textContent = (state.cityName || "BERLIN").toUpperCase();
+                document.getElementById('active-coord-badge').textContent = `Feld: ${state.targetCoord || "J5"}`;
+                document.getElementById('round-indicator').textContent = `Runde ${state.currentRound || 1} von ${state.totalRoundsMax || 10}`;
+
+                if (document.getElementById('cfg-twitch-channel').value === '') {
+                    document.getElementById('cfg-twitch-channel').value = state.twitchChannel || '';
+                }
+                document.getElementById('cfg-round-time').value = state.roundTimeSec || 45;
+                document.getElementById('cfg-total-rounds').value = state.totalRoundsMax || 10;
+
+                const pauseBtn = document.getElementById('btn-toggle-pause');
+                const badge = document.getElementById('game-status-badge');
+                if (state.paused) {
+                    pauseBtn.innerHTML = '▶️ Spiel Fortsetzen';
+                    badge.textContent = 'PAUSIERT';
+                    badge.style.background = 'rgba(239, 68, 68, 0.2)';
+                    badge.style.color = '#ef4444';
+                    badge.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+                } else {
+                    pauseBtn.innerHTML = '⏸️ Spiel Pausieren';
+                    badge.textContent = 'AKTIV';
+                    badge.style.background = 'rgba(16, 185, 129, 0.2)';
+                    badge.style.color = '#10b981';
+                    badge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                }
+
+                // Render Scores
+                renderScores(state.scores || {});
+
+                // Render Guesses
+                renderGuesses(state.lastGuesses || []);
+            });
+        }
+
+        function renderScores(scores) {
+            const body = document.getElementById('scores-body');
+            body.innerHTML = '';
+
+            const entries = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+            if (entries.length === 0) {
+                body.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Noch keine Punkte vorhanden</td></tr>`;
+                return;
+            }
+
+            entries.forEach(([user, pts], idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="score-rank">${idx + 1}</td>
+                    <td class="score-user">${user}</td>
+                    <td class="score-pts">${pts} Pkt</td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+
+        function renderGuesses(guesses) {
+            const container = document.getElementById('guesses-container');
+            container.innerHTML = '';
+
+            if (!guesses || guesses.length === 0) {
+                container.innerHTML = `<div style="color: var(--text-muted); font-size: 13px; font-style: italic;">Noch keine Tipps eingegangen...</div>`;
+                return;
+            }
+
+            guesses.slice(-5).reverse().forEach(g => {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.justifyContent = 'space-between';
+                row.style.padding = '8px 12px';
+                row.style.background = 'rgba(255,255,255,0.03)';
+                row.style.borderRadius = '6px';
+                row.style.fontSize = '13px';
+                row.innerHTML = `
+                    <span style="font-weight: 600; color: var(--accent);">${g.user}</span>
+                    <span style="font-family: monospace; font-weight: 800; color: #fff;">${g.guess}</span>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        // Action Handlers
+        document.getElementById('btn-next-round').addEventListener('click', async () => {
+            if (!streamId) return;
+            const randCity = GERMAN_CITIES[Math.floor(Math.random() * GERMAN_CITIES.length)];
+            const round = ((currentGameState?.currentRound || 1) % (currentGameState?.totalRoundsMax || 10)) + 1;
+            const time = currentGameState?.roundTimeSec || 45;
+            
+            await db.ref(`streams/${streamId}/data/mapgame`).update({
+                cityName: randCity.name,
+                targetCoord: randCity.coord,
+                currentRound: round,
+                gameStatus: 'guessing',
+                paused: false,
+                nextTimeoutTime: Date.now() + (time * 1000),
+                lastGuesses: []
+            });
+            showToast("Nächste Stadt gestartet!");
+        });
+
+        document.getElementById('btn-toggle-pause').addEventListener('click', async () => {
+            if (!streamId) return;
+            const isPaused = !!currentGameState?.paused;
+            const time = currentGameState?.roundTimeSec || 45;
+            if (isPaused) {
+                // Resume
+                const remaining = currentGameState?.pauseTimeRemaining || time;
+                await db.ref(`streams/${streamId}/data/mapgame`).update({
+                    paused: false,
+                    nextTimeoutTime: Date.now() + (remaining * 1000)
+                });
+                showToast("Spiel fortgesetzt");
+            } else {
+                // Pause
+                const remaining = Math.max(1, Math.ceil(((currentGameState?.nextTimeoutTime || (Date.now() + time * 1000)) - Date.now()) / 1000));
+                await db.ref(`streams/${streamId}/data/mapgame`).update({
+                    paused: true,
+                    pauseTimeRemaining: remaining
+                });
+                showToast("Spiel pausiert");
+            }
+        });
+
+        document.getElementById('btn-save-settings').addEventListener('click', async () => {
+            if (!streamId) return;
+            const channel = document.getElementById('cfg-twitch-channel').value.trim();
+            const time = parseInt(document.getElementById('cfg-round-time').value) || 45;
+            const rounds = parseInt(document.getElementById('cfg-total-rounds').value) || 10;
+
+            await db.ref(`streams/${streamId}/data/mapgame`).update({
+                twitchChannel: channel,
+                roundTimeSec: time,
+                totalRoundsMax: rounds
+            });
+            showToast("Einstellungen gespeichert!");
+        });
+
+        document.getElementById('btn-reset-scores').addEventListener('click', async () => {
+            if (!streamId) return;
+            if (confirm("Möchtest du die Rangliste wirklich zurücksetzen?")) {
+                await db.ref(`streams/${streamId}/data/mapgame/scores`).set({});
+                showToast("Rangliste zurückgesetzt!");
+            }
+        });
+    </script>
+</body>
+</html>

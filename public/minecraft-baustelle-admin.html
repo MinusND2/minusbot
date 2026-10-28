@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sozialstunden Timer - Admin Steuerung</title>
+
+  <!-- Google Fonts: Minecraft & Clean UI -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Optional Firebase SDKs for Cross-Device Sync -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="app-config.js"></script>
+
+  <style>
+    :root {
+      --neon-yellow: #facc15;
+      --neon-green: #bef264;
+      --warn-orange: #fb923c;
+      --bg-dark: #0f1115;
+      --card-bg: #16181f;
+      --card-border: #272a34;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(250, 204, 21, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(190, 242, 100, 0.04) 0%, transparent 40%);
+    }
+
+    .container {
+      width: 100%;
+      max-width: 960px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* Header */
+    header {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .vest-icon-box {
+      width: 44px;
+      height: 44px;
+      background: rgba(250, 204, 21, 0.12);
+      border: 1px solid rgba(250, 204, 21, 0.3);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 0 14px rgba(250, 204, 21, 0.2);
+    }
+
+    .header-left h1 {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 14px;
+      color: var(--neon-yellow);
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+      text-shadow: 0 0 10px rgba(250, 204, 21, 0.4);
+    }
+
+    .header-left p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .header-btns {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Buttons */
+    .btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary { background: #16a34a; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3); }
+    .btn-warning { background: #ea580c; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3); }
+    .btn-danger { background: #dc2626; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); }
+    .btn-yellow { background: #eab308; color: #000; font-weight: 800; box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3); }
+    .btn-outline { background: #272a34; border: 1px solid #3b3f4f; color: #f1f5f9; }
+
+    /* Dashboard Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 820px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+    }
+
+    .card-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      color: var(--neon-yellow);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #272a34;
+    }
+
+    /* Live Monitor */
+    .monitor-box {
+      background: #090a0d;
+      border: 1px solid #272a34;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .monitor-status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 11px;
+    }
+
+    .status-tag {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .status-tag.working { background: rgba(34, 197, 94, 0.2); color: #86efac; }
+    .status-tag.break { background: rgba(249, 115, 22, 0.25); color: #fdba74; animation: pulseBlink 1.2s infinite; }
+    .status-tag.paused { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
+    .status-tag.finished { background: rgba(56, 189, 248, 0.25); color: #7dd3fc; }
+
+    @keyframes pulseBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+    .monitor-time {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 38px;
+      color: #fff;
+      letter-spacing: 2px;
+      margin: 6px 0;
+      text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+    }
+
+    .monitor-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Mittagspause Highlight Card */
+    .break-card {
+      border: 1px solid rgba(251, 146, 60, 0.4);
+      background: linear-gradient(145deg, #1d1612 0%, #16181f 100%);
+      box-shadow: 0 0 20px rgba(251, 146, 60, 0.15);
+    }
+
+    .break-status-bar {
+      background: #251a14;
+      border: 1px solid #582b17;
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .break-digits-huge {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 24px;
+      color: #fde047;
+      text-shadow: 0 0 12px rgba(253, 224, 71, 0.4);
+    }
+
+    /* Inputs & Form Elements */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .input-field {
+      background: #0b0d11;
+      border: 1px solid #272a34;
+      padding: 10px 12px;
+      color: #fff;
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      border-radius: 6px;
+      outline: none;
+    }
+
+    .input-field:focus {
+      border-color: var(--neon-yellow);
+      box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.2);
+    }
+
+    .input-pixel {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    /* Mode Radio Segment */
+    .mode-switch {
+      display: flex;
+      background: #0b0d11;
+      border: 1px solid #272a34;
+      border-radius: 8px;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      cursor: pointer;
+      border-radius: 6px;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .mode-btn.active {
+      background: #272a34;
+      color: #fff;
+    }
+
+    .mode-btn.active.countdown { background: #0284c7; color: #fff; }
+    .mode-btn.active.countup { background: #16a34a; color: #fff; }
+
+    /* Chips */
+    .chip {
+      background: #20232c;
+      border: 1px solid #333745;
+      color: #e2e8f0;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.1s;
+    }
+
+    .chip:hover {
+      background: #2e3342;
+      color: var(--neon-yellow);
+    }
+
+    .chip-active {
+      background: rgba(250, 204, 21, 0.2);
+      border-color: var(--neon-yellow);
+      color: var(--neon-yellow);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #16a34a;
+      border: 1px solid #4ade80;
+      color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      padding: 12px 18px;
+      border-radius: 8px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 1000;
+    }
+
+    .toast.show { transform: translateY(0); opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Header -->
+    <header>
+      <div class="header-left">
+        <div class="vest-icon-box">🦺</div>
+        <div>
+          <h1>SOZIALSTUNDEN - ADMIN</h1>
+          <p>Steuerungszentrale für den Sozialstunden- & Pausen-Timer</p>
+        </div>
+      </div>
+
+      <div class="header-btns">
+        <button class="btn btn-outline" id="openOverlayBtn">
+          <span>🖥️</span> OVERLAY ÖFFNEN
+        </button>
+        <button class="btn btn-yellow" id="copyObsBtn">
+          <span>📋</span> OBS-LINK KOPIEREN
+        </button>
+      </div>
+    </header>
+
+    <div class="grid">
+
+      <!-- LINKE SPALTE: MONITOR, STEUERUNG & MITTAGSPAUSE -->
+      <div style="display: flex; flex-direction: column; gap: 18px;">
+        
+        <!-- Live Monitor -->
+        <div class="card">
+          <div class="card-title">
+            <span>📡</span> LIVE MONITOR
+          </div>
+
+          <div class="monitor-box">
+            <div class="monitor-status">
+              <span id="monitorStatusPill" class="status-tag working">IM DIENST</span>
+              <span id="monitorModeText" style="font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--neon-yellow);">
+                COUNTDOWN
+              </span>
+            </div>
+
+            <div class="monitor-time" id="monitorTimeDigits">01:00:00</div>
+            <div class="monitor-sub" id="monitorSubText">🗜️ Müll sammeln & Park reinigen</div>
+          </div>
+
+          <!-- Start / Pause / Reset -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+            <button class="btn btn-primary" id="startBtn" style="padding: 12px 8px; justify-content: center;">
+              <span>▶️</span> START
+            </button>
+            <button class="btn btn-warning" id="pauseBtn" style="padding: 12px 8px; justify-content: center;">
+              <span>⏸️</span> PAUSE
+            </button>
+            <button class="btn btn-danger" id="resetBtn" style="padding: 12px 8px; justify-content: center;">
+              <span>🔄</span> RESET
+            </button>
+          </div>
+        </div>
+
+        <!-- MITTAGSPAUSE (DAS GEWÜNSCHTE FEATURE) -->
+        <div class="card break-card">
+          <div class="card-title" style="color: #fde047;">
+            <span>🥪</span> MITTAGSPAUSE
+          </div>
+
+          <p style="font-size: 12px; color: #fed7aa; line-height: 1.4;">
+            Pausiert die Sozialstunden und schaltet das Overlay auf den Pausen-Countdown um.
+          </p>
+
+          <div class="break-status-bar">
+            <div>
+              <div style="font-size: 10px; color: #fdba74; font-weight: 700; text-transform: uppercase;">
+                Status:
+              </div>
+              <div id="breakStatusLabel" style="font-size: 13px; font-weight: 800; color: #fff; margin-top: 2px;">
+                Bereit
+              </div>
+            </div>
+            <div class="break-digits-huge" id="breakDigitsDisplay">30:00</div>
+          </div>
+
+          <!-- Pausen-Aktionsbuttons -->
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-yellow" id="startBreakBtn" style="flex: 1; padding: 12px; justify-content: center;">
+              <span>🥪</span> MITTAGSPAUSE STARTEN
+            </button>
+            <button class="btn btn-primary" id="endBreakBtn" style="flex: 1; padding: 12px; display: none; justify-content: center;">
+              <span>🗜️</span> WEITERARBEITEN
+            </button>
+          </div>
+
+          <!-- Dauer der Pause -->
+          <div class="form-group" style="margin-top: 4px;">
+            <label>Pausendauer einstellen</label>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="chip break-chip" data-min="15">15 Min</button>
+              <button class="chip break-chip chip-active" data-min="30">30 Min</button>
+              <button class="chip break-chip" data-min="45">45 Min</button>
+              <button class="chip break-chip" data-min="60">60 Min</button>
+              <button class="chip" id="breakAdd5Btn">+5 Min</button>
+              <button class="chip" id="breakSub5Btn">-5 Min</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timer-Richtung (Modus) -->
+        <div class="card">
+          <div class="card-title">
+            <span>⏱️</span> ZÄHL-RICHTUNG
+          </div>
+
+          <div class="mode-switch">
+            <button class="mode-btn active countdown" id="modeCountdownBtn">
+              ⏳ RUNTERZÄHLEN (RESTZEIT)
+            </button>
+            <button class="mode-btn countup" id="modeCountupBtn">
+              📈 HOCHZÄHLEN (STEMPELUHR)
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RECHTE SPALTE: ZEITEN, MÜLLZANGEN-SOUNDS & TEXTE -->
+      <div style="display: flex; flex-direction: column; gap: 18px;">
+
+        <!-- Zeiteinstellung Haupttimer -->
+        <div class="card">
+          <div class="card-title">
+            <span>⚙️</span> SOZIALSTUNDEN DAUER
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="form-group">
+              <label>Stunden</label>
+              <input type="number" id="inputHours" class="input-field input-pixel" value="1" min="0" max="99">
+            </div>
+            <div class="form-group">
+              <label>Minuten</label>
+              <input type="number" id="inputMinutes" class="input-field input-pixel" value="0" min="0" max="59">
+            </div>
+          </div>
+
+          <button class="btn btn-primary" id="applyWorkTimeBtn" style="padding: 12px; justify-content: center;">
+            <span>💾</span> ZEIT ANWENDEN
+          </button>
+
+          <!-- Schnell-Tasten -->
+          <div class="form-group" style="margin-top: 4px;">
+            <label>Schnell-Anpassung (+/-)</label>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="chip time-adj" data-delta="300">+5m</button>
+              <button class="chip time-adj" data-delta="600">+10m</button>
+              <button class="chip time-adj" data-delta="1800">+30m</button>
+              <button class="chip time-adj" data-delta="3600">+1h</button>
+              <button class="chip time-adj" data-delta="-300">-5m</button>
+              <button class="chip time-adj" data-delta="-600">-10m</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Müllzangen-Sound & Audio-Test -->
+        <div class="card">
+          <div class="card-title">
+            <span>🗜️</span> MÜLLZANGEN-SOUNDEFFEKT
+          </div>
+
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+            Authentischer Müllzangen-Klack / Schnapp-Sound bei Aktionen und Zählen.
+          </p>
+
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="chip sound-btn" data-sound="grabber" style="background: rgba(250, 204, 21, 0.2); border-color: var(--neon-yellow); color: var(--neon-yellow);">
+              🗜️ MÜLLZANGE (SCHNAPP!)
+            </button>
+            <button class="chip sound-btn" data-sound="eat">
+              🥪 ESSEN (PAUSE)
+            </button>
+            <button class="chip sound-btn" data-sound="levelup">
+              🎉 FERTIG FANFARE
+            </button>
+          </div>
+
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-top: 6px; cursor: pointer;">
+            <input type="checkbox" id="soundToggleCheck" checked>
+            <span>Müllzangen-Sound aktiv</span>
+          </label>
+        </div>
+
+        <!-- Texte & Aufgabe -->
+        <div class="card">
+          <div class="card-title">
+            <span>🦺</span> BESCHRIFTUNG & AUFGABE
+          </div>
+
+          <div class="form-group">
+            <label>Titel</label>
+            <input type="text" id="titleInput" class="input-field" value="SOZIALSTUNDEN">
+          </div>
+
+          <div class="form-group">
+            <label>Aktuelle Aufgabe</label>
+            <input type="text" id="taskInput" class="input-field" value="Müll sammeln & Park reinigen">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="form-group">
+              <label>Skalierung (OBS)</label>
+              <select id="scaleSelect" class="input-field">
+                <option value="0.8">80% (Kompakt)</option>
+                <option value="1.0" selected>100% (Standard)</option>
+                <option value="1.2">120% (Groß)</option>
+                <option value="1.5">150% (Sehr groß)</option>
+              </select>
+            </div>
+            <div class="form-group" style="justify-content: flex-end;">
+              <button class="btn btn-outline" id="saveTextsBtn" style="padding: 12px; justify-content: center;">
+                <span>💾</span> SPEICHERN
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <div class="toast" id="toast">GESPEICHERT!</div>
+
+  <script>
+    // --- State & Config ---
+    const STORAGE_KEY = 'minecraft_baustelle_timer_state';
+    const CHANNEL_NAME = 'minecraft_baustelle_channel';
+    const params = new URLSearchParams(window.location.search);
+    const streamId = params.get('stream') || (window.BINGO_CONFIG && window.BINGO_CONFIG.streamId) || 'default-stream';
+
+    const bc = ('BroadcastChannel' in window) ? new BroadcastChannel(CHANNEL_NAME) : null;
+
+    const defaultState = {
+      mode: 'countdown',
+      status: 'working',
+      isRunning: false,
+      targetSeconds: 3600,
+      remainingSeconds: 3600,
+      elapsedSeconds: 0,
+      breakDurationSeconds: 1800,
+      breakRemainingSeconds: 1800,
+      isBreakActive: false,
+      title: 'SOZIALSTUNDEN',
+      task: 'Müll sammeln & Park reinigen',
+      workerName: 'MinusND',
+      scale: 1.0,
+      soundEnabled: true,
+      volume: 0.7,
+      lastUpdated: Date.now(),
+      version: 1
+    };
+
+    let state = { ...defaultState };
+
+    // --- Web Audio: Müllzangen-Sound ---
+    let audioCtx = null;
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) audioCtx = new AudioContext();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    function playGrabberSound() {
+      if (!state.soundEnabled) return;
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      const vol = (state.volume || 0.7) * 0.45;
+      const now = ctx.currentTime;
+
+      try {
+        // Phase 1: Griff-Klick
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'triangle';
+        osc1.frequency.setValueAtTime(1600, now);
+        osc1.frequency.exponentialRampToValueAtTime(350, now + 0.03);
+        gain1.gain.setValueAtTime(vol * 0.9, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.035);
+
+        // Phase 2: Zangenschnapp
+        const t2 = now + 0.03;
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(580, t2);
+        osc2.frequency.exponentialRampToValueAtTime(140, t2 + 0.06);
+        gain2.gain.setValueAtTime(vol * 0.75, t2);
+        gain2.gain.exponentialRampToValueAtTime(0.001, t2 + 0.06);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(t2);
+        osc2.stop(t2 + 0.07);
+      } catch (e) {}
+    }
+
+    function playSound(type) {
+      if (type === 'grabber') return playGrabberSound();
+      const ctx = getAudioContext();
+      if (!ctx || !state.soundEnabled) return;
+      const vol = (state.volume || 0.7) * 0.4;
+      const now = ctx.currentTime;
+
+      if (type === 'eat') {
+        [0, 0.1, 0.2].forEach(d => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(260 + Math.random() * 50, now + d);
+          gain.gain.setValueAtTime(vol * 0.5, now + d);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + d + 0.06);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + d);
+          osc.stop(now + d + 0.07);
+        });
+      } else if (type === 'levelup') {
+        [0, 0.08, 0.16, 0.24].forEach((d, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime([523.25, 659.25, 783.99, 1046.50][i], now + d);
+          gain.gain.setValueAtTime(vol * 0.7, now + d);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + d + 0.25);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + d);
+          osc.stop(now + d + 0.3);
+        });
+      }
+    }
+
+    // --- DOM Elements ---
+    const monitorStatusPill = document.getElementById('monitorStatusPill');
+    const monitorModeText = document.getElementById('monitorModeText');
+    const monitorTimeDigits = document.getElementById('monitorTimeDigits');
+    const monitorSubText = document.getElementById('monitorSubText');
+
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    const startBreakBtn = document.getElementById('startBreakBtn');
+    const endBreakBtn = document.getElementById('endBreakBtn');
+    const breakStatusLabel = document.getElementById('breakStatusLabel');
+    const breakDigitsDisplay = document.getElementById('breakDigitsDisplay');
+    const breakAdd5Btn = document.getElementById('breakAdd5Btn');
+    const breakSub5Btn = document.getElementById('breakSub5Btn');
+
+    const modeCountdownBtn = document.getElementById('modeCountdownBtn');
+    const modeCountupBtn = document.getElementById('modeCountupBtn');
+
+    const inputHours = document.getElementById('inputHours');
+    const inputMinutes = document.getElementById('inputMinutes');
+    const applyWorkTimeBtn = document.getElementById('applyWorkTimeBtn');
+
+    const titleInput = document.getElementById('titleInput');
+    const taskInput = document.getElementById('taskInput');
+    const scaleSelect = document.getElementById('scaleSelect');
+    const saveTextsBtn = document.getElementById('saveTextsBtn');
+    const soundToggleCheck = document.getElementById('soundToggleCheck');
+
+    const openOverlayBtn = document.getElementById('openOverlayBtn');
+    const copyObsBtn = document.getElementById('copyObsBtn');
+    const toast = document.getElementById('toast');
+
+    const overlayUrl = window.location.href.replace('minecraft-baustelle-admin.html', 'minecraft-baustelle-overlay.html');
+
+    function formatTime(totalSeconds) {
+      const s = Math.max(0, Math.floor(totalSeconds));
+      const hours = Math.floor(s / 3600);
+      const minutes = Math.floor((s % 3600) / 60);
+      const seconds = s % 60;
+      const pad = (n) => String(n).padStart(2, '0');
+
+      if (hours > 0) return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+      return `${pad(minutes)}:${pad(seconds)}`;
+    }
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    function saveState() {
+      state.lastUpdated = Date.now();
+      state.version = (state.version || 0) + 1;
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+
+      if (bc) bc.postMessage({ type: 'STATE_UPDATE', state });
+
+      if (window.firebase && firebase.apps && firebase.apps.length) {
+        try { firebase.database().ref(`streams/${streamId}/minecraft_timer`).set(state); } catch (e) {}
+      }
+
+      renderAdminUI();
+    }
+
+    function renderAdminUI() {
+      if (state.isBreakActive) {
+        monitorTimeDigits.textContent = formatTime(state.breakRemainingSeconds);
+        monitorStatusPill.className = 'status-tag break';
+        monitorStatusPill.textContent = 'MITTAGSPAUSE';
+        monitorModeText.textContent = 'PAUSE LÄUFT';
+        breakStatusLabel.textContent = state.isRunning ? 'Läuft gerade 🥪' : 'Pausiert';
+        breakDigitsDisplay.textContent = formatTime(state.breakRemainingSeconds);
+        startBreakBtn.style.display = 'none';
+        endBreakBtn.style.display = 'inline-flex';
+      } else {
+        if (state.mode === 'countup') {
+          monitorTimeDigits.textContent = formatTime(state.elapsedSeconds);
+          monitorModeText.textContent = 'HOCHZÄHLEN';
+        } else {
+          monitorTimeDigits.textContent = formatTime(state.remainingSeconds);
+          monitorModeText.textContent = 'RUNTERZÄHLEN';
+        }
+
+        monitorStatusPill.className = 'status-tag ' + (state.isRunning ? 'working' : (state.status === 'finished' ? 'finished' : 'paused'));
+        monitorStatusPill.textContent = state.isRunning ? 'IM DIENST' : (state.status === 'finished' ? 'ABGELEISTET' : 'PAUSIERT');
+
+        breakStatusLabel.textContent = 'Bereit';
+        breakDigitsDisplay.textContent = formatTime(state.breakDurationSeconds);
+        startBreakBtn.style.display = 'inline-flex';
+        endBreakBtn.style.display = 'none';
+      }
+
+      monitorSubText.textContent = `🗜️ ${state.task || 'Müll sammeln & Park reinigen'}`;
+
+      if (state.mode === 'countup') {
+        modeCountdownBtn.classList.remove('active');
+        modeCountupBtn.classList.add('active');
+      } else {
+        modeCountdownBtn.classList.add('active');
+        modeCountupBtn.classList.remove('active');
+      }
+    }
+
+    // Tick
+    let lastTick = Date.now();
+    setInterval(() => {
+      const now = Date.now();
+      const delta = (now - lastTick) / 1000;
+      lastTick = now;
+
+      if (state.isBreakActive && state.isRunning) {
+        state.breakRemainingSeconds -= delta;
+        if (state.breakRemainingSeconds <= 0) {
+          state.breakRemainingSeconds = 0;
+          state.isBreakActive = false;
+          saveState();
+        }
+        renderAdminUI();
+      } else if (state.isRunning) {
+        if (state.mode === 'countdown') {
+          state.remainingSeconds -= delta;
+          if (state.remainingSeconds <= 0) {
+            state.remainingSeconds = 0;
+            state.isRunning = false;
+            state.status = 'finished';
+            saveState();
+          }
+        } else {
+          state.elapsedSeconds += delta;
+        }
+        renderAdminUI();
+      }
+    }, 250);
+
+    // Event Handlers
+    startBtn.addEventListener('click', () => {
+      state.isRunning = true;
+      if (state.status === 'finished') {
+        state.status = 'working';
+        state.remainingSeconds = state.targetSeconds;
+      }
+      playGrabberSound();
+      saveState();
+      showToast('TIMER GESTARTET ▶️');
+    });
+
+    pauseBtn.addEventListener('click', () => {
+      state.isRunning = false;
+      playGrabberSound();
+      saveState();
+      showToast('TIMER PAUSIERT ⏸️');
+    });
+
+    resetBtn.addEventListener('click', () => {
+      if (confirm('Sozialstunden-Timer zurücksetzen?')) {
+        state.isRunning = false;
+        state.status = 'working';
+        state.isBreakActive = false;
+        state.remainingSeconds = state.targetSeconds;
+        state.elapsedSeconds = 0;
+        state.breakRemainingSeconds = state.breakDurationSeconds;
+        playGrabberSound();
+        saveState();
+        showToast('ZURÜCKGESETZT 🔄');
+      }
+    });
+
+    // Mittagspause
+    startBreakBtn.addEventListener('click', () => {
+      state.isBreakActive = true;
+      state.status = 'break';
+      state.breakRemainingSeconds = state.breakDurationSeconds;
+      state.isRunning = true;
+      playSound('eat');
+      saveState();
+      showToast('MITTAGSPAUSE GESTARTET! 🥪');
+    });
+
+    endBreakBtn.addEventListener('click', () => {
+      state.isBreakActive = false;
+      state.status = 'working';
+      state.isRunning = true;
+      playGrabberSound();
+      saveState();
+      showToast('PAUSE BEENDET - WEITER AN DIE ARBEIT! 🗜️');
+    });
+
+    document.querySelectorAll('.break-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.break-chip').forEach(c => c.classList.remove('chip-active'));
+        btn.classList.add('chip-active');
+        const mins = parseInt(btn.dataset.min, 10);
+        state.breakDurationSeconds = mins * 60;
+        if (!state.isBreakActive) state.breakRemainingSeconds = state.breakDurationSeconds;
+        playGrabberSound();
+        saveState();
+        showToast(`PAUSE: ${mins} MINUTEN`);
+      });
+    });
+
+    breakAdd5Btn.addEventListener('click', () => {
+      state.breakRemainingSeconds += 300;
+      state.breakDurationSeconds += 300;
+      playGrabberSound();
+      saveState();
+      showToast('+5 MIN PAUSE');
+    });
+
+    breakSub5Btn.addEventListener('click', () => {
+      state.breakRemainingSeconds = Math.max(60, state.breakRemainingSeconds - 300);
+      state.breakDurationSeconds = Math.max(60, state.breakDurationSeconds - 300);
+      playGrabberSound();
+      saveState();
+      showToast('-5 MIN PAUSE');
+    });
+
+    // Modus
+    modeCountdownBtn.addEventListener('click', () => {
+      state.mode = 'countdown';
+      playGrabberSound();
+      saveState();
+      showToast('MODUS: RUNTERZÄHLEN');
+    });
+
+    modeCountupBtn.addEventListener('click', () => {
+      state.mode = 'countup';
+      playGrabberSound();
+      saveState();
+      showToast('MODUS: HOCHZÄHLEN');
+    });
+
+    // Zeiten
+    applyWorkTimeBtn.addEventListener('click', () => {
+      const h = Math.max(0, parseInt(inputHours.value, 10) || 0);
+      const m = Math.max(0, parseInt(inputMinutes.value, 10) || 0);
+      const totalSec = Math.max(10, (h * 3600) + (m * 60));
+      state.targetSeconds = totalSec;
+      if (state.mode === 'countdown') state.remainingSeconds = totalSec;
+      playGrabberSound();
+      saveState();
+      showToast(`ZEIT: ${h}h ${m}m GESETZT`);
+    });
+
+    document.querySelectorAll('.time-adj').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const delta = parseInt(btn.dataset.delta, 10);
+        if (state.mode === 'countdown') {
+          state.remainingSeconds = Math.max(0, state.remainingSeconds + delta);
+        } else {
+          state.elapsedSeconds = Math.max(0, state.elapsedSeconds + delta);
+        }
+        playGrabberSound();
+        saveState();
+        showToast(`ZEIT UM ${delta > 0 ? '+' : ''}${Math.round(delta / 60)}m ANGEPASST`);
+      });
+    });
+
+    // Sound Tester
+    document.querySelectorAll('.sound-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const snd = btn.dataset.sound;
+        playSound(snd);
+        if (bc) bc.postMessage({ type: 'PLAY_SOUND', sound: snd });
+      });
+    });
+
+    soundToggleCheck.addEventListener('change', () => {
+      state.soundEnabled = soundToggleCheck.checked;
+      saveState();
+    });
+
+    // Texte
+    saveTextsBtn.addEventListener('click', () => {
+      state.title = titleInput.value.trim() || 'SOZIALSTUNDEN';
+      state.task = taskInput.value.trim() || 'Müll sammeln & Park reinigen';
+      state.scale = parseFloat(scaleSelect.value) || 1.0;
+      playGrabberSound();
+      saveState();
+      showToast('INFOS GESPEICHERT! 💾');
+    });
+
+    // Links
+    openOverlayBtn.addEventListener('click', () => window.open(overlayUrl, '_blank'));
+    copyObsBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(overlayUrl).then(() => showToast('OBS-LINK KOPIERT! 📋'));
+    });
+
+    // Load initial
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        state = { ...defaultState, ...JSON.parse(raw) };
+      }
+    } catch (e) {}
+
+    titleInput.value = state.title || 'SOZIALSTUNDEN';
+    taskInput.value = state.task || 'Müll sammeln & Park reinigen';
+    inputHours.value = Math.floor((state.targetSeconds || 3600) / 3600);
+    inputMinutes.value = Math.floor(((state.targetSeconds || 3600) % 3600) / 60);
+    scaleSelect.value = String(state.scale || 1.0);
+    soundToggleCheck.checked = state.soundEnabled !== false;
+
+    renderAdminUI();
+  </script>
+</body>
+</html>

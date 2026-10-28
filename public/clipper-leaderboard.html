@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <title>Clipper Team Leaderboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+    <script src="app-config.js"></script>
+
+    <style>
+        :root {
+            --bg: #090a0f;
+            --bg-card: rgba(18, 20, 29, 0.75);
+            --bg-card-hover: rgba(26, 30, 44, 0.85);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(245, 197, 24, 0.3);
+            --text: #f4f4f5;
+            --text-muted: #94a3b8;
+            --accent: #f5c518;
+            --accent-cyan: #06b6d4;
+            --accent-purple: #8b5cf6;
+            --accent-green: #10b981;
+            --accent-grad: linear-gradient(135deg, #f5c518 0%, #ff9900 100%);
+            --purple-grad: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+            --radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(245, 197, 24, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.05) 0%, transparent 40%);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1000px;
+            width: 100%;
+        }
+
+        /* Header Card */
+        .header-card {
+            background: linear-gradient(135deg, rgba(20, 22, 34, 0.9) 0%, rgba(13, 14, 22, 0.9) 100%);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+            backdrop-filter: blur(16px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header-card::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: var(--accent-grad);
+        }
+
+        .header-info h1 {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-info p {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            border-color: rgba(255,255,255,0.2);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: var(--accent-grad);
+            color: #000;
+            border: none;
+            box-shadow: 0 4px 15px rgba(245, 197, 24, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(245, 197, 24, 0.4);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            backdrop-filter: blur(12px);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 26px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .stat-sub {
+            font-size: 12px;
+            color: var(--accent-green);
+            margin-top: 4px;
+        }
+
+        /* Leaderboard Controls */
+        .controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .time-tabs {
+            display: flex;
+            background: var(--bg-card);
+            padding: 4px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 8px 16px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        /* Leaderboard Table */
+        .leaderboard-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .clipper-row {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            backdrop-filter: blur(12px);
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .clipper-row:hover {
+            background: var(--bg-card-hover);
+            border-color: rgba(255,255,255,0.15);
+            transform: translateX(4px);
+        }
+
+        .clipper-row.top-1 {
+            border-color: rgba(245, 197, 24, 0.4);
+            box-shadow: 0 4px 20px rgba(245, 197, 24, 0.15);
+            background: linear-gradient(135deg, rgba(245, 197, 24, 0.08) 0%, rgba(18, 20, 29, 0.8) 100%);
+        }
+
+        .clipper-row.top-2 {
+            border-color: rgba(148, 163, 184, 0.4);
+            background: linear-gradient(135deg, rgba(148, 163, 184, 0.06) 0%, rgba(18, 20, 29, 0.8) 100%);
+        }
+
+        .clipper-row.top-3 {
+            border-color: rgba(217, 119, 6, 0.4);
+            background: linear-gradient(135deg, rgba(217, 119, 6, 0.06) 0%, rgba(18, 20, 29, 0.8) 100%);
+        }
+
+        .rank-badge {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 18px;
+            background: rgba(255,255,255,0.05);
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .top-1 .rank-badge { background: var(--accent-grad); color: #000; font-size: 20px; }
+        .top-2 .rank-badge { background: #cbd5e1; color: #0f172a; font-size: 20px; }
+        .top-3 .rank-badge { background: #d97706; color: #fff; font-size: 20px; }
+
+        .clipper-info {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .clipper-name {
+            font-weight: 700;
+            font-size: 17px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .clipper-handle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .clipper-handle a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+        }
+
+        .clipper-handle a:hover {
+            text-decoration: underline;
+        }
+
+        .progress-box {
+            width: 180px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .progress-bar-bg {
+            height: 8px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--accent-cyan);
+            border-radius: 4px;
+            transition: width 0.4s ease;
+        }
+
+        .top-1 .progress-bar-fill { background: var(--accent); }
+
+        .progress-text {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+        }
+
+        .views-box {
+            text-align: right;
+            min-width: 110px;
+        }
+
+        .views-val {
+            font-size: 20px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .views-lbl {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .badge-tag {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .tag-quota { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+        /* Submission Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: #10121a;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 480px;
+            padding: 32px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+            position: relative;
+        }
+
+        .modal-card h2 {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        /* Empty State */
+        .empty-box {
+            text-align: center;
+            padding: 48px;
+            color: var(--text-muted);
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+
+        /* OBS Compact Overlay Mode */
+        body.obs-mode {
+            background: transparent !important;
+            padding: 12px;
+        }
+        body.obs-mode .header-card,
+        body.obs-mode .stats-grid,
+        body.obs-mode .controls-bar {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header-card">
+            <div class="header-info">
+                <h1>🎬 <span id="streamerTitle">Clipper Team Leaderboard</span></h1>
+                <p>Offizielles Ranking & Performance Tracker für Content Clipper</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-primary" id="btnOpenSubmit">
+                    <span>+</span> Clip Einreichen
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Gesamt Aufrufe (Views)</div>
+                <div class="stat-value" id="statTotalViews">0</div>
+                <div class="stat-sub" id="statViewsTrend">🔥 Alle Clips kumuliert</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Gepostete Clips</div>
+                <div class="stat-value" id="statTotalClips">0</div>
+                <div class="stat-sub">Videos im Team</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Team Roster</div>
+                <div class="stat-value" id="statActiveClippers">0</div>
+                <div class="stat-sub">Aktive Clipper</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Top Clipper</div>
+                <div class="stat-value" id="statTopClipper" style="font-size: 20px; font-weight: 700;">-</div>
+                <div class="stat-sub" style="color: var(--accent);">🥇 Rang 1 Leader</div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-bar">
+            <div class="time-tabs">
+                <button class="tab-btn active" data-time="week">Diese Woche</button>
+                <button class="tab-btn" data-time="month">Dieser Monat</button>
+                <button class="tab-btn" data-time="all">Gesamt</button>
+            </div>
+            <div style="font-size: 13px; color: var(--text-muted);">
+                Live Update 🟢
+            </div>
+        </div>
+
+        <!-- Leaderboard List -->
+        <div class="leaderboard-list" id="leaderboardContainer">
+            <div class="empty-box">Lade Clipper Leaderboard...</div>
+        </div>
+    </div>
+
+    <!-- Submit Clip Modal -->
+    <div class="modal-overlay" id="submitModal">
+        <div class="modal-card">
+            <h2>Clip Einreichen</h2>
+            <form id="submitClipForm">
+                <div class="form-group">
+                    <label>Dein Clipper Name / Account</label>
+                    <select class="form-control" id="submitClipperSelect" required>
+                        <option value="">Wähle deinen Namen aus...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>TikTok / Video Link URL</label>
+                    <input type="url" class="form-control" id="submitVideoUrl" placeholder="https://www.tiktok.com/@username/video/..." required>
+                </div>
+                <div class="form-group">
+                    <label>Titel / Beschreibung (optional)</label>
+                    <input type="text" class="form-control" id="submitVideoTitle" placeholder="z. B. Insane Fortnite Clutch">
+                </div>
+                <div class="form-group">
+                    <label>Aktuelle Views (optional)</label>
+                    <input type="number" class="form-control" id="submitVideoViews" placeholder="z. B. 15000" min="0">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn" id="btnCloseSubmit">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Absenden</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        if (!firebase.apps.length && window.BINGO_CONFIG) {
+            firebase.initializeApp(window.BINGO_CONFIG.firebaseConfig);
+        }
+
+        // Query Params
+        const urlParams = new URLSearchParams(window.location.search);
+        let streamId = urlParams.get('stream') || urlParams.get('streamId');
+        const obsMode = urlParams.get('obs') === 'true';
+
+        if (obsMode) {
+            document.body.classList.add('obs-mode');
+        }
+
+        // State Variables
+        let currentFilter = 'week';
+        let clippersData = {};
+        let videosData = {};
+        let settingsData = {};
+        let isInitialized = false;
+
+        // DOM Elements
+        const streamerTitle = document.getElementById('streamerTitle');
+        const statTotalViews = document.getElementById('statTotalViews');
+        const statTotalClips = document.getElementById('statTotalClips');
+        const statActiveClippers = document.getElementById('statActiveClippers');
+        const statTopClipper = document.getElementById('statTopClipper');
+        const leaderboardContainer = document.getElementById('leaderboardContainer');
+        const submitModal = document.getElementById('submitModal');
+        const btnOpenSubmit = document.getElementById('btnOpenSubmit');
+        const btnCloseSubmit = document.getElementById('btnCloseSubmit');
+        const submitClipperSelect = document.getElementById('submitClipperSelect');
+        const submitClipForm = document.getElementById('submitClipForm');
+
+        // Modal Controls
+        btnOpenSubmit.addEventListener('click', () => submitModal.classList.add('active'));
+        btnCloseSubmit.addEventListener('click', () => submitModal.classList.remove('active'));
+
+        // Tab Filters
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.time;
+                renderLeaderboard();
+            });
+        });
+
+        function initLeaderboard(sid) {
+            if (!sid || isInitialized) return;
+            streamId = sid;
+            isInitialized = true;
+
+            const db = firebase.database();
+            
+            // Listen to settings
+            db.ref(`streams/${streamId}/data/clipper_team/settings`).on('value', snap => {
+                settingsData = snap.val() || {};
+                if (settingsData.streamerName) {
+                    streamerTitle.textContent = `${settingsData.streamerName} Clipper Team`;
+                }
+            });
+
+            // Listen to Clippers Roster
+            db.ref(`streams/${streamId}/data/clipper_team/clippers`).on('value', snap => {
+                clippersData = snap.val() || {};
+                updateClipperSelect();
+                renderLeaderboard();
+            });
+
+            // Listen to Videos
+            db.ref(`streams/${streamId}/data/clipper_team/videos`).on('value', snap => {
+                videosData = snap.val() || {};
+                renderLeaderboard();
+            });
+        }
+
+        if (streamId) {
+            initLeaderboard(streamId);
+        } else {
+            leaderboardContainer.innerHTML = '<div class="empty-box">⚠️ Kein Stream-ID Parameter angegeben (?stream=STREAM_ID)</div>';
+        }
+
+        function updateClipperSelect() {
+            submitClipperSelect.innerHTML = '<option value="">Wähle deinen Namen aus...</option>';
+            Object.entries(clippersData).forEach(([id, clipper]) => {
+                if (clipper.status !== 'inactive') {
+                    const opt = document.createElement('option');
+                    opt.value = id;
+                    opt.textContent = `${clipper.name} (${clipper.tiktokHandle || 'No TikTok'})`;
+                    submitClipperSelect.appendChild(opt);
+                }
+            });
+        }
+
+        function renderLeaderboard() {
+            if (!clippersData || Object.keys(clippersData).length === 0) {
+                leaderboardContainer.innerHTML = '<div class="empty-box">Noch keine Clipper im Team registriert.</div>';
+                statTotalViews.textContent = '0';
+                statTotalClips.textContent = '0';
+                statActiveClippers.textContent = '0';
+                statTopClipper.textContent = '-';
+                return;
+            }
+
+            const now = new Date();
+            const startOfWeek = new Date(now);
+            startOfWeek.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1));
+            startOfWeek.setHours(0, 0, 0, 0);
+
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+            // Compute aggregates per clipper
+            const stats = {};
+            let totalViewsSum = 0;
+            let totalClipsSum = 0;
+
+            Object.entries(clippersData).forEach(([id, clipper]) => {
+                stats[id] = {
+                    id,
+                    name: clipper.name,
+                    handle: clipper.tiktokHandle || '',
+                    tiktokUrl: clipper.tiktokUrl || '',
+                    profileImage: clipper.profileImage || '',
+                    target: clipper.quotaTarget || 7,
+                    inTeam: clipper.inTeam !== false,
+                    views: 0,
+                    clips: 0
+                };
+            });
+
+            Object.values(videosData).forEach(video => {
+                if (!video.clipperId || !stats[video.clipperId]) return;
+
+                const videoDate = new Date(video.timestamp || video.uploadDate);
+                let include = false;
+
+                if (currentFilter === 'week') {
+                    include = videoDate >= startOfWeek;
+                } else if (currentFilter === 'month') {
+                    include = videoDate >= startOfMonth;
+                } else {
+                    include = true;
+                }
+
+                if (include) {
+                    const vCount = parseInt(video.views) || 0;
+                    stats[video.clipperId].views += vCount;
+                    stats[video.clipperId].clips += 1;
+                    totalViewsSum += vCount;
+                    totalClipsSum += 1;
+                }
+            });
+
+            // Sort by views desc, then clips desc
+            const sorted = Object.values(stats).sort((a, b) => {
+                if (b.views !== a.views) return b.views - a.views;
+                return b.clips - a.clips;
+            });
+
+            // Update Header Stats
+            statTotalViews.textContent = totalViewsSum.toLocaleString('de-DE');
+            statTotalClips.textContent = totalClipsSum.toLocaleString('de-DE');
+            statActiveClippers.textContent = Object.keys(clippersData).length;
+            statTopClipper.textContent = sorted.length > 0 && sorted[0].views > 0 ? sorted[0].name : '-';
+
+            // Build HTML
+            leaderboardContainer.innerHTML = '';
+            sorted.forEach((item, index) => {
+                const rank = index + 1;
+                const topClass = rank === 1 ? 'top-1' : rank === 2 ? 'top-2' : rank === 3 ? 'top-3' : '';
+                const trophyIcon = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+                
+                const pct = Math.min(100, Math.round((item.clips / (item.target || 7)) * 100));
+                const targetMet = item.clips >= (item.target || 7);
+
+                const initial = (item.name || '?')[0].toUpperCase();
+                const avatarHtml = item.profileImage
+                    ? `<img src="${escapeHtml(item.profileImage)}" referrerpolicy="no-referrer" alt="" style="width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.08); flex-shrink: 0;" onerror="this.outerHTML='<div style=&quot;width: 42px; height: 42px; border-radius: 50%; background: var(--accent-grad); display: flex; align-items: center; justify-content: center; font-weight: 800; color: #000; flex-shrink: 0;&quot;>${initial}</div>'">`
+                    : `<div style="width: 42px; height: 42px; border-radius: 50%; background: var(--accent-grad); display: flex; align-items: center; justify-content: center; font-weight: 800; color: #000; flex-shrink: 0;">${initial}</div>`;
+
+                const row = document.createElement('div');
+                row.className = `clipper-row ${topClass}`;
+                row.innerHTML = `
+                    <div class="rank-badge">${trophyIcon}</div>
+                    ${avatarHtml}
+                    <div class="clipper-info">
+                        <div class="clipper-name" style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                            ${escapeHtml(item.name)}
+                            ${item.inTeam 
+                                ? '<span class="badge-tag" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 1px 5px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase;">Team</span>' 
+                                : '<span class="badge-tag" style="background: rgba(156, 163, 175, 0.15); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.3); padding: 1px 5px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase;">Test</span>'}
+                            ${targetMet ? '<span class="badge-tag tag-quota">🎯 Goal Met</span>' : ''}
+                        </div>
+                        <div class="clipper-handle">
+                            ${item.tiktokUrl ? `<a href="${escapeHtml(item.tiktokUrl)}" target="_blank">${escapeHtml(item.handle || 'TikTok')}</a>` : escapeHtml(item.handle || '@clipper')}
+                        </div>
+                    </div>
+                    <div class="progress-box">
+                        <div class="progress-text">
+                            <span>Quotas (${item.clips}/${item.target || 7} Clips)</span>
+                            <span>${pct}%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" style="width: ${pct}%"></div>
+                        </div>
+                    </div>
+                    <div class="views-box">
+                        <div class="views-val">${item.views.toLocaleString('de-DE')}</div>
+                        <div class="views-lbl">Views</div>
+                    </div>
+                `;
+                leaderboardContainer.appendChild(row);
+            });
+        }
+
+        // Submit Clip Link
+        submitClipForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const clipperId = submitClipperSelect.value;
+            const videoUrl = document.getElementById('submitVideoUrl').value.trim();
+            const title = document.getElementById('submitVideoTitle').value.trim();
+            const views = parseInt(document.getElementById('submitVideoViews').value) || 0;
+
+            if (!clipperId || !videoUrl) return;
+
+            let videoTimestamp = Date.now();
+            try {
+                const match = videoUrl.match(/video\/(\d+)/);
+                if (match) {
+                    videoTimestamp = Number(BigInt(match[1]) >> 32n) * 1000;
+                }
+            } catch(e) {}
+            const uploadDate = new Date(videoTimestamp).toISOString().split('T')[0];
+
+            const clipper = clippersData[clipperId];
+            const newRef = firebase.database().ref(`streams/${streamId}/data/clipper_team/videos`).push();
+            
+            newRef.set({
+                clipperId: clipperId,
+                clipperName: clipper.name,
+                videoUrl: videoUrl,
+                title: title || 'TikTok Clip',
+                views: views,
+                platform: 'tiktok',
+                timestamp: videoTimestamp,
+                uploadDate: uploadDate
+            }).then(() => {
+                alert('Clip erfolgreich eingereicht! Vielen Dank 🔥');
+                submitClipForm.reset();
+                submitModal.classList.remove('active');
+            }).catch(err => {
+                alert('Fehler beim Speichern: ' + err.message);
+            });
+        });
+
+        function escapeHtml(str) {
+            return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>

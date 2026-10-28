@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mod-Tracker Setup - Minus</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: #050505;
+        }
+
+        /* Animated grid background */
+        .bg-grid {
+            position: fixed;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(245, 197, 24, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(245, 197, 24, 0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+            z-index: 0;
+        }
+
+        /* Gold glow orbs */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: 0;
+            animation: float 8s ease-in-out infinite;
+            opacity: 0.6;
+        }
+        .orb-1 { width: 500px; height: 500px; background: rgba(245, 197, 24, 0.08); top: -150px; right: -100px; }
+        .orb-2 { width: 450px; height: 450px; background: rgba(167, 129, 4, 0.05); bottom: -100px; left: -80px; animation-delay: -4s; }
+        .orb-3 { width: 250px; height: 250px; background: rgba(245, 197, 24, 0.03); top: 50%; left: 50%; animation-delay: -2s; }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(30px, -20px) scale(1.1); }
+        }
+
+        /* Scan line */
+        .scanline {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #f5c518, transparent);
+            z-index: 1;
+            animation: scan 6s linear infinite;
+            opacity: 0.15;
+        }
+        @keyframes scan {
+            0% { top: -2px; }
+            100% { top: 100%; }
+        }
+
+        .setup-container {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            max-width: 480px;
+            padding: 40px;
+            background: #0c0c0e;
+            border: 1px solid rgba(245, 197, 24, 0.15);
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.02);
+            overflow: hidden;
+        }
+        .setup-container::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(95deg, #f5c518 0%, #a78104 100%);
+        }
+
+        /* Logo */
+        .logo-area {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .logo-area img {
+            width: 90px;
+            height: auto;
+            filter: drop-shadow(0 0 20px rgba(245, 197, 24, 0.2));
+            animation: logoPulse 3s ease-in-out infinite;
+        }
+        @keyframes logoPulse {
+            0%, 100% { filter: drop-shadow(0 0 15px rgba(245, 197, 24, 0.15)); }
+            50% { filter: drop-shadow(0 0 30px rgba(245, 197, 24, 0.35)); }
+        }
+
+        /* Title */
+        .setup-title {
+            font-size: 32px;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+        .setup-title span {
+            background: linear-gradient(135deg, #f5c518 0%, #a78104 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .setup-subtitle {
+            text-align: center;
+            color: #a1a1aa;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        /* Banners */
+        .success-banner, .error-banner {
+            display: none;
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            font-weight: 600;
+            font-size: 14px;
+            animation: slideDown 0.3s ease;
+        }
+        .success-banner {
+            background: rgba(245, 197, 24, 0.1);
+            border: 1px solid rgba(245, 197, 24, 0.2);
+            border-left: 3px solid #f5c518;
+            color: #fef08a;
+        }
+        .error-banner {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-left: 3px solid #ef4444;
+            color: #fca5a5;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Buttons */
+        .connect-btn {
+            position: relative;
+            width: 100%;
+            padding: 18px 22px;
+            font-size: 16px;
+            font-weight: 600;
+            font-family: inherit;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+        .connect-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .connect-btn:hover::before {
+            opacity: 1;
+        }
+        .connect-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-twitch {
+            background: #09090b;
+            color: #fff;
+            border: 1px solid rgba(245, 197, 24, 0.15);
+            margin-bottom: 0;
+        }
+        .btn-twitch::before { background: linear-gradient(90deg, rgba(245, 197, 24, 0.05), transparent); }
+        .btn-twitch:hover { border-color: #f5c518; box-shadow: 0 10px 25px rgba(245, 197, 24, 0.15); }
+        .btn-twitch .icon-circle {
+            width: 40px; height: 40px; border-radius: 10px;
+            background: linear-gradient(135deg, #a78104, #f5c518);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .btn-label { text-align: left; }
+        .btn-label .btn-title { font-weight: 600; font-size: 15px; }
+        .btn-label .btn-desc { font-size: 12px; color: #71717a; margin-top: 2px; }
+
+        .btn-arrow {
+            margin-left: auto;
+            color: #71717a;
+            font-size: 20px;
+            transition: all 0.3s;
+        }
+        .connect-btn:hover .btn-arrow { color: #f5c518; transform: translateX(4px); }
+
+        /* Divider */
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 28px 0;
+            color: #71717a;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(245, 197, 24, 0.15), transparent);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 32px;
+            color: #71717a;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-weight: 500;
+        }
+        .footer svg { width: 12px; height: 12px; }
+        .footer .green { color: #f5c518; }
+
+        /* Corner accents */
+        .corner { position: fixed; z-index: 1; }
+        .corner-tl { top: 20px; left: 20px; width: 40px; height: 40px; border-top: 2px solid rgba(245, 197, 24, 0.1); border-left: 2px solid rgba(245, 197, 24, 0.1); }
+        .corner-tr { top: 20px; right: 20px; width: 40px; height: 40px; border-top: 2px solid rgba(245, 197, 24, 0.1); border-right: 2px solid rgba(245, 197, 24, 0.1); }
+        .corner-bl { bottom: 20px; left: 20px; width: 40px; height: 40px; border-bottom: 2px solid rgba(245, 197, 24, 0.1); border-left: 2px solid rgba(245, 197, 24, 0.1); }
+        .corner-br { bottom: 20px; right: 20px; width: 40px; height: 40px; border-bottom: 2px solid rgba(245, 197, 24, 0.1); border-right: 2px solid rgba(245, 197, 24, 0.1); }
+    </style>
+</head>
+<body>
+
+    <div class="bg-grid"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="scanline"></div>
+    <div class="corner corner-tl"></div>
+    <div class="corner corner-tr"></div>
+    <div class="corner corner-bl"></div>
+    <div class="corner corner-br"></div>
+
+    <div class="setup-container">
+        <div class="logo-area">
+            <img src="logo.png?v=3" alt="Minus Logo">
+        </div>
+
+        <h1 class="setup-title"><span>Tracker Setup</span></h1>
+        <p id="setupInstructions" class="setup-subtitle">Verbinde deinen Twitch-Account, damit die Moderator-Statistiken für deinen Stream erfasst werden können.</p>
+
+        <div id="successBanner" class="success-banner"></div>
+        <div id="errorBanner" class="error-banner"></div>
+
+        <button id="btnTwitch" class="connect-btn btn-twitch">
+            <div class="icon-circle">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+            </div>
+            <div class="btn-label">
+                <div class="btn-title">Mit Twitch verbinden</div>
+                <div class="btn-desc">Mod-Statistiken & Aktivität tracken</div>
+            </div>
+            <span class="btn-arrow">→</span>
+        </button>
+
+        <div class="divider">Sicher</div>
+
+        <div class="footer">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+            OAuth 2.0 — <span class="green">wir sehen niemals dein Passwort</span>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const botId = urlParams.get('botId');
+        const success = urlParams.get('success');
+
+        const btnTwitch = document.getElementById('btnTwitch');
+        const successBanner = document.getElementById('successBanner');
+        const errorBanner = document.getElementById('errorBanner');
+        const setupInstructions = document.getElementById('setupInstructions');
+
+        if (!botId) {
+            errorBanner.textContent = "⚠ Keine Bot-ID im Link gefunden. Bitte fordere einen neuen Setup-Link an.";
+            errorBanner.style.display = "block";
+            btnTwitch.disabled = true;
+            btnTwitch.style.opacity = "0.3";
+            btnTwitch.style.cursor = "not-allowed";
+        }
+
+        if (success === 'twitch') {
+            successBanner.textContent = "✓ Twitch wurde erfolgreich verbunden!";
+            successBanner.style.display = "block";
+            setupInstructions.textContent = "Dein Mod-Tracker wurde erfolgreich verknüpft. Dieses Fenster schließt sich in wenigen Sekunden...";
+            btnTwitch.style.display = "none";
+            setTimeout(() => {
+                window.close();
+            }, 3000);
+        }
+
+        const baseUrl = "https://minusnd.de";
+
+        btnTwitch.addEventListener('click', () => {
+            if (!botId) return;
+            window.location.href = baseUrl + "/bot/auth/twitch?botId=" + botId;
+        });
+    </script>
+</body>
+</html>

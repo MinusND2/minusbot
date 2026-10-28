@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Scoreboard Admin - Subathon Timer</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- CSS Design Tokens and layout -->
+    <style>
+        :root {
+            --bg: #090e0c;
+            --surface: #111815;
+            --surface-hover: #16201b;
+            --border: rgba(255, 255, 255, 0.08);
+            --text: #e2f0e7;
+            --text-muted: #8b9e94;
+            --accent: #ff007a; /* Pink theme for Subathon */
+            --accent-cyan: #00e5ff;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border-radius: 12px;
+            --font-family: 'Outfit', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font-family);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Ambient glow spots */
+        .ambient-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(140px);
+            opacity: 0.15;
+            z-index: -1;
+            pointer-events: none;
+        }
+        .orb-pink {
+            width: 400px;
+            height: 400px;
+            background: var(--accent);
+            top: -100px;
+            right: -100px;
+        }
+        .orb-cyan {
+            width: 300px;
+            height: 300px;
+            background: var(--accent-cyan);
+            bottom: -50px;
+            left: -50px;
+        }
+
+        .app-wrap {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar navigation */
+        .sidebar {
+            width: 250px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            padding: 0 8px;
+            margin-bottom: 8px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            color: #fff;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: var(--border-radius);
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .nav-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.03);
+        }
+
+        .nav-btn.active {
+            color: #fff;
+            background: rgba(236, 0, 140, 0.08);
+            border-color: rgba(236, 0, 140, 0.2);
+            box-shadow: inset 0 0 12px rgba(236, 0, 140, 0.05);
+        }
+
+        .nav-icon {
+            opacity: 0.7;
+            flex-shrink: 0;
+        }
+        .nav-btn.active .nav-icon {
+            opacity: 1;
+            color: var(--accent);
+        }
+
+        /* Main Content Layout */
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 15px;
+            margin-bottom: 30px;
+        }
+
+        /* Responsive Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .card h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Input Controls group styling */
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+
+        .input-group label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: #fff;
+            font-family: var(--font-family);
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus, select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(236, 0, 140, 0.15);
+        }
+
+        .color-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .color-picker-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 12px;
+        }
+
+        .color-picker-wrap input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            background: none;
+        }
+
+        .color-picker-wrap input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+        .color-picker-wrap input[type="color"]::-webkit-color-swatch {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+        }
+
+        .color-picker-wrap span {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        /* Buttons styles */
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+        .btn-success:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+        .btn-danger:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Timer display */
+        .admin-timer-display {
+            font-size: 64px;
+            font-weight: 900;
+            text-align: center;
+            letter-spacing: -2px;
+            font-family: monospace;
+            color: var(--accent);
+            text-shadow: 0 0 20px rgba(256, 0, 122, 0.2);
+            margin: 10px 0 24px 0;
+            line-height: 1;
+        }
+
+        .timer-status-badge {
+            text-align: center;
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 1px;
+            margin-bottom: 24px;
+            color: var(--text-muted);
+        }
+
+        .control-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        /* Adjustment buttons grid */
+        .adjustment-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+
+        .adjustment-btn {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            color: #fff;
+            border-radius: 6px;
+            padding: 8px 4px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .adjustment-btn:hover {
+            border-color: var(--accent);
+            background: rgba(236, 0, 140, 0.05);
+        }
+
+        /* Set time layout */
+        .time-setter-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr) auto;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        /* OBS integration block */
+        .integration-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-top: 8px;
+            margin-bottom: 14px;
+            gap: 12px;
+        }
+        .share-url {
+            color: var(--accent-cyan);
+            font-size: 13px;
+            font-family: monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-decoration: none;
+            flex: 1;
+        }
+
+        #saveStatus { font-size: 13px; font-weight: 500; text-align: center; margin-top: 12px; min-height: 20px; }
+
+        @media (max-width: 1100px) {
+            .app-wrap { flex-direction: column; }
+            .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); padding: 20px; flex-direction: row; align-items: center; justify-content: space-between; }
+            .logo { margin-bottom: 0; }
+            .nav-menu { flex-direction: row; gap: 12px; margin-left: 20px; }
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="/public/app-config.js"></script>
+    <script src="/public/tmi.min.js"></script>
+    <script src="/public/realtime-store.js"></script>
+</head>
+<body class="admin-mode">
+    <div class="ambient-orb orb-pink"></div>
+    <div class="ambient-orb orb-cyan"></div>
+
+    <div class="app-wrap">
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="logo-text">MINUS<span style="color:var(--accent);">.</span></span>
+            </div>
+            <nav class="nav-menu">
+                <a id="bingoAdminLink" href="/protected/admin.html" class="nav-btn">
+                    <svg class="nav-icon" style="width:16px; height:16px; fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
+                    Bingo Board
+                </a>
+                <a id="scoreboardAdminLink" href="/protected/scoreboard-admin.html" class="nav-btn">
+                    <svg class="nav-icon" style="width:16px; height:16px; fill:currentColor;" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2zm0-4H7V7h10v2zm0 8H7v-2h10v2z"/></svg>
+                    Scoreboard
+                </a>
+                <a id="scoreboard2v2v2AdminLink" href="/protected/scoreboard-2v2v2-admin.html" class="nav-btn">
+                    <svg class="nav-icon" style="width:16px; height:16px; fill:currentColor;" viewBox="0 0 24 24"><path d="M21 6H3V4h18v2zm0 4H3v2h18v-2zm0 4H3v2h18v-2zm0 4H3v2h18v-2z"/></svg>
+                    2v2v2 Game
+                </a>
+                <a id="challengeAdminLink" href="/protected/challenge-admin.html" class="nav-btn">
+                    <svg class="nav-icon" style="width:16px; height:16px; fill:currentColor;" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+                    Win Challenge
+                </a>
+                <a href="#" class="nav-btn active">
+                    <svg class="nav-icon" style="width:16px; height:16px; fill:currentColor;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Subathon
+                </a>
+            </nav>
+            <div style="margin-top:auto;">
+                <a href="/protected/panel.html" class="nav-btn">← Zurück zum Hub</a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <h1>Subathon-Timer steuern</h1>
+            <p class="subtitle">Verwalte deinen Live-Subathon, starte/pausiere den Countdown und passe Zeit-Regeln an.</p>
+
+            <div class="dashboard-grid">
+                <!-- Left: Timer controls & settings -->
+                <div>
+                    <!-- Live timer display -->
+                    <div class="card">
+                        <h3>Live Subathon Timer</h3>
+                        <div class="admin-timer-display" id="adminTimerDisplay">00:00:00</div>
+                        <div class="timer-status-badge" id="timerStatusBadge">Geladen</div>
+
+                        <div class="control-row">
+                            <button id="btnPlayPause" class="btn-success">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                                Start / Pause
+                            </button>
+                            <button id="btnResetTimer" class="btn-danger">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                                Alles zurücksetzen
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quick adjustment & Starting time setting -->
+                    <div class="card">
+                        <h3>Zeit-Anpassungen</h3>
+                        
+                        <div class="input-group">
+                            <label>Schnell Zeit hinzufügen / abziehen</label>
+                            <div class="adjustment-grid">
+                                <button onclick="adjustTime(60)" class="adjustment-btn">+1 Min</button>
+                                <button onclick="adjustTime(300)" class="adjustment-btn">+5 Min</button>
+                                <button onclick="adjustTime(600)" class="adjustment-btn">+10 Min</button>
+                                <button onclick="adjustTime(3600)" class="adjustment-btn">+1 Std</button>
+                                <button onclick="adjustTime(-60)" class="adjustment-btn">-1 Min</button>
+                                <button onclick="adjustTime(-300)" class="adjustment-btn">-5 Min</button>
+                                <button onclick="adjustTime(-600)" class="adjustment-btn">-10 Min</button>
+                                <button onclick="adjustTime(-3600)" class="adjustment-btn">-1 Std</button>
+                            </div>
+                        </div>
+
+                        <div class="input-group" style="margin-top: 20px;">
+                            <label>Abonnements simulieren (Testen)</label>
+                            <div class="adjustment-grid" style="grid-template-columns: repeat(2, 1fr);">
+                                <button onclick="simulateEvent('sub', '1000')" class="adjustment-btn" style="border-color: var(--accent-cyan); color: var(--accent-cyan);">Simuliere Tier 1 Sub</button>
+                                <button onclick="simulateEvent('sub', '3000')" class="adjustment-btn" style="border-color: var(--accent-cyan); color: var(--accent-cyan);">Simuliere Tier 3 Sub</button>
+                                <button onclick="simulateEvent('gift', '1000')" class="adjustment-btn" style="border-color: var(--accent-cyan); color: var(--accent-cyan);">Simuliere Gift Sub</button>
+                                <button onclick="simulateEvent('gift', '3000')" class="adjustment-btn" style="border-color: var(--accent-cyan); color: var(--accent-cyan);">Simuliere Gift T3 Sub</button>
+                            </div>
+                        </div>
+
+                        <hr style="border: 0; border-top: 1px solid var(--border); margin: 20px 0;">
+
+                        <div class="input-group">
+                            <label>Subathon Startzeit setzen</label>
+                            <div class="time-setter-row">
+                                <div>
+                                    <span style="font-size: 11px; color: var(--text-muted);">Stunden</span>
+                                    <input id="numStartHours" type="number" min="0" value="1">
+                                </div>
+                                <div>
+                                    <span style="font-size: 11px; color: var(--text-muted);">Minuten</span>
+                                    <input id="numStartMinutes" type="number" min="0" max="59" value="0">
+                                </div>
+                                <div>
+                                    <span style="font-size: 11px; color: var(--text-muted);">Sekunden</span>
+                                    <input id="numStartSeconds" type="number" min="0" max="59" value="0">
+                                </div>
+                                <button id="btnSetTime" class="btn-outline" style="padding: 12px 14px;">Zeit setzen</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subathon Rules -->
+                    <div class="card">
+                        <h3>Subathon & Twitch Regeln</h3>
+                        
+                        <div class="input-group">
+                            <label for="txtTwitchChannel">Twitch Kanalname (für Chat-Reader)</label>
+                            <input id="txtTwitchChannel" type="text" placeholder="z.B. lacy">
+                        </div>
+
+                        <div class="color-row">
+                            <div class="input-group">
+                                <label for="numTimeT1">Tier 1 Sub (+ Sek)</label>
+                                <input id="numTimeT1" type="number" min="0" value="30">
+                            </div>
+                            <div class="input-group">
+                                <label for="numTimeT2">Tier 2 Sub (+ Sek)</label>
+                                <input id="numTimeT2" type="number" min="0" value="60">
+                            </div>
+                        </div>
+
+                        <div class="color-row">
+                            <div class="input-group">
+                                <label for="numTimeT3">Tier 3 Sub (+ Sek)</label>
+                                <input id="numTimeT3" type="number" min="0" value="120">
+                            </div>
+                            <div class="input-group">
+                                <label for="numTimeGift">Gifted Sub (+ Sek)</label>
+                                <input id="numTimeGift" type="number" min="0" value="30">
+                            </div>
+                        </div>
+
+                        <div class="color-row">
+                            <div class="input-group">
+                                <label for="numSubGoal">Sub-Goal (Ziel)</label>
+                                <input id="numSubGoal" type="number" min="1" value="50">
+                            </div>
+                            <div class="input-group">
+                                <label for="numTotalSubs">Erhaltene Subs (Zähler)</label>
+                                <input id="numTotalSubs" type="number" min="0" value="0">
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="numMaxTime">Max. Zeitlimit (in Stunden, 0 für unendlich)</label>
+                            <input id="numMaxTime" type="number" min="0" value="0" placeholder="z.B. 24">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Custom styling, links -->
+                <div>
+                    <!-- OBS Integration Links -->
+                    <div class="card">
+                        <h3>OBS Integration</h3>
+                        <div class="input-group">
+                            <label>OBS Overlay Link (Als Browserquelle einfügen)</label>
+                            <div class="integration-box">
+                                <a id="obsOverlayLink" href="#" target="_blank" class="share-url">Lade Link...</a>
+                                <button id="copyObsBtn" class="btn-primary" style="padding: 8px 12px; font-size: 12px;">Kopieren</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Theme selection and customization -->
+                    <div class="card">
+                        <h3>Design & Styles</h3>
+                        
+                        <div class="input-group">
+                            <label for="themeSelect">Design Theme</label>
+                            <select id="themeSelect">
+                                <option value="fantasy">Fantasy (Anime/Schmetterlinge) [Default]</option>
+                                <option value="standard">Standard (Glassmorphism)</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="overlayTitle">Overlay Überschrift</label>
+                            <input id="overlayTitle" type="text" placeholder="z.B. SUBATHON" value="SUBATHON">
+                        </div>
+
+                        <div class="input-group" style="display: flex; align-items: center; gap: 8px; margin-top: 15px; margin-bottom: 15px;">
+                            <input id="chkTimerOnly" type="checkbox" style="width: auto; margin: 0; transform: scale(1.2); cursor: pointer;">
+                            <label for="chkTimerOnly" style="margin: 0; cursor: pointer; font-size: 13px; font-weight: 600; color: #fff;">Nur Timer anzeigen (ohne Rahmen, Header & Ziel)</label>
+                        </div>
+
+                        <div class="input-group" style="display: flex; align-items: center; gap: 8px; margin-top: 5px; margin-bottom: 15px;">
+                            <input id="chkHideSubGoal" type="checkbox" style="width: auto; margin: 0; transform: scale(1.2); cursor: pointer;">
+                            <label for="chkHideSubGoal" style="margin: 0; cursor: pointer; font-size: 13px; font-weight: 600; color: #fff;">Sub-Goal (Ziel-Fortschrittsbalken) ausblenden</label>
+                        </div>
+
+                        <!-- Presets and customization (standard only) -->
+                        <div id="standardStylesContainer" style="display: none;">
+                            <div class="input-group">
+                                <label for="stylePreset">Farb-Preset für Header</label>
+                                <select id="stylePreset">
+                                    <option value="turquoise">Türkis / Mint (Default)</option>
+                                    <option value="volcano">Vulkan / Feuer-Orange</option>
+                                    <option value="purple">Neon Violett / Cyan</option>
+                                    <option value="pink">Pink / Indigo</option>
+                                    <option value="dark">Edles Anthrazit / Kohle</option>
+                                    <option value="custom">Benutzerdefiniert</option>
+                                </select>
+                            </div>
+
+                            <div id="customColorsContainer" style="display: none;">
+                                <label style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 6px; font-weight: 700;">Custom Header Verlauf</label>
+                                <div class="color-row">
+                                    <div class="color-picker-wrap">
+                                        <input id="colorHeaderA" type="color" value="#ff758c">
+                                        <span>Von</span>
+                                    </div>
+                                    <div class="color-picker-wrap">
+                                        <input id="colorHeaderB" type="color" value="#ff7eb3">
+                                        <span>Bis</span>
+                                    </div>
+                                </div>
+                                <div class="color-picker-wrap" style="margin-bottom: 18px;">
+                                    <input id="colorHeaderTextColor" type="color" value="#ffffff">
+                                    <span>Header Textfarbe</span>
+                                </div>
+                            </div>
+
+                            <div class="color-row">
+                                <div class="color-picker-wrap">
+                                    <input id="colorBodyBg" type="color" value="#0a0f0c">
+                                    <span>Box Hintergrund</span>
+                                </div>
+                                <div class="color-picker-wrap">
+                                    <input id="colorTextColor" type="color" value="#e2f0e7">
+                                    <span>Textfarbe</span>
+                                </div>
+                            </div>
+
+                            <div class="color-row">
+                                <div class="color-picker-wrap">
+                                    <input id="colorAccent" type="color" value="#ff007a">
+                                    <span>Akzent (Bars)</span>
+                                </div>
+                                <div class="color-picker-wrap">
+                                    <input id="colorGlow" type="color" value="#ff007a">
+                                    <span>Leuchteffekt</span>
+                                </div>
+                            </div>
+
+                            <div class="input-group">
+                                <label for="sliderBodyOpacity">Hintergrund-Deckkraft (%)</label>
+                                <div style="display:flex; align-items:center; gap:12px;">
+                                    <input id="sliderBodyOpacity" type="range" min="0" max="100" value="75" style="flex:1;">
+                                    <span id="opacityVal" style="font-size:14px; font-weight:bold; min-width:36px; text-align:right;">75%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div class="input-group">
+                                <label for="numScale">Skalierung Overlay</label>
+                                <input id="numScale" type="number" min="0.3" max="3" step="0.05" value="1.0">
+                            </div>
+                            <div class="input-group">
+                                <label for="numRadius">Eckenradius (px)</label>
+                                <input id="numRadius" type="number" min="0" max="32" value="12">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div class="input-group">
+                                <label for="numPosX">Position X (px)</label>
+                                <input id="numPosX" type="number" value="40">
+                            </div>
+                            <div class="input-group">
+                                <label for="numPosY">Position Y (px)</label>
+                                <input id="numPosY" type="number" value="40">
+                            </div>
+                        </div>
+
+                        <button id="saveAllBtn" class="btn-primary" style="width: 100%; margin-top: 10px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            Design & Regeln anwenden
+                        </button>
+                        <div id="saveStatus"></div>
+                    </div>
+
+                    <!-- Twitch Chat Live Preview Box -->
+                    <div class="card" style="margin-top: 20px;">
+                        <h3 style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                            Twitch Live-Chat (Vorschau)
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <button onclick="connectPreviewTwitchChat(txtTwitchChannel.value)" class="btn-outline" style="padding: 4px 8px; font-size: 11px; margin: 0; line-height: 1.2;">Neu verbinden</button>
+                                <span id="chatStatusBadge" style="font-size: 11px; padding: 4px 8px; border-radius: 20px; background: rgba(255,255,255,0.06); color: var(--text-muted); line-height: 1.2;">Getrennt</span>
+                            </div>
+                        </h3>
+                        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Hier siehst du in Echtzeit Nachrichten aus dem eingetragenen Twitch-Kanal (zum Testen):</p>
+                        
+                        <div id="chatPreviewContainer" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; height: 180px; overflow-y: auto; padding: 12px; font-family: monospace; font-size: 12px; display: flex; flex-direction: column; gap: 6px;">
+                            <div style="color: var(--text-muted); font-style: italic;">Noch nicht verbunden...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Extract stream ID
+        const streamId = BingoStore.getActiveStreamId();
+
+        // Check path and redirect if invalid
+        if (!streamId) {
+            window.location.href = "/protected/panel.html";
+        }
+
+        // Global states
+        let running = false;
+        let startDuration = 3600;
+        let addedTime = 0;
+        let accumulatedTime = 0;
+        let baseTime = 0;
+        let styleObj = {};
+
+        // UI elements references
+        const adminTimerDisplay = document.getElementById('adminTimerDisplay');
+        const timerStatusBadge = document.getElementById('timerStatusBadge');
+        const btnPlayPause = document.getElementById('btnPlayPause');
+        const btnResetTimer = document.getElementById('btnResetTimer');
+        const btnSetTime = document.getElementById('btnSetTime');
+        const saveAllBtn = document.getElementById('saveAllBtn');
+        const saveStatus = document.getElementById('saveStatus');
+
+        // Inputs references
+        const numStartHours = document.getElementById('numStartHours');
+        const numStartMinutes = document.getElementById('numStartMinutes');
+        const numStartSeconds = document.getElementById('numStartSeconds');
+        const txtTwitchChannel = document.getElementById('txtTwitchChannel');
+        const numTimeT1 = document.getElementById('numTimeT1');
+        const numTimeT2 = document.getElementById('numTimeT2');
+        const numTimeT3 = document.getElementById('numTimeT3');
+        const numTimeGift = document.getElementById('numTimeGift');
+        const numSubGoal = document.getElementById('numSubGoal');
+        const numTotalSubs = document.getElementById('numTotalSubs');
+        const numMaxTime = document.getElementById('numMaxTime');
+
+        // Styles references
+        const themeSelect = document.getElementById('themeSelect');
+        const chkTimerOnly = document.getElementById('chkTimerOnly');
+        const chkHideSubGoal = document.getElementById('chkHideSubGoal');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const standardStylesContainer = document.getElementById('standardStylesContainer');
+        const stylePreset = document.getElementById('stylePreset');
+        const customColorsContainer = document.getElementById('customColorsContainer');
+        const colorHeaderA = document.getElementById('colorHeaderA');
+        const colorHeaderB = document.getElementById('colorHeaderB');
+        const colorHeaderTextColor = document.getElementById('colorHeaderTextColor');
+        const colorBodyBg = document.getElementById('colorBodyBg');
+        const colorTextColor = document.getElementById('colorTextColor');
+        const colorAccent = document.getElementById('colorAccent');
+        const colorGlow = document.getElementById('colorGlow');
+        const sliderBodyOpacity = document.getElementById('sliderBodyOpacity');
+        const opacityVal = document.getElementById('opacityVal');
+        const numScale = document.getElementById('numScale');
+        const numRadius = document.getElementById('numRadius');
+        const numPosX = document.getElementById('numPosX');
+        const numPosY = document.getElementById('numPosY');
+
+        // Presets map
+        const presets = {
+            turquoise: { headerBg: 'linear-gradient(135deg, #00b4db 0%, #0083b0 100%)', headerTextColor: '#ffffff' },
+            volcano: { headerBg: 'linear-gradient(135deg, #f12711 0%, #f5af19 100%)', headerTextColor: '#ffffff' },
+            purple: { headerBg: 'linear-gradient(135deg, #7f00ff 0%, #e100ff 100%)', headerTextColor: '#ffffff' },
+            pink: { headerBg: 'linear-gradient(135deg, #ec008c 0%, #fc6767 100%)', headerTextColor: '#ffffff' },
+            dark: { headerBg: 'linear-gradient(135deg, #141e30 0%, #243b55 100%)', headerTextColor: '#ffffff' }
+        };
+
+        // Theme and preset toggling listeners
+        themeSelect.addEventListener('change', () => {
+            if (themeSelect.value === 'standard') {
+                standardStylesContainer.style.display = 'block';
+            } else {
+                standardStylesContainer.style.display = 'none';
+            }
+        });
+
+        stylePreset.addEventListener('change', () => {
+            if (stylePreset.value === 'custom') {
+                customColorsContainer.style.display = 'block';
+            } else {
+                customColorsContainer.style.display = 'none';
+            }
+        });
+
+        sliderBodyOpacity.addEventListener('input', () => {
+            opacityVal.textContent = sliderBodyOpacity.value + '%';
+        });
+
+        // Set Navigation links
+        document.getElementById('bingoAdminLink').href = "/protected/admin.html?stream=" + encodeURIComponent(streamId);
+        document.getElementById('scoreboardAdminLink').href = "/protected/scoreboard-admin.html?stream=" + encodeURIComponent(streamId);
+        document.getElementById('scoreboard2v2v2AdminLink').href = "/protected/scoreboard-2v2v2-admin.html?stream=" + encodeURIComponent(streamId);
+        document.getElementById('challengeAdminLink').href = "/protected/challenge-admin.html?stream=" + encodeURIComponent(streamId);
+
+        const alertWrapper = document.getElementById('alertWrapper');
+
+        // Server-side database write helper to bypass client rules
+        let cachedGuestToken = null;
+        async function getGuestToken() {
+            if (cachedGuestToken) return cachedGuestToken;
+            const snap = await firebase.database().ref(`streams/${streamId}/meta/guestToken`).once('value');
+            let token = snap.val();
+            if (!token) {
+                // Generate a random token on the fly if none exists yet
+                token = 'sub_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+                await firebase.database().ref(`streams/${streamId}/meta/guestToken`).set(token);
+            }
+            cachedGuestToken = token;
+            return cachedGuestToken;
+        }
+
+        async function updateSubathonData(payload) {
+            const token = await getGuestToken();
+            if (!token) {
+                throw new Error("Mod/Guest-Token wurde nicht im Stream-Meta gefunden. Bitte lade den Hub neu.");
+            }
+            const res = await fetch('/bot/api/scoreboard/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    streamId: streamId,
+                    token: token,
+                    path: 'subathon',
+                    value: payload
+                })
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) {
+                throw new Error(data.error || "Netzwerkfehler beim Speichern.");
+            }
+            return data;
+        }
+
+        async function initializeDefaultDbState() {
+            try {
+                await updateSubathonData({
+                    running: false,
+                    startDuration: 3600, // 1 hour
+                    addedTime: 0,
+                    accumulatedTime: 0,
+                    baseTime: 0,
+                    twitchChannel: "",
+                    theme: "fantasy",
+                    title: "SUBATHON",
+                    timeT1: 30,
+                    timeT2: 60,
+                    timeT3: 120,
+                    timeGift: 30,
+                    maxTime: 0,
+                    subGoal: 50,
+                    totalSubs: 0,
+                    style: {
+                        scale: 1.0,
+                        borderRadius: 12,
+                        posX: 40,
+                        posY: 40,
+                        colorBodyHex: "#0a0f0c",
+                        colorBodyOpacity: 70,
+                        colorAccentHex: "#ec008c",
+                        colorTextHex: "#ffffff"
+                    }
+                });
+            } catch (err) {
+                console.error("Failed to initialize Subathon DB:", err);
+            }
+        }
+
+        // Authenticate & Bind database
+        BingoStore.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = "/protected/panel.html";
+                return;
+            }
+
+            try {
+                await BingoStore.requireOwner(streamId, user.uid);
+                await BingoStore.ensureInitialized(streamId);
+
+                // Set OBS link
+                const baseUrl = window.location.origin;
+                const token = await getGuestToken();
+                const obsUrl = `${baseUrl}/public/subathon.html?stream=${encodeURIComponent(streamId)}&token=${encodeURIComponent(token)}`;
+                document.getElementById('obsOverlayLink').href = obsUrl;
+                document.getElementById('obsOverlayLink').textContent = obsUrl;
+
+                document.getElementById('copyObsBtn').addEventListener('click', () => {
+                    navigator.clipboard.writeText(obsUrl);
+                    alert('OBS Overlay Link kopiert!');
+                });
+
+                // Listen to database
+                firebase.database().ref(`streams/${streamId}/data/subathon`).on('value', (snap) => {
+                    const val = snap.val();
+                    if (val) {
+                        running = !!val.running;
+                        startDuration = parseInt(val.startDuration) || 3600;
+                        addedTime = parseInt(val.addedTime) || 0;
+                        accumulatedTime = parseInt(val.accumulatedTime) || 0;
+                        baseTime = parseInt(val.baseTime) || 0;
+
+                        // Rules configuration
+                        const nextChannel = (val.twitchChannel || "").trim().toLowerCase();
+                        txtTwitchChannel.value = val.twitchChannel || "";
+                        if (nextChannel !== (txtTwitchChannel.dataset.currentJoined || "")) {
+                            txtTwitchChannel.dataset.currentJoined = nextChannel;
+                            connectPreviewTwitchChat(nextChannel);
+                        }
+                        numTimeT1.value = val.timeT1 ?? 30;
+                        numTimeT2.value = val.timeT2 ?? 60;
+                        numTimeT3.value = val.timeT3 ?? 120;
+                        numTimeGift.value = val.timeGift ?? 30;
+                        numSubGoal.value = val.subGoal ?? 50;
+                        numTotalSubs.value = val.totalSubs ?? 0;
+                        numMaxTime.value = val.maxTime ? (val.maxTime / 3600).toFixed(1) : 0;
+
+                        // Layout styling config
+                        themeSelect.value = val.theme || "fantasy";
+                        themeSelect.dispatchEvent(new Event('change'));
+                        overlayTitle.value = val.title || 'SUBATHON';
+                        chkTimerOnly.checked = !!val.timerOnly;
+                        chkHideSubGoal.checked = !!val.hideSubGoal;
+
+                        styleObj = val.style || {};
+                        applyStyleObjToInputs(styleObj);
+                        updateAdminTimerDisplay();
+                        updatePlayPauseBtnUI();
+                    } else {
+                        initializeDefaultDbState();
+                    }
+                });
+
+            } catch (err) {
+                alert(err.message || "Zugriff verweigert.");
+                window.location.href = "/protected/panel.html";
+            }
+        });
+
+        // Update PlayPause Button visual styling
+        function updatePlayPauseBtnUI() {
+            if (running) {
+                btnPlayPause.textContent = "Timer PAUSIEREN";
+                btnPlayPause.className = "btn-danger";
+                timerStatusBadge.textContent = "LÄUFT LIVE";
+                timerStatusBadge.style.color = "var(--success)";
+            } else {
+                btnPlayPause.textContent = "Timer STARTEN";
+                btnPlayPause.className = "btn-success";
+                timerStatusBadge.textContent = "PAUSIERT";
+                timerStatusBadge.style.color = "var(--text-muted)";
+            }
+        }
+
+        // Live clock loop
+        setInterval(() => {
+            if (running) {
+                updateAdminTimerDisplay();
+            }
+        }, 200);
+
+        function updateAdminTimerDisplay() {
+            const totalSec = startDuration + addedTime;
+            let elapsed = 0;
+
+            if (running && baseTime > 0) {
+                elapsed = (accumulatedTime + (Date.now() - baseTime)) / 1000;
+            } else {
+                elapsed = accumulatedTime / 1000;
+            }
+
+            let remaining = totalSec - elapsed;
+            if (remaining < 0) remaining = 0;
+
+            const hrs = Math.floor(remaining / 3600);
+            const mins = Math.floor((remaining % 3600) / 60);
+            const secs = Math.floor(remaining % 60);
+
+            const pad = (n) => n < 10 ? '0' + n : n;
+            adminTimerDisplay.textContent = `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+        }
+
+        // Play/Pause Action Toggle
+        btnPlayPause.addEventListener('click', async () => {
+            let nextRunning = !running;
+            let nextAccumulated = accumulatedTime;
+            let nextBase = 0;
+            if (!nextRunning) {
+                nextAccumulated = accumulatedTime + (Date.now() - baseTime);
+                nextBase = 0;
+            } else {
+                nextBase = Date.now();
+            }
+            
+            try {
+                await updateSubathonData({
+                    running: nextRunning,
+                    accumulatedTime: nextAccumulated,
+                    baseTime: nextBase
+                });
+            } catch (err) {
+                alert("Fehler beim Steuern: " + err.message);
+            }
+        });
+
+        // Set starting time button click
+        btnSetTime.addEventListener('click', async () => {
+            const hrs = parseInt(numStartHours.value) || 0;
+            const mins = Math.min(59, Math.max(0, parseInt(numStartMinutes.value) || 0));
+            const secs = Math.min(59, Math.max(0, parseInt(numStartSeconds.value) || 0));
+            const totalSeconds = hrs * 3600 + mins * 60 + secs;
+
+            if (totalSeconds <= 0) {
+                alert('Bitte trage eine gültige Startzeit ein!');
+                return;
+            }
+
+            if (confirm('Möchtest du die Startzeit wirklich überschreiben und alle bisherigen Zeit-Gewinne zurücksetzen?')) {
+                try {
+                    await updateSubathonData({
+                        startDuration: totalSeconds,
+                        addedTime: 0,
+                        accumulatedTime: 0,
+                        baseTime: running ? Date.now() : 0
+                    });
+                    alert('Startzeit erfolgreich neu gesetzt!');
+                } catch (err) {
+                    alert("Fehler beim Setzen: " + err.message);
+                }
+            }
+        });
+
+        async function simulateEvent(type, plan) {
+            let seconds = 0;
+            if (type === 'gift') {
+                seconds = parseInt(document.getElementById('numTimeGift').value) || 30;
+            } else {
+                if (plan === '2000') {
+                    seconds = parseInt(document.getElementById('numTimeT2').value) || 60;
+                } else if (plan === '3000') {
+                    seconds = parseInt(document.getElementById('numTimeT3').value) || 120;
+                } else {
+                    seconds = parseInt(document.getElementById('numTimeT1').value) || 30;
+                }
+            }
+
+            try {
+                let newAdded = addedTime + seconds;
+                
+                const maxTimeVal = parseInt(document.getElementById('numMaxTime').value) || 0;
+                const maxSeconds = maxTimeVal * 3600;
+                if (maxSeconds > 0) {
+                    const start = startDuration || 3600;
+                    const total = start + newAdded;
+                    let elapsed = 0;
+                    if (running) {
+                        elapsed = (accumulatedTime + (Date.now() - baseTime)) / 1000;
+                    } else {
+                        elapsed = accumulatedTime / 1000;
+                    }
+                    const remaining = total - elapsed;
+                    if (remaining > maxSeconds) {
+                        newAdded = maxSeconds + elapsed - start;
+                    }
+                }
+
+                const currentSubs = parseInt(document.getElementById('numTotalSubs').value) || 0;
+                const nextTotalSubs = currentSubs + 1;
+
+                await updateSubathonData({
+                    addedTime: newAdded,
+                    totalSubs: nextTotalSubs,
+                    testEvent: {
+                        username: 'Simulant_' + Math.floor(100 + Math.random() * 900),
+                        type: type,
+                        plan: plan,
+                        timestamp: Date.now()
+                    }
+                });
+            } catch (err) {
+                alert("Simulationsfehler: " + err.message);
+            }
+        }
+
+        // Quick adjustment helper
+        async function adjustTime(deltaSeconds) {
+            let newAdded = addedTime + deltaSeconds;
+            
+            const maxTimeVal = parseInt(numMaxTime.value) || 0;
+            const maxSeconds = maxTimeVal * 3600;
+            if (maxSeconds > 0) {
+                const start = startDuration || 3600;
+                const total = start + newAdded;
+                let elapsed = 0;
+                if (running) {
+                    elapsed = (accumulatedTime + (Date.now() - baseTime)) / 1000;
+                } else {
+                    elapsed = accumulatedTime / 1000;
+                }
+                const remaining = total - elapsed;
+                if (remaining > maxSeconds) {
+                    newAdded = maxSeconds + elapsed - start;
+                }
+            }
+            
+            try {
+                await updateSubathonData({
+                    addedTime: newAdded
+                });
+            } catch (err) {
+                alert("Fehler beim Anpassen: " + err.message);
+            }
+        }
+
+        // Full reset button
+        btnResetTimer.addEventListener('click', async () => {
+            if (confirm('Achtung! Dadurch werden der Timer pausiert, alle Zeit-Gewinne gelöscht, die Startzeit auf 1 Stunde gesetzt und alle Zähler zurückgesetzt. Fortfahren?')) {
+                try {
+                    await updateSubathonData({
+                        running: false,
+                        startDuration: 3600,
+                        addedTime: 0,
+                        accumulatedTime: 0,
+                        baseTime: 0,
+                        totalSubs: 0
+                    });
+                    alert('Zähler & Timer erfolgreich zurückgesetzt!');
+                } catch (err) {
+                    alert("Fehler beim Zurücksetzen: " + err.message);
+                }
+            }
+        });
+
+        // Populate Styling options from Firebase object
+        function applyStyleObjToInputs(style) {
+            if (!style) return;
+            numScale.value = style.scale ?? 1.0;
+            numRadius.value = style.borderRadius ?? 12;
+            numPosX.value = style.posX ?? 40;
+            numPosY.value = style.posY ?? 40;
+            sliderBodyOpacity.value = style.bodyOpacity ?? 75;
+            opacityVal.textContent = (style.bodyOpacity ?? 75) + '%';
+
+            colorBodyBg.value = style.colorBodyHex || '#0a0f0c';
+            colorTextColor.value = style.colorTextHex || '#e2f0e7';
+            colorAccent.value = style.colorAccentHex || '#ff007a';
+            colorGlow.value = style.colorGlowHex || '#ff007a';
+
+            if (style.presetName) {
+                stylePreset.value = style.presetName;
+            } else {
+                stylePreset.value = 'custom';
+            }
+            stylePreset.dispatchEvent(new Event('change'));
+
+            if (stylePreset.value === 'custom') {
+                colorHeaderA.value = style.colorHeaderAHex || '#ff758c';
+                colorHeaderB.value = style.colorHeaderBHex || '#ff7eb3';
+                colorHeaderTextColor.value = style.colorHeaderTextColorHex || '#ffffff';
+            }
+        }
+
+        // Build style helper
+        function getStyleObjFromInputs() {
+            const presetVal = stylePreset.value;
+            let headerBgStr = '';
+            let headerTextColorStr = '';
+            
+            if (presetVal !== 'custom' && presets[presetVal]) {
+                headerBgStr = presets[presetVal].headerBg;
+                headerTextColorStr = presets[presetVal].headerTextColor;
+            } else {
+                const hexA = colorHeaderA.value;
+                const hexB = colorHeaderB.value;
+                headerBgStr = `linear-gradient(135deg, ${hexA} 0%, ${hexB} 100%)`;
+                headerTextColorStr = colorHeaderTextColor.value;
+            }
+
+            const opacity = parseInt(sliderBodyOpacity.value) || 75;
+            const bodyBgRgba = hexToRgba(colorBodyBg.value, opacity);
+
+            return {
+                scale: parseFloat(numScale.value) || 1.0,
+                borderRadius: parseInt(numRadius.value) || 12,
+                posX: parseInt(numPosX.value) || 40,
+                posY: parseInt(numPosY.value) || 40,
+                bodyOpacity: opacity,
+                
+                headerBg: headerBgStr,
+                headerTextColor: headerTextColorStr,
+                bodyBg: bodyBgRgba,
+                textColor: colorTextColor.value,
+                accentColor: colorAccent.value,
+                glowColor: hexToRgba(colorGlow.value, 40),
+
+                presetName: presetVal,
+                colorHeaderAHex: colorHeaderA.value,
+                colorHeaderBHex: colorHeaderB.value,
+                colorHeaderTextColorHex: colorHeaderTextColor.value,
+                colorBodyHex: colorBodyBg.value,
+                colorTextHex: colorTextColor.value,
+                colorAccentHex: colorAccent.value,
+                glowColorHex: colorGlow.value
+            };
+        }
+
+        function hexToRgba(hex, opacity) {
+            let c = hex.substring(1);
+            if (c.length === 3) c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
+            const r = parseInt(c.substring(0,2), 16);
+            const g = parseInt(c.substring(2,4), 16);
+            const b = parseInt(c.substring(4,6), 16);
+            const a = (opacity / 100).toFixed(2);
+            return `rgba(${r}, ${g}, ${b}, ${a})`;
+        }
+
+        // Save All Configuration and Rules
+        saveAllBtn.addEventListener('click', async () => {
+            saveStatus.textContent = 'Speichere...';
+            saveStatus.style.color = '#fff';
+
+            // Hour to Seconds conversions for Max time
+            const maxHrs = parseFloat(numMaxTime.value) || 0;
+            const maxSeconds = Math.round(maxHrs * 3600);
+
+            const payload = {
+                running: running,
+                startDuration: startDuration,
+                addedTime: addedTime,
+                accumulatedTime: accumulatedTime,
+                baseTime: baseTime,
+                
+                twitchChannel: txtTwitchChannel.value.trim().toLowerCase(),
+                timeT1: parseInt(numTimeT1.value) || 0,
+                timeT2: parseInt(numTimeT2.value) || 0,
+                timeT3: parseInt(numTimeT3.value) || 0,
+                timeGift: parseInt(numTimeGift.value) || 0,
+                subGoal: parseInt(numSubGoal.value) || 50,
+                totalSubs: parseInt(numTotalSubs.value) || 0,
+                maxTime: maxSeconds,
+
+                theme: themeSelect.value,
+                title: overlayTitle.value.trim() || 'SUBATHON',
+                timerOnly: chkTimerOnly.checked,
+                hideSubGoal: chkHideSubGoal.checked,
+                style: getStyleObjFromInputs()
+            };
+
+            try {
+                await updateSubathonData(payload);
+                saveStatus.textContent = 'Erfolgreich gespeichert!';
+                saveStatus.style.color = 'var(--success)';
+                setTimeout(() => { saveStatus.textContent = ''; }, 3000);
+            } catch (err) {
+                console.error("Save error:", err);
+                saveStatus.textContent = 'Fehler beim Speichern: ' + (err.message || err);
+                saveStatus.style.color = 'var(--danger)';
+            }
+        });
+
+        // Twitch Chat Preview Connection
+        let twitchPreviewClient = null;
+        const chatPreviewContainer = document.getElementById('chatPreviewContainer');
+        const chatStatusBadge = document.getElementById('chatStatusBadge');
+
+        function connectPreviewTwitchChat(channel) {
+            if (twitchPreviewClient) {
+                twitchPreviewClient.disconnect().catch(() => {});
+                twitchPreviewClient = null;
+            }
+
+            chatPreviewContainer.innerHTML = '';
+            
+            const nextChannel = (channel || "").trim().toLowerCase();
+            if (!nextChannel) {
+                chatStatusBadge.textContent = 'Kein Kanal';
+                chatStatusBadge.style.color = 'var(--text-muted)';
+                chatStatusBadge.style.background = 'rgba(255,255,255,0.06)';
+                chatPreviewContainer.innerHTML = '<div style="color: var(--text-muted); font-style: italic;">Trage oben einen Twitch-Kanalnamen ein und speichere, um den Live-Chat zu verbinden.</div>';
+                return;
+            }
+
+            chatStatusBadge.textContent = 'Verbinde...';
+            chatStatusBadge.style.color = '#ffaa00';
+            chatStatusBadge.style.background = 'rgba(255, 170, 0, 0.1)';
+
+            try {
+                twitchPreviewClient = new tmi.Client({
+                    connection: {
+                        secure: true,
+                        reconnect: true
+                    },
+                    channels: [nextChannel]
+                });
+
+                // Register connection logs
+                twitchPreviewClient.on('connecting', (address, port) => {
+                    appendChatMessage('System', `Verbinde mit Twitch Server (${address}:${port})...`, '#ffaa00');
+                });
+
+                twitchPreviewClient.on('connected', (address, port) => {
+                    chatStatusBadge.textContent = `Verbunden (#${nextChannel})`;
+                    chatStatusBadge.style.color = '#00ffaa';
+                    chatStatusBadge.style.background = 'rgba(0, 255, 170, 0.1)';
+                    appendChatMessage('System', `Verbindung hergestellt! Warte auf Nachrichten...`, '#00ffaa');
+                });
+
+                twitchPreviewClient.on('disconnected', (reason) => {
+                    chatStatusBadge.textContent = 'Getrennt';
+                    chatStatusBadge.style.color = 'var(--text-muted)';
+                    chatStatusBadge.style.background = 'rgba(255,255,255,0.06)';
+                    appendChatMessage('System', `Verbindung getrennt: ${reason}`, '#ff5555');
+                });
+
+                twitchPreviewClient.on('message', (channel, userstate, message, self) => {
+                    const username = userstate['display-name'] || userstate.username;
+                    const userColor = userstate.color || '#00e5ff';
+                    appendChatMessage(username, message, userColor);
+                });
+
+                twitchPreviewClient.on('subscription', (channel, username, method, message, userstate) => {
+                    appendChatMessage('⭐ SUB-ALERT', `${username} hat abonniert (Tier ${(method && method.plan === '3000') ? '3' : (method && method.plan === '2000') ? '2' : '1'})!`, '#ff00aa', true);
+                });
+                twitchPreviewClient.on('resub', (channel, username, months, message, userstate, methods) => {
+                    appendChatMessage('⭐ SUB-RENEWAL', `${username} hat verlängert!`, '#ff00aa', true);
+                });
+                twitchPreviewClient.on('subgift', (channel, username, streakMonths, recipient, methods, userstate) => {
+                    appendChatMessage('⭐ SUB-GIFT', `${username} verschenkt ein Abo an ${recipient}!`, '#ff00aa', true);
+                });
+                twitchPreviewClient.on('anonsubgift', (channel, streakMonths, recipient, methods, userstate) => {
+                    appendChatMessage('⭐ SUB-GIFT', `Anonymer Gifter verschenkt ein Abo an ${recipient}!`, '#ff00aa', true);
+                });
+
+                // Start connection after registering listeners
+                twitchPreviewClient.connect().catch(err => {
+                    chatStatusBadge.textContent = 'Fehler';
+                    chatStatusBadge.style.color = 'var(--danger)';
+                    chatStatusBadge.style.background = 'rgba(220, 53, 69, 0.1)';
+                    appendChatMessage('System-Fehler', err.message || 'Verbindungsfehler', '#ff5555');
+                });
+            } catch (err) {
+                chatStatusBadge.textContent = 'Fehler';
+                chatStatusBadge.style.color = 'var(--danger)';
+                chatStatusBadge.style.background = 'rgba(220, 53, 69, 0.1)';
+                appendChatMessage('Script-Fehler', err.message || err, '#ff5555');
+            }
+        }
+
+        function appendChatMessage(sender, text, color, isAlert = false) {
+            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            const msgEl = document.createElement('div');
+            msgEl.style.lineHeight = '1.4';
+            msgEl.style.marginBottom = '4px';
+            if (isAlert) {
+                msgEl.style.padding = '4px 6px';
+                msgEl.style.background = 'rgba(255, 0, 170, 0.08)';
+                msgEl.style.borderLeft = '3px solid #ff00aa';
+                msgEl.style.borderRadius = '2px';
+            }
+
+            msgEl.innerHTML = `<span style="color: var(--text-muted); font-size: 10px;">[${timeStr}]</span> ` +
+                              `<span style="color: ${color || '#00e5ff'}; font-weight: bold;">${sender}:</span> ` +
+                              `<span style="color: #fff;">${text}</span>`;
+            
+            chatPreviewContainer.appendChild(msgEl);
+            chatPreviewContainer.scrollTop = chatPreviewContainer.scrollHeight;
+
+            while (chatPreviewContainer.childNodes.length > 50) {
+                chatPreviewContainer.removeChild(chatPreviewContainer.firstChild);
+            }
+        }
+    </script>
+</body>
+</html>

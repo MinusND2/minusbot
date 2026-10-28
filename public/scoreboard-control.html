@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scoreboard Moderator Panel</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --bg: #030705;
+            --bg-card: #080e0a;
+            --bg-elevated: #0e1811;
+            --border: rgba(34, 197, 94, 0.08);
+            --border-hover: rgba(34, 197, 94, 0.2);
+            --text: #e2f0e7;
+            --text-muted: #62826d;
+            --accent: #22c55e;
+            --accent-cyan: #06b6d4;
+            --accent-grad: linear-gradient(135deg, #22c55e 0%, #06b6d4 100%);
+            --radius: 12px;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Ambient Background Orbs */
+        .ambient-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(140px);
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.45;
+        }
+        .orb-green { width: 400px; height: 400px; background: rgba(34, 197, 94, 0.08); top: -100px; right: -50px; }
+        .orb-cyan { width: 300px; height: 300px; background: rgba(6, 182, 212, 0.06); bottom: -50px; left: 100px; }
+
+        .app-wrap {
+            width: 100%;
+            max-width: 1300px;
+            padding: 40px 20px;
+            z-index: 2;
+            position: relative;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .logo-text {
+            font-size: 24px; font-weight: 800; letter-spacing: 3px;
+            text-transform: uppercase;
+            background: var(--accent-grad);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+
+        h1 {
+            font-size: 28px; font-weight: 800; color: #fff; margin: 0 0 8px 0;
+            background: linear-gradient(to right, #fff, var(--text-muted));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        h3 { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .subtitle { color: var(--text-muted); margin: 0; font-size: 15px; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+
+        @media (max-width: 800px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: linear-gradient(145deg, #09100c 0%, #050a07 100%);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        .teams-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .team-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: var(--bg-elevated);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        h2 { font-weight: 700; letter-spacing: 1px; margin: 0 0 8px 0; }
+        .score-display {
+            font-size: 64px;
+            font-weight: 800;
+            margin: 12px 0;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+            background: var(--accent-grad);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        input, select {
+            width: 100%;
+            min-height: 44px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-elevated);
+            color: #fff;
+            padding: 8px 12px;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.2s;
+            margin-bottom: 10px;
+        }
+        input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15); }
+        .text-center { text-align: center; }
+
+        button {
+            padding: 12px 14px; font-size: 14px; font-weight: 700; font-family: inherit;
+            border-radius: 10px; border: 1px solid transparent; color: #fff; cursor: pointer; transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); width: 100%;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.3); }
+        
+        .btn-primary {
+            background: var(--accent-grad);
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.2);
+            color: #000;
+        }
+        .btn-primary:hover {
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.35);
+        }
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #ff8080;
+        }
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #fff;
+        }
+        .btn-success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            color: #86efac;
+        }
+        .btn-success:hover {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: rgba(34, 197, 94, 0.4);
+            color: #fff;
+        }
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            box-shadow: none;
+        }
+        .btn-ghost:hover {
+            color: #fff;
+            background: var(--bg-elevated);
+            border-color: var(--border-hover);
+        }
+
+        .score-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+        .score-btns .btn-success { font-size: 18px; }
+        .score-btns .btn-danger { font-size: 18px; }
+
+        /* Tab Switcher Styling */
+        .tab-switcher {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 30px;
+            justify-content: center;
+            position: relative;
+            z-index: 10;
+        }
+        .tab-btn {
+            width: auto !important;
+            padding: 10px 24px !important;
+            font-size: 15px !important;
+            border-radius: 20px !important;
+            border: 1px solid var(--border) !important;
+            background: var(--bg-elevated) !important;
+            color: var(--text-muted) !important;
+            box-shadow: none !important;
+            transition: all 0.2s ease-in-out !important;
+        }
+        .tab-btn:hover {
+            color: #fff !important;
+            border-color: var(--border-hover) !important;
+            transform: translateY(-1px) !important;
+        }
+        .tab-btn.active {
+            background: var(--accent-grad) !important;
+            color: #030705 !important;
+            border-color: transparent !important;
+            font-weight: 800 !important;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.25) !important;
+        }
+        
+        .barca { color: #ff8080; text-shadow: 0 0 10px rgba(239, 68, 68, 0.15); } 
+        .atleti { color: #06b6d4; text-shadow: 0 0 10px rgba(6, 182, 212, 0.15); }
+
+        /* Status card for errors */
+        #accessStatusCard {
+            text-align: center;
+            padding: 40px;
+        }
+        #accessStatusCard h2 {
+            color: var(--danger);
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+        #accessStatusCard p {
+            color: var(--text-muted);
+            font-size: 15px;
+            margin-bottom: 24px;
+        }
+
+        /* Custom Searchable Dropdown Styling */
+        .custom-select-container {
+            position: relative;
+            width: 100%;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+
+        .custom-select-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 44px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-elevated);
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+            box-sizing: border-box;
+        }
+
+        .custom-select-trigger:hover {
+            border-color: var(--border-hover);
+        }
+
+        .custom-select-container.open .custom-select-trigger {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+        }
+
+        .custom-select-trigger-text {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .custom-select-arrow {
+            font-size: 10px;
+            transition: transform 0.2s;
+            color: var(--text-muted);
+        }
+
+        .custom-select-container.open .custom-select-arrow {
+            transform: rotate(180deg);
+        }
+
+        .custom-select-menu {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: #121214;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            z-index: 999;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 300px;
+            box-sizing: border-box;
+        }
+
+        .custom-select-search {
+            width: 100% !important;
+            min-height: 38px !important;
+            margin-bottom: 0 !important;
+            border-radius: 6px !important;
+            border: 1px solid var(--border) !important;
+            background: #1a1a1e !important;
+            color: #fff !important;
+            padding: 6px 10px !important;
+            box-sizing: border-box !important;
+            font-family: inherit;
+        }
+
+        .custom-select-options {
+            overflow-y: auto;
+            max-height: 200px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        /* Custom Scrollbar for options list */
+        .custom-select-options::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-select-options::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-select-options::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+        }
+        .custom-select-options::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .custom-select-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+            color: #e4e4e7;
+            font-size: 14px;
+            user-select: none;
+        }
+
+        .custom-select-option:hover {
+            background: rgba(34, 197, 94, 0.1);
+            color: #fff;
+        }
+
+        .custom-select-option.selected {
+            background: var(--accent);
+            color: #000;
+            font-weight: 600;
+        }
+
+        .custom-select-option-flag {
+            width: 20px;
+            height: 14px;
+            object-fit: cover;
+            border-radius: 2px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="ambient-orb orb-green"></div>
+    <div class="ambient-orb orb-cyan"></div>
+
+    <div class="app-wrap">
+        <!-- Access Denied Card (Visible by default until checked) -->
+        <div id="accessStatusCard" class="card">
+            <h2>⏳ Prüfe Freigabe...</h2>
+            <p id="accessStatusMsg">Bitte warten, die Zugriffsberechtigung wird überprüft.</p>
+        </div>
+
+        <!-- Main Panel Content (Hidden by default) -->
+        <div id="panelContent" style="display: none;">
+            <header>
+                <div class="logo-text">Minus</div>
+                <h1>Scoreboard Moderator Panel</h1>
+                <p class="subtitle" id="moderatorSub">Du steuerst das Scoreboard für einen Stream.</p>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- Score Area -->
+                <div class="card">
+                    <div class="teams-grid">
+                        <!-- Home -->
+                        <div class="team-col">
+                            <!-- Custom Select Home -->
+                            <div class="custom-select-container" id="customSelectHome">
+                                <div class="custom-select-trigger">
+                                    <span class="custom-select-trigger-text">🌍 Land auswählen...</span>
+                                    <span class="custom-select-arrow">▼</span>
+                                </div>
+                                <div class="custom-select-menu" style="display: none;">
+                                    <input type="text" class="custom-select-search" placeholder="🔍 Land suchen..." autocomplete="off">
+                                    <div class="custom-select-options"></div>
+                                </div>
+                            </div>
+                            <select id="countrySelectHome" style="display: none;">
+                                <option value="">🌍 Land auswählen...</option>
+                            </select>
+                            <input type="text" id="nameHomeInput" placeholder="Home Team Name" class="text-center" style="font-size: 18px; font-weight: 600;">
+                            <input type="text" id="logoHomeInput" placeholder="Home Logo URL">
+                            <h2 class="barca" id="homeLabel">Home</h2>
+                            <div id="scoreHome" class="score-display">0</div>
+                            <div class="score-btns">
+                                <button class="btn-success" onclick="adjustScore('home', 1)">+1</button>
+                                <button class="btn-danger" onclick="adjustScore('home', -1)">-1</button>
+                            </div>
+                            <div style="margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;">
+                                <span style="font-size: 13px; color: var(--text-muted);">🟥 Rote Karten:</span>
+                                <span id="redCardsHomeVal" style="font-weight: bold; color: #ff4d4d; font-size: 14px;">0</span>
+                                <button class="btn-ghost" onclick="adjustRedCards('home', 1)" style="padding: 2px 6px; font-size: 12px; margin: 0; width: auto;">+</button>
+                                <button class="btn-ghost" onclick="adjustRedCards('home', -1)" style="padding: 2px 6px; font-size: 12px; margin: 0; width: auto;">-</button>
+                            </div>
+                        </div>
+
+                        <!-- Away -->
+                        <div class="team-col">
+                            <!-- Custom Select Away -->
+                            <div class="custom-select-container" id="customSelectAway">
+                                <div class="custom-select-trigger">
+                                    <span class="custom-select-trigger-text">🌍 Land auswählen...</span>
+                                    <span class="custom-select-arrow">▼</span>
+                                </div>
+                                <div class="custom-select-menu" style="display: none;">
+                                    <input type="text" class="custom-select-search" placeholder="🔍 Land suchen..." autocomplete="off">
+                                    <div class="custom-select-options"></div>
+                                </div>
+                            </div>
+                            <select id="countrySelectAway" style="display: none;">
+                                <option value="">🌍 Land auswählen...</option>
+                            </select>
+                            <input type="text" id="nameAwayInput" placeholder="Away Team Name" class="text-center" style="font-size: 18px; font-weight: 600;">
+                            <input type="text" id="logoAwayInput" placeholder="Away Logo URL">
+                            <h2 class="atleti" id="awayLabel">Away</h2>
+                            <div id="scoreAway" class="score-display">0</div>
+                            <div class="score-btns">
+                                <button class="btn-success" onclick="adjustScore('away', 1)">+1</button>
+                                <button class="btn-danger" onclick="adjustScore('away', -1)">-1</button>
+                            </div>
+                            <div style="margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;">
+                                <span style="font-size: 13px; color: var(--text-muted);">🟥 Rote Karten:</span>
+                                <span id="redCardsAwayVal" style="font-weight: bold; color: #ff4d4d; font-size: 14px;">0</span>
+                                <button class="btn-ghost" onclick="adjustRedCards('away', 1)" style="padding: 2px 6px; font-size: 12px; margin: 0; width: auto;">+</button>
+                                <button class="btn-ghost" onclick="adjustRedCards('away', -1)" style="padding: 2px 6px; font-size: 12px; margin: 0; width: auto;">-</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <button onclick="updateTeams()" class="btn-primary" style="font-size: 16px;">Teams & Logos Aktualisieren</button>
+                        <button class="btn-danger" onclick="resetScore()" style="font-size: 16px;">Reset 0:0</button>
+                    </div>
+                </div>
+
+                <!-- Timer Area -->
+                <div class="card">
+                    <h3>⏱ Spielzeit (Match Timer)</h3>
+                    <div style="text-align: center; margin: 20px 0;">
+                        <div id="adminTimerDisplay" style="font-size: 64px; font-weight: 800; font-variant-numeric: tabular-nums; color: #fff; text-shadow: 0 0 20px rgba(255,255,255,0.2); letter-spacing: 2px;">00:00</div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 24px;">
+                        <button class="btn-success" onclick="startTimer()">▶ Start</button>
+                        <button class="btn-primary" style="background: #f59e0b;" onclick="pauseTimer()">⏸ Pause</button>
+                        <button class="btn-danger" onclick="resetTimer()">⏹ Reset</button>
+                    </div>
+
+                    <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                        <h4 style="margin: 0 0 10px 0; font-size: 14px; color: var(--text-muted);">Erweiterte Timer-Funktionen:</h4>
+                        <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
+                            <input type="number" id="manualTimerMinutes" placeholder="Minuten (z.B. 45)" style="margin: 0; max-width: 150px;">
+                            <button class="btn-ghost" onclick="setManualTime()" style="flex: 1;">Zeit setzen</button>
+                        </div>
+                        <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 12px;">
+                            <label style="font-size: 13px; color: var(--text-muted); margin: 0; min-width: 100px;">Nachspielzeit:</label>
+                            <input type="number" id="manualAddedTime" placeholder="Minuten (z.B. 5)" style="margin: 0; max-width: 100px;" min="0" value="0">
+                            <button class="btn-ghost" onclick="setAddedTime()" style="flex: 1;">Nachspielzeit setzen</button>
+                        </div>
+                        <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 12px;">
+                            <label style="font-size: 13px; color: var(--text-muted); margin: 0; min-width: 100px;">Spielhälfte:</label>
+                            <select id="manualPeriod" onchange="setPeriod()" style="background: rgba(255,255,255,0.06); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 6px 12px; border-radius: 6px; flex: 1; outline: none; font-size: 13px;">
+                                <option value="1">1. Halbzeit</option>
+                                <option value="2">2. Halbzeit</option>
+                                <option value="3">Verlängerung 1. Hälfte</option>
+                                <option value="4">Verlängerung 2. Hälfte</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 12px; margin-top: 12px;">
+                            <button id="toggleTimerBtn" class="btn-ghost" onclick="toggleTimerVisibility()" style="flex: 1; margin: 0;">👁️ Timer ausblenden</button>
+                            <button id="toggleSecondsBtn" class="btn-ghost" onclick="toggleTimerSeconds()" style="flex: 1; margin: 0;">⏱️ Sekunden anzeigen</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+
+    <script src="../public/app-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="../public/realtime-store.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const streamId = urlParams.get('stream');
+        const token = urlParams.get('token');
+
+        const accessStatusCard = document.getElementById('accessStatusCard');
+        const accessStatusMsg = document.getElementById('accessStatusMsg');
+        const panelContent = document.getElementById('panelContent');
+
+        // Check if stream & token are present, then validate
+        if (!streamId || !token) {
+            showAccessDenied("Ungültiger Link. Stream-ID oder Token-Parameter fehlen im Link.");
+        } else {
+            // Initialize Firebase manually since app-config is loaded
+            if (!firebase.apps.length) {
+                firebase.initializeApp(window.BINGO_CONFIG.firebaseConfig);
+            }
+            
+            // Validate guestToken against Backend API
+            fetch('/bot/api/scoreboard/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ streamId, token })
+            })
+            .then(res => {
+                if (!res.ok) throw new Error("Server-Fehler bei der Validierung");
+                return res.json();
+            })
+            .then(data => {
+                if (data.valid) {
+                    // Authorized!
+                    initModeratorPanel();
+                } else {
+                    showAccessDenied("Zugriff verweigert. Der Freigabelink ist ungültig oder abgelaufen.");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showAccessDenied("Fehler beim Abrufen der Zugriffsrechte vom Server.");
+            });
+        }
+
+        function showAccessDenied(msg) {
+            accessStatusCard.querySelector('h2').textContent = "❌ Zugriff verweigert";
+            accessStatusCard.querySelector('h2').style.color = "var(--danger)";
+            accessStatusMsg.textContent = msg;
+        }
+
+        // Global state inside panel
+        let currentScore = { home: 0, away: 0 };
+        let currentTimer = { isRunning: false, baseTime: 0, accumulatedTime: 0, isVisible: true, addedTime: 0 };
+        let currentRedCards = { home: 0, away: 0 };
+        
+        let serverTimeOffset = 0;
+        firebase.database().ref('.info/serverTimeOffset').on('value', (snap) => {
+            serverTimeOffset = snap.val() || 0;
+        });
+
+        // DOM elements
+        const scoreHomeEl = document.getElementById('scoreHome');
+        const scoreAwayEl = document.getElementById('scoreAway');
+        const nameHomeInput = document.getElementById('nameHomeInput');
+        const logoHomeInput = document.getElementById('logoHomeInput');
+        const nameAwayInput = document.getElementById('nameAwayInput');
+        const logoAwayInput = document.getElementById('logoAwayInput');
+        const countrySelectHome = document.getElementById('countrySelectHome');
+        const countrySelectAway = document.getElementById('countrySelectAway');
+        const adminTimerDisplay = document.getElementById('adminTimerDisplay');
+        const manualTimerMinutes = document.getElementById('manualTimerMinutes');
+        const toggleTimerBtn = document.getElementById('toggleTimerBtn');
+
+        const countries = [
+            { code: 'eg', name: 'Ägypten', abbr: 'EGY' },
+            { code: 'al', name: 'Albanien', abbr: 'ALB' },
+            { code: 'dz', name: 'Algerien', abbr: 'ALG' },
+            { code: 'ao', name: 'Angola', abbr: 'ANG' },
+            { code: 'ar', name: 'Argentinien', abbr: 'ARG' },
+            { code: 'au', name: 'Australien', abbr: 'AUS' },
+            { code: 'be', name: 'Belgien', abbr: 'BEL' },
+            { code: 'bo', name: 'Bolivien', abbr: 'BOL' },
+            { code: 'ba', name: 'Bosnien und Herzegowina', abbr: 'BIH' },
+            { code: 'br', name: 'Brasilien', abbr: 'BRA' },
+            { code: 'bg', name: 'Bulgarien', abbr: 'BUL' },
+            { code: 'bf', name: 'Burkina Faso', abbr: 'BFA' },
+            { code: 'cl', name: 'Chile', abbr: 'CHI' },
+            { code: 'cn', name: 'China', abbr: 'CHN' },
+            { code: 'cr', name: 'Costa Rica', abbr: 'CRC' },
+            { code: 'dk', name: 'Dänemark', abbr: 'DEN' },
+            { code: 'de', name: 'Deutschland', abbr: 'GER' },
+            { code: 'cd', name: 'DR Kongo', abbr: 'COD' },
+            { code: 'ec', name: 'Ecuador', abbr: 'ECU' },
+            { code: 'ci', name: 'Elfenbeinküste', abbr: 'CIV' },
+            { code: 'sv', name: 'El Salvador', abbr: 'SLV' },
+            { code: 'gb-eng', name: 'England', abbr: 'ENG' },
+            { code: 'fi', name: 'Finnland', abbr: 'FIN' },
+            { code: 'fr', name: 'Frankreich', abbr: 'FRA' },
+            { code: 'ga', name: 'Gabun', abbr: 'GAB' },
+            { code: 'ge', name: 'Georgien', abbr: 'GEO' },
+            { code: 'gh', name: 'Ghana', abbr: 'GHA' },
+            { code: 'gr', name: 'Griechenland', abbr: 'GRE' },
+            { code: 'gn', name: 'Guinea', abbr: 'GUI' },
+            { code: 'ht', name: 'Haiti', abbr: 'HAI' },
+            { code: 'hn', name: 'Honduras', abbr: 'HON' },
+            { code: 'in', name: 'Indien', abbr: 'IND' },
+            { code: 'id', name: 'Indonesien', abbr: 'IDN' },
+            { code: 'iq', name: 'Irak', abbr: 'IRQ' },
+            { code: 'ir', name: 'Iran', abbr: 'IRN' },
+            { code: 'ie', name: 'Irland', abbr: 'IRL' },
+            { code: 'is', name: 'Island', abbr: 'ISL' },
+            { code: 'il', name: 'Israel', abbr: 'ISR' },
+            { code: 'it', name: 'Italien', abbr: 'ITA' },
+            { code: 'jm', name: 'Jamaika', abbr: 'JAM' },
+            { code: 'jp', name: 'Japan', abbr: 'JPN' },
+            { code: 'jo', name: 'Jordanien', abbr: 'JOR' },
+            { code: 'cm', name: 'Kamerun', abbr: 'CMR' },
+            { code: 'ca', name: 'Kanada', abbr: 'CAN' },
+            { code: 'cv', name: 'Kap Verde', abbr: 'CPV' },
+            { code: 'qa', name: 'Katar', abbr: 'QAT' },
+            { code: 'co', name: 'Kolumbien', abbr: 'COL' },
+            { code: 'xk', name: 'Kosovo', abbr: 'KOS' },
+            { code: 'hr', name: 'Kroatien', abbr: 'CRO' },
+            { code: 'cu', name: 'Kuba', abbr: 'CUB' },
+            { code: 'kw', name: 'Kuwait', abbr: 'KUW' },
+            { code: 'lu', name: 'Luxemburg', abbr: 'LUX' },
+            { code: 'ml', name: 'Mali', abbr: 'MLI' },
+            { code: 'ma', name: 'Marokko', abbr: 'MAR' },
+            { code: 'mx', name: 'Mexiko', abbr: 'MEX' },
+            { code: 'me', name: 'Montenegro', abbr: 'MNE' },
+            { code: 'nz', name: 'Neuseeland', abbr: 'NZL' },
+            { code: 'nl', name: 'Niederlande', abbr: 'NED' },
+            { code: 'ng', name: 'Nigeria', abbr: 'NGA' },
+            { code: 'gb-nir', name: 'Nordirland', abbr: 'NIR' },
+            { code: 'mk', name: 'Nordmazedonien', abbr: 'MKD' },
+            { code: 'kp', name: 'Nordkorea', abbr: 'PRK' },
+            { code: 'no', name: 'Norwegen', abbr: 'NOR' },
+            { code: 'om', name: 'Oman', abbr: 'OMA' },
+            { code: 'at', name: 'Österreich', abbr: 'AUT' },
+            { code: 'ps', name: 'Palästina', abbr: 'PLE' },
+            { code: 'pa', name: 'Panama', abbr: 'PAN' },
+            { code: 'py', name: 'Paraguay', abbr: 'PAR' },
+            { code: 'pe', name: 'Peru', abbr: 'PER' },
+            { code: 'pl', name: 'Polen', abbr: 'POL' },
+            { code: 'pt', name: 'Portugal', abbr: 'POR' },
+            { code: 'ro', name: 'Rumänien', abbr: 'ROU' },
+            { code: 'ru', name: 'Russland', abbr: 'RUS' },
+            { code: 'sa', name: 'Saudi-Arabien', abbr: 'KSA' },
+            { code: 'gb-sct', name: 'Schottland', abbr: 'SCO' },
+            { code: 'se', name: 'Schweden', abbr: 'SWE' },
+            { code: 'ch', name: 'Schweiz', abbr: 'SUI' },
+            { code: 'sn', name: 'Senegal', abbr: 'SEN' },
+            { code: 'rs', name: 'Serbien', abbr: 'SRB' },
+            { code: 'sk', name: 'Slowakei', abbr: 'SVK' },
+            { code: 'si', name: 'Slowenien', abbr: 'SVN' },
+            { code: 'es', name: 'Spanien', abbr: 'ESP' },
+            { code: 'za', name: 'Südafrika', abbr: 'RSA' },
+            { code: 'kr', name: 'Südkorea', abbr: 'KOR' },
+            { code: 'sy', name: 'Syrien', abbr: 'SYR' },
+            { code: 'th', name: 'Thailand', abbr: 'THA' },
+            { code: 'tg', name: 'Togo', abbr: 'TG' },
+            { code: 'tt', name: 'Trinidad und Tobago', abbr: 'TRI' },
+            { code: 'cz', name: 'Tschechien', abbr: 'CZE' },
+            { code: 'tn', name: 'Tunesien', abbr: 'TUN' },
+            { code: 'tr', name: 'Türkei', abbr: 'TUR' },
+            { code: 'ua', name: 'Ukraine', abbr: 'UKR' },
+            { code: 'hu', name: 'Ungarn', abbr: 'HUN' },
+            { code: 'uy', name: 'Uruguay', abbr: 'URU' },
+            { code: 'us', name: 'USA', abbr: 'USA' },
+            { code: 'uz', name: 'Usbekistan', abbr: 'UZB' },
+            { code: 've', name: 'Venezuela', abbr: 'VEN' },
+            { code: 'ae', name: 'Vereinigte Arabische Emirate', abbr: 'UAE' },
+            { code: 'vn', name: 'Vietnam', abbr: 'VIE' },
+            { code: 'gb-wls', name: 'Wales', abbr: 'WAL' }
+        ];
+
+        // Setup custom searchable select component
+        function setupCustomSelect(containerId, originalSelectId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const trigger = container.querySelector('.custom-select-trigger');
+            const triggerText = container.querySelector('.custom-select-trigger-text');
+            const menu = container.querySelector('.custom-select-menu');
+            const searchInput = container.querySelector('.custom-select-search');
+            const optionsContainer = container.querySelector('.custom-select-options');
+            const originalSelect = document.getElementById(originalSelectId);
+
+            // Dynamically populate original select options first to ensure .value assignment works
+            if (originalSelect) {
+                originalSelect.innerHTML = '<option value="">🌍 Land auswählen...</option>';
+                countries.forEach(c => {
+                    const optEl = document.createElement('option');
+                    optEl.value = c.code;
+                    optEl.textContent = `${c.name} (${c.abbr})`;
+                    originalSelect.appendChild(optEl);
+                });
+            }
+
+            function renderOptions(filterQuery = '') {
+                optionsContainer.innerHTML = '';
+                const query = filterQuery.toLowerCase().trim();
+
+                // Add default empty option
+                const emptyOpt = document.createElement('div');
+                emptyOpt.className = 'custom-select-option';
+                if (!originalSelect.value) emptyOpt.classList.add('selected');
+                emptyOpt.textContent = '🌍 Land auswählen...';
+                emptyOpt.addEventListener('click', () => {
+                    selectValue('', '🌍 Land auswählen...');
+                });
+                optionsContainer.appendChild(emptyOpt);
+
+                countries.forEach(c => {
+                    if (!query || c.name.toLowerCase().includes(query) || c.abbr.toLowerCase().includes(query)) {
+                        const opt = document.createElement('div');
+                        opt.className = 'custom-select-option';
+                        if (originalSelect.value === c.code) {
+                            opt.classList.add('selected');
+                        }
+
+                        // Add flag img
+                        const flagImg = document.createElement('img');
+                        flagImg.className = 'custom-select-option-flag';
+                        flagImg.src = `https://flagcdn.com/w80/${c.code}.png`;
+                        flagImg.alt = c.name;
+                        opt.appendChild(flagImg);
+
+                        // Add text label
+                        const labelSpan = document.createElement('span');
+                        labelSpan.textContent = `${c.name} (${c.abbr})`;
+                        opt.appendChild(labelSpan);
+
+                        opt.addEventListener('click', () => {
+                            selectValue(c.code, `${c.name} (${c.abbr})`, c.code);
+                        });
+
+                        optionsContainer.appendChild(opt);
+                    }
+                });
+            }
+
+            function selectValue(val, label, code = null) {
+                originalSelect.value = val;
+                // Dispatch change event on original select
+                originalSelect.dispatchEvent(new Event('change'));
+
+                // Update trigger text with flag if selected
+                if (code) {
+                    triggerText.innerHTML = `<img class="custom-select-option-flag" src="https://flagcdn.com/w80/${code}.png"><span>${label}</span>`;
+                } else {
+                    triggerText.textContent = label;
+                }
+
+                // Close dropdown
+                container.classList.remove('open');
+                menu.style.display = 'none';
+            }
+
+            // Toggle dropdown
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                
+                // Close all other open custom selects first
+                document.querySelectorAll('.custom-select-container').forEach(other => {
+                    if (other !== container) {
+                        other.classList.remove('open');
+                        other.querySelector('.custom-select-menu').style.display = 'none';
+                    }
+                });
+
+                const isOpen = container.classList.toggle('open');
+                menu.style.display = isOpen ? 'flex' : 'none';
+                if (isOpen) {
+                    searchInput.value = '';
+                    renderOptions();
+                    searchInput.focus();
+                }
+            });
+
+            // Search filtering
+            searchInput.addEventListener('input', (e) => {
+                renderOptions(e.target.value);
+            });
+
+            // Prevent closing when clicking inside search input
+            searchInput.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+
+        // Close custom selects when clicking outside
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.custom-select-container').forEach(container => {
+                container.classList.remove('open');
+                const menu = container.querySelector('.custom-select-menu');
+                if (menu) menu.style.display = 'none';
+            });
+        });
+
+        function initModeratorPanel() {
+            // Hide loading card, show controls
+            accessStatusCard.style.display = 'none';
+            panelContent.style.display = 'block';
+
+            document.getElementById('moderatorSub').textContent = `Du steuerst das Scoreboard für Stream ID: ${streamId}`;
+
+            // Initialize custom selects
+            setupCustomSelect('customSelectHome', 'countrySelectHome');
+            setupCustomSelect('customSelectAway', 'countrySelectAway');
+
+            // Bind change handlers on original selects to update name/logo inputs
+            countrySelectHome.addEventListener('change', (e) => {
+                const selectedValue = e.target.value;
+                if (selectedValue) {
+                    const country = countries.find(c => c.code === selectedValue);
+                    if (country) {
+                        nameHomeInput.value = country.abbr;
+                        logoHomeInput.value = `https://flagcdn.com/w80/${country.code}.png`;
+                    }
+                }
+            });
+
+            countrySelectAway.addEventListener('change', (e) => {
+                const selectedValue = e.target.value;
+                if (selectedValue) {
+                    const country = countries.find(c => c.code === selectedValue);
+                    if (country) {
+                        nameAwayInput.value = country.abbr;
+                        logoAwayInput.value = `https://flagcdn.com/w80/${country.code}.png`;
+                    }
+                }
+            });
+
+            // Subscribe to Firebase real-time data
+            BingoStore.subscribe((data) => {
+                if (!data) return;
+                currentScore = data.score || { home: 0, away: 0 };
+                scoreHomeEl.textContent = currentScore.home;
+                scoreAwayEl.textContent = currentScore.away;
+                
+                nameHomeInput.value = data.teams?.home?.name || "";
+                logoHomeInput.value = data.teams?.home?.logo || "";
+                nameAwayInput.value = data.teams?.away?.name || "";
+                logoAwayInput.value = data.teams?.away?.logo || "";
+
+                document.getElementById('homeLabel').textContent = data.teams?.home?.name || "Home";
+                document.getElementById('awayLabel').textContent = data.teams?.away?.name || "Away";
+
+                currentRedCards = data.redCards || { home: 0, away: 0 };
+                const rcHomeVal = document.getElementById('redCardsHomeVal');
+                if (rcHomeVal) rcHomeVal.textContent = currentRedCards.home;
+                const rcAwayVal = document.getElementById('redCardsAwayVal');
+                if (rcAwayVal) rcAwayVal.textContent = currentRedCards.away;
+
+                if (data.timer) {
+                    currentTimer = data.timer;
+                    const addedTimeInput = document.getElementById('manualAddedTime');
+                    if (addedTimeInput && document.activeElement !== addedTimeInput) {
+                        addedTimeInput.value = currentTimer.addedTime || 0;
+                    }
+                    const periodSelect = document.getElementById('manualPeriod');
+                    if (periodSelect && document.activeElement !== periodSelect) {
+                        periodSelect.value = currentTimer.period || 1;
+                    }
+                    toggleTimerBtn.textContent = currentTimer.isVisible === false ? "👁️ Timer einblenden" : "👁️ Timer ausblenden";
+                    if (currentTimer.isVisible === false) {
+                        toggleTimerBtn.style.background = "rgba(255,255,255,0.06)";
+                    } else {
+                        toggleTimerBtn.style.background = "transparent";
+                    }
+                    
+                    const toggleSecondsBtn = document.getElementById('toggleSecondsBtn');
+                    if (toggleSecondsBtn) {
+                        toggleSecondsBtn.textContent = currentTimer.showSeconds === true ? "⏱️ Sekunden ausblenden" : "⏱️ Sekunden anzeigen";
+                        if (currentTimer.showSeconds === true) {
+                            toggleSecondsBtn.style.background = "rgba(34,197,94,0.15)";
+                            toggleSecondsBtn.style.color = "var(--success)";
+                            toggleSecondsBtn.style.borderColor = "var(--success)";
+                        } else {
+                            toggleSecondsBtn.style.background = "transparent";
+                            toggleSecondsBtn.style.color = "inherit";
+                            toggleSecondsBtn.style.borderColor = "rgba(255, 255, 255, 0.15)";
+                        }
+                    }
+                }
+
+
+            }, streamId);
+
+            // Start timer loops
+            requestAnimationFrame(updateTimerDisplay);
+        }
+
+        // --- DATABASE WRITES VIA API ---
+        async function sendDatabaseUpdate(path, value) {
+            try {
+                const res = await fetch('/bot/api/scoreboard/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        streamId,
+                        token,
+                        path,
+                        value
+                    })
+                });
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.error || "Fehler beim Aktualisieren");
+                }
+            } catch (err) {
+                console.error("Datenbank Update Fehler:", err);
+                alert("Fehler beim Speichern: " + err.message);
+            }
+        }
+
+        // --- BUTTON ACTIONS ---
+        function adjustScore(team, amount) {
+            if (team === 'home') {
+                currentScore.home = Math.max(0, currentScore.home + amount);
+            } else {
+                currentScore.away = Math.max(0, currentScore.away + amount);
+            }
+            sendDatabaseUpdate('score', currentScore);
+        }
+
+        function resetScore() {
+            if (confirm("Spielstand wirklich auf 0:0 zurücksetzen?")) {
+                currentScore = { home: 0, away: 0 };
+                sendDatabaseUpdate('score', currentScore);
+            }
+        }
+
+        function updateTeams() {
+            const teams = {
+                home: {
+                    name: nameHomeInput.value.trim(),
+                    logo: logoHomeInput.value.trim()
+                },
+                away: {
+                    name: nameAwayInput.value.trim(),
+                    logo: logoAwayInput.value.trim()
+                }
+            };
+            sendDatabaseUpdate('teams', teams);
+            alert("Teams & Logos erfolgreich aktualisiert!");
+        }
+
+        function startTimer() {
+            if (currentTimer.isRunning) return;
+            sendDatabaseUpdate('timer', {
+                ...currentTimer,
+                isRunning: true,
+                baseTime: Date.now(),
+                accumulatedTime: currentTimer.accumulatedTime
+            });
+        }
+
+        function pauseTimer() {
+            if (!currentTimer.isRunning) return;
+            const now = Date.now();
+            const addedTime = now - currentTimer.baseTime;
+            sendDatabaseUpdate('timer', {
+                ...currentTimer,
+                isRunning: false,
+                baseTime: now,
+                accumulatedTime: currentTimer.accumulatedTime + addedTime
+            });
+        }
+
+        function resetTimer() {
+            sendDatabaseUpdate('timer', {
+                ...currentTimer,
+                isRunning: false,
+                baseTime: Date.now(),
+                accumulatedTime: 0
+            });
+        }
+
+        function setManualTime() {
+            const mins = manualTimerMinutes.value;
+            if (!mins) return;
+            const targetMs = Math.max(0, parseInt(mins, 10)) * 60 * 1000;
+            
+            sendDatabaseUpdate('timer', {
+                ...currentTimer,
+                isRunning: false,
+                baseTime: Date.now(),
+                accumulatedTime: targetMs
+            });
+            manualTimerMinutes.value = '';
+        }
+
+        function setAddedTime() {
+            const val = parseInt(document.getElementById('manualAddedTime').value || 0, 10);
+            sendDatabaseUpdate('timer/addedTime', val);
+        }
+
+        function setPeriod() {
+            const val = parseInt(document.getElementById('manualPeriod').value || 1, 10);
+            sendDatabaseUpdate('timer/period', val);
+        }
+
+        function adjustRedCards(team, amount) {
+            const current = currentRedCards[team] || 0;
+            const target = Math.max(0, current + amount);
+            sendDatabaseUpdate(`redCards/${team}`, target);
+        }
+
+        function toggleTimerVisibility() {
+            const newVisible = currentTimer.isVisible === false;
+            sendDatabaseUpdate('timer/isVisible', newVisible);
+        }
+
+        function toggleTimerSeconds() {
+            const newShowSeconds = currentTimer.showSeconds !== true;
+            sendDatabaseUpdate('timer/showSeconds', newShowSeconds);
+        }
+
+        // Lokaler Update-Loop für die Timer-Anzeige im Admin-Panel
+        function updateTimerDisplay() {
+            if (!currentTimer) return;
+            let totalMs = currentTimer.accumulatedTime;
+            if (currentTimer.isRunning) {
+                const serverNow = Date.now() + serverTimeOffset;
+                totalMs += (serverNow - currentTimer.baseTime);
+            }
+            
+            const totalSeconds = Math.floor(totalMs / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            
+            const mm = minutes.toString().padStart(2, '0');
+            const ss = seconds.toString().padStart(2, '0');
+            
+            adminTimerDisplay.textContent = `${mm}:${ss}`;
+            requestAnimationFrame(updateTimerDisplay);
+        }
+
+
+    </script>
+</body>
+</html>

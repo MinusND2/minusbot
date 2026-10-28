@@ -1,0 +1,1988 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minus Overlay Studio - Figma-Style Overlay Maker</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+
+  <!-- Optional Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="app-config.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #0e0f12;
+      --bg-panel: #16181d;
+      --bg-panel-hover: #1f2229;
+      --border: #282c35;
+      --border-focus: #3b82f6;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-yellow: #facc15;
+      --accent-green: #22c55e;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --canvas-bg: #111216;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* TOPBAR (Figma Navigation Header) */
+    .topbar {
+      height: 52px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 100;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-badge {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 900;
+      font-size: 16px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .logo-badge span { color: var(--accent-yellow); }
+
+    .project-name-input {
+      background: transparent;
+      border: 1px solid transparent;
+      color: #fff;
+      font-weight: 600;
+      font-size: 14px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .project-name-input:hover, .project-name-input:focus {
+      background: var(--bg-dark);
+      border-color: var(--border);
+    }
+
+    .topbar-center {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .zoom-ctrl {
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-ghost:hover { background: var(--bg-panel-hover); }
+
+    .btn-primary {
+      background: var(--accent);
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+
+    .btn-create {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      font-weight: 700;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .btn-create:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+    /* WORKSPACE BODY */
+    .workspace {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* LEFT SIDEBAR (Assets & Tool Palette) */
+    .sidebar-left {
+      width: 270px;
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 50;
+    }
+
+    .sidebar-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-tab {
+      flex: 1;
+      text-align: center;
+      padding: 12px 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+
+    .sidebar-tab.active {
+      color: #fff;
+      border-bottom: 2px solid var(--accent);
+    }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .tool-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .tool-card {
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+
+    .tool-card:hover {
+      background: var(--bg-panel-hover);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .tool-icon { font-size: 20px; }
+    .tool-label { font-size: 11px; font-weight: 600; color: #fff; }
+
+    /* File Upload Box */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+      cursor: pointer;
+      background: rgba(0,0,0,0.15);
+      transition: all 0.2s;
+    }
+    .upload-zone:hover {
+      border-color: var(--accent);
+      background: rgba(59, 130, 246, 0.05);
+    }
+    .upload-zone p { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    /* Asset Preset Grid */
+    .asset-preset-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .asset-preset-card {
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 4px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .asset-preset-card:hover {
+      border-color: var(--accent-yellow);
+      transform: scale(1.05);
+    }
+    .asset-preset-card .icon { font-size: 24px; display: block; margin-bottom: 2px; }
+    .asset-preset-card span { font-size: 9px; color: var(--text-muted); }
+
+    /* Layers List & Reordering */
+    .layers-toolbar {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 12px;
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px;
+    }
+    .layers-tool-btn {
+      flex: 1;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 600;
+      padding: 6px 2px;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .layers-tool-btn:hover:not(:disabled) {
+      background: var(--bg-panel-hover);
+      border-color: var(--border);
+      color: #fff;
+    }
+    .layers-tool-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .layer-item {
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.15s;
+      margin-bottom: 6px;
+      gap: 6px;
+    }
+    .layer-item:hover { background: var(--bg-panel-hover); border-color: rgba(255,255,255,0.15); }
+    .layer-item.active { border-color: var(--accent); background: rgba(59, 130, 246, 0.12); }
+    .layer-item.dragging { opacity: 0.4; border-style: dashed; }
+    .layer-item.drag-over { border-top: 2px solid var(--accent); }
+
+    .layer-left { display: flex; align-items: center; gap: 8px; overflow: hidden; flex: 1; min-width: 0; }
+    .layer-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px; font-weight: 500; }
+
+    .layer-actions {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      flex-shrink: 0;
+    }
+    .layer-btn-action {
+      background: #111317;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      width: 22px;
+      height: 22px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 10px;
+      transition: all 0.12s;
+      padding: 0;
+    }
+    .layer-btn-action:hover {
+      background: var(--bg-panel-hover);
+      border-color: var(--accent);
+      color: #fff;
+      transform: scale(1.08);
+    }
+    .layer-btn-action.btn-delete:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: #ef4444;
+      color: #ef4444;
+    }
+
+    /* CANVAS AREA (Center) */
+    .canvas-viewport {
+      flex: 1;
+      background: var(--canvas-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: auto;
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+
+    /* Screen Frame (1920x1080 scaled) */
+    .overlay-stage {
+      width: 1920px;
+      height: 1080px;
+      position: relative;
+      background: transparent;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15), 0 25px 60px rgba(0,0,0,0.8);
+      transform-origin: center center;
+      transition: transform 0.1s ease;
+      background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0, rgba(255,255,255,0.02) 10px, transparent 10px, transparent 20px);
+    }
+
+    .overlay-stage.bg-black { background: #000000; }
+    .overlay-stage.bg-green { background: #00ff00; }
+
+    /* Canvas Elements */
+    .canvas-element {
+      position: absolute;
+      cursor: move;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+
+    .canvas-element.selected {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    /* Resize Handles */
+    .resize-handle {
+      display: none;
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: #fff;
+      border: 1px solid var(--accent);
+      border-radius: 2px;
+      z-index: 10;
+    }
+
+    .canvas-element.selected .resize-handle { display: block; }
+
+    .rh-nw { top: -5px; left: -5px; cursor: nwse-resize; }
+    .rh-ne { top: -5px; right: -5px; cursor: nesw-resize; }
+    .rh-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+    .rh-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+    .rh-n  { top: -5px; left: calc(50% - 4px); cursor: ns-resize; }
+    .rh-s  { bottom: -5px; left: calc(50% - 4px); cursor: ns-resize; }
+    .rh-w  { top: calc(50% - 4px); left: -5px; cursor: ew-resize; }
+    .rh-e  { top: calc(50% - 4px); right: -5px; cursor: ew-resize; }
+
+    /* RIGHT SIDEBAR (Inspector) */
+    .sidebar-right {
+      width: 300px;
+      background: var(--bg-panel);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      z-index: 50;
+      padding: 16px;
+      gap: 16px;
+    }
+
+    .inspector-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .inspector-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+    }
+
+    .prop-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .prop-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .prop-field label {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .prop-input {
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 12px;
+      padding: 6px 8px;
+      outline: none;
+      width: 100%;
+    }
+
+    .prop-input:focus {
+      border-color: var(--accent);
+    }
+
+    .color-picker-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .color-picker-wrap input[type="color"] {
+      background: transparent;
+      border: none;
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    /* MODAL: EXPORT & OBS LINK */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.active { display: flex; }
+
+    .modal-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      width: 100%;
+      max-width: 580px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.7);
+      animation: modalPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes modalPop {
+      0% { transform: scale(0.92); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h2 { font-size: 18px; font-weight: 800; color: #fff; }
+
+    .obs-link-box {
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .obs-link-box input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--accent-yellow);
+      font-family: monospace;
+      font-size: 12px;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="logo-badge">
+        <span>MINUS</span> STUDIO
+      </div>
+      <input type="text" id="projectName" class="project-name-input" value="Mein Custom Overlay" title="Projekt-Name bearbeiten">
+    </div>
+
+    <div class="topbar-center">
+      <div class="zoom-ctrl">
+        <span>Zoom:</span>
+        <button class="btn-ghost" style="padding:2px 6px; font-size:10px;" id="zoomOutBtn">-</button>
+        <span id="zoomLabel">45%</span>
+        <button class="btn-ghost" style="padding:2px 6px; font-size:10px;" id="zoomInBtn">+</button>
+        <button class="btn-ghost" style="padding:2px 6px; font-size:10px;" id="zoomFitBtn">Fit</button>
+      </div>
+      <select id="stageBgSelect" class="prop-input" style="width: auto; padding: 4px 8px;">
+        <option value="transparent">Hintergrund: Transparent</option>
+        <option value="black">Hintergrund: Schwarz</option>
+        <option value="green">Hintergrund: Green Screen</option>
+      </select>
+    </div>
+
+    <div class="topbar-right">
+      <button class="btn btn-ghost" id="clearCanvasBtn">Leeren</button>
+      <button class="btn btn-ghost" id="saveLocalBtn">Speichern</button>
+      <button class="btn btn-create" id="openExportModalBtn">
+        <span>🚀</span> OVERLAY ERSTELLEN
+      </button>
+    </div>
+  </div>
+
+  <!-- WORKSPACE -->
+  <div class="workspace">
+    
+    <!-- LEFT SIDEBAR: PALETTE & ASSETS -->
+    <div class="sidebar-left">
+      <div class="sidebar-tabs">
+        <div class="sidebar-tab active" data-tab="elements">Elemente</div>
+        <div class="sidebar-tab" data-tab="layers">Ebenen (<span id="layerCount">0</span>)</div>
+      </div>
+
+      <div class="sidebar-content" id="tabElementsContent">
+        
+        <!-- Element Creation Tools -->
+        <div>
+          <div class="section-title">Overlay Bausteine</div>
+          <div class="tool-grid">
+            <div class="tool-card" id="addTimerBtn">
+              <span class="tool-icon">⏱️</span>
+              <span class="tool-label">Timer</span>
+            </div>
+            <div class="tool-card" id="addBreakBtn">
+              <span class="tool-icon">🥪</span>
+              <span class="tool-label">Mittagspause</span>
+            </div>
+            <div class="tool-card" id="addTextBtn">
+              <span class="tool-icon">🔤</span>
+              <span class="tool-label">Text</span>
+            </div>
+            <div class="tool-card" id="addBoxBtn">
+              <span class="tool-icon">🟦</span>
+              <span class="tool-label">Box / Karte</span>
+            </div>
+            <div class="tool-card" id="addProgressBarBtn">
+              <span class="tool-icon">📊</span>
+              <span class="tool-label">Ladebalken</span>
+            </div>
+            <div class="tool-card" id="addBadgeBtn">
+              <span class="tool-icon">🏷️</span>
+              <span class="tool-label">Badge</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PNG Upload Zone -->
+        <div>
+          <div class="section-title">Eigenes Bild / PNG Hinzufügen</div>
+          <div class="upload-zone" id="uploadZone">
+            <span style="font-size:24px;">📁</span>
+            <div style="font-size:12px; font-weight:700; color:#fff; margin-top:4px;">PNG / Bild hochladen</div>
+            <p>Vom Computer auswählen (Transparenz unterstützt)</p>
+            <input type="file" id="pngFileInput" accept="image/*" style="display:none;">
+          </div>
+        </div>
+
+        <!-- Sticker / Icon Presets -->
+        <div>
+          <div class="section-title">Schnell-Sticker & Vorlagen</div>
+          <div class="asset-preset-grid">
+            <div class="asset-preset-card" data-preset="vest">
+              <span class="icon">🦺</span>
+              <span>Warnweste</span>
+            </div>
+            <div class="asset-preset-card" data-preset="grabber">
+              <span class="icon">🗜️</span>
+              <span>Müllzange</span>
+            </div>
+            <div class="asset-preset-card" data-preset="pickaxe">
+              <span class="icon">⛏️</span>
+              <span>Spitzhacke</span>
+            </div>
+            <div class="asset-preset-card" data-preset="sandwich">
+              <span class="icon">🥪</span>
+              <span>Sandwich</span>
+            </div>
+            <div class="asset-preset-card" data-preset="hearts">
+              <span class="icon">❤️</span>
+              <span>Herzen</span>
+            </div>
+            <div class="asset-preset-card" data-preset="trophy">
+              <span class="icon">🏆</span>
+              <span>Pokal</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Layers Tab -->
+      <div class="sidebar-content" id="tabLayersContent" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div class="section-title" style="margin-bottom:0;">Ebenen-Reihenfolge</div>
+          <span style="font-size:10px; color:var(--text-muted);">Oben = Im Vordergrund</span>
+        </div>
+
+        <!-- Quick Toolbar for Selected Layer -->
+        <div class="layers-toolbar">
+          <button class="layers-tool-btn" id="toolLayerFront" title="Ganz nach vorne (Top)">🔝 Vorne</button>
+          <button class="layers-tool-btn" id="toolLayerUp" title="Eine Ebene nach oben (vorne)">▲ Hoch</button>
+          <button class="layers-tool-btn" id="toolLayerDown" title="Eine Ebene nach unten (hinten)">▼ Runter</button>
+          <button class="layers-tool-btn" id="toolLayerBack" title="Ganz nach hinten (Boden)">🔚 Hinten</button>
+        </div>
+
+        <div id="layersList"></div>
+      </div>
+    </div>
+
+    <!-- CANVAS VIEWPORT -->
+    <div class="canvas-viewport" id="viewport">
+      <div class="overlay-stage" id="stage">
+        <!-- Draggable elements are placed here -->
+      </div>
+    </div>
+
+    <!-- RIGHT SIDEBAR: PROPERTIES INSPECTOR -->
+    <div class="sidebar-right" id="inspector">
+      <div style="font-size:13px; font-weight:700; color:#fff; display:flex; justify-content:space-between; align-items:center;">
+        <span id="inspectorTitle">Eigenschaften</span>
+        <button class="btn-ghost" style="padding:4px 8px; font-size:11px; color:#ef4444;" id="deleteElementBtn">Löschen</button>
+      </div>
+
+      <div id="emptyInspectorNotice" style="font-size:12px; color:var(--text-muted); text-align:center; padding:30px 10px;">
+        Klicke ein Element auf dem Canvas an, um es wie in Figma anzupassen.
+      </div>
+
+      <div id="inspectorFields" style="display:none; flex-direction:column; gap:16px;">
+        
+        <!-- Position & Size -->
+        <div class="inspector-group">
+          <div class="inspector-title">Position & Größe</div>
+          <div class="prop-row">
+            <div class="prop-field">
+              <label>X Position</label>
+              <input type="number" id="propX" class="prop-input">
+            </div>
+            <div class="prop-field">
+              <label>Y Position</label>
+              <input type="number" id="propY" class="prop-input">
+            </div>
+          </div>
+          <div class="prop-row">
+            <div class="prop-field">
+              <label>Breite</label>
+              <input type="number" id="propW" class="prop-input">
+            </div>
+            <div class="prop-field">
+              <label>Höhe</label>
+              <input type="number" id="propH" class="prop-input">
+            </div>
+          </div>
+          <div class="prop-row">
+            <div class="prop-field">
+              <label>Deckkraft (Opacity %)</label>
+              <input type="number" id="propOpacity" min="10" max="100" class="prop-input" value="100">
+            </div>
+            <div class="prop-field">
+              <label>Ebene (Z-Index)</label>
+              <input type="number" id="propZIndex" class="prop-input" value="10" readonly style="opacity:0.8;">
+            </div>
+          </div>
+          <div class="prop-field" style="margin-top: 4px;">
+            <label>Ebene Verschieben</label>
+            <div style="display: flex; gap: 4px;">
+              <button class="btn btn-ghost" style="flex:1; padding:6px 2px; font-size:10px;" id="inspBringFrontBtn" title="Ganz nach vorne">🔝 Vorne</button>
+              <button class="btn btn-ghost" style="flex:1; padding:6px 2px; font-size:10px;" id="inspStepUpBtn" title="Eine Ebene nach oben">▲ Vor</button>
+              <button class="btn btn-ghost" style="flex:1; padding:6px 2px; font-size:10px;" id="inspStepDownBtn" title="Eine Ebene nach unten">▼ Zurück</button>
+              <button class="btn btn-ghost" style="flex:1; padding:6px 2px; font-size:10px;" id="inspSendBackBtn" title="Ganz nach hinten">🔚 Hinten</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Typography (For Text & Timers) -->
+        <div class="inspector-group" id="groupTypography">
+          <div class="inspector-title">Typografie & Text</div>
+          <div class="prop-field">
+            <label>Textinhalt</label>
+            <input type="text" id="propText" class="prop-input">
+          </div>
+          <div class="prop-row">
+            <div class="prop-field">
+              <label>Schriftart</label>
+              <select id="propFontFamily" class="prop-input">
+                <option value="'Inter', sans-serif">Inter (Modern)</option>
+                <option value="'Outfit', sans-serif">Outfit (Stream)</option>
+                <option value="'Press Start 2P', monospace">Minecraft / Pixel</option>
+                <option value="'VT323', monospace">Retro Digital</option>
+                <option value="monospace">Monospace</option>
+              </select>
+            </div>
+            <div class="prop-field">
+              <label>Größe (px)</label>
+              <input type="number" id="propFontSize" min="8" max="200" class="prop-input">
+            </div>
+          </div>
+          <div class="prop-row">
+            <div class="prop-field">
+              <label>Textfarbe</label>
+              <div class="color-picker-wrap">
+                <input type="color" id="propTextColor">
+                <input type="text" id="propTextColorHex" class="prop-input" style="font-family:monospace;">
+              </div>
+            </div>
+            <div class="prop-field">
+              <label>Text-Schatten</label>
+              <select id="propTextShadow" class="prop-input">
+                <option value="none">Kein Schatten</option>
+                <option value="2px 2px 0px #000">Pixel Schatten (Minecraft)</option>
+                <option value="0 0 16px currentColor">Leuchten (Glow)</option>
+                <option value="0 4px 10px rgba(0,0,0,0.8)">Weicher Schatten</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Styling & Colors -->
+        <div class="inspector-group">
+          <div class="inspector-title">Aussehen & Rahmen</div>
+          <div class="prop-field">
+            <label>Hintergrundfarbe</label>
+            <div class="color-picker-wrap">
+              <input type="color" id="propBgColor">
+              <input type="text" id="propBgColorHex" class="prop-input" style="font-family:monospace;">
+            </div>
+          </div>
+          <div class="prop-row">
+            <div class="prop-field">
+              <label>Eckenrundung (px)</label>
+              <input type="number" id="propBorderRadius" min="0" max="100" class="prop-input" value="0">
+            </div>
+            <div class="prop-field">
+              <label>Rahmen-Dicke (px)</label>
+              <input type="number" id="propBorderWidth" min="0" max="20" class="prop-input" value="0">
+            </div>
+          </div>
+          <div class="prop-field">
+            <label>Rahmenfarbe</label>
+            <div class="color-picker-wrap">
+              <input type="color" id="propBorderColor">
+              <input type="text" id="propBorderColorHex" class="prop-input" style="font-family:monospace;">
+            </div>
+          </div>
+        </div>
+
+        <!-- Timer Spezifische Einstellungen -->
+        <div class="inspector-group" id="groupTimerProps" style="display:none;">
+          <div class="inspector-title" style="color:var(--accent-yellow);">Timer Logik</div>
+          <div class="prop-field">
+            <label>Modus</label>
+            <select id="propTimerMode" class="prop-input">
+              <option value="countdown">Runterzählen (Countdown)</option>
+              <option value="countup">Hochzählen (Stempeluhr)</option>
+            </select>
+          </div>
+          <div class="prop-row">
+            <div class="prop-field">
+              <label>Startzeit (Minuten)</label>
+              <input type="number" id="propTimerMinutes" class="prop-input" value="60">
+            </div>
+            <div class="prop-field">
+              <label>Pause-Dauer (Minuten)</label>
+              <input type="number" id="propBreakMinutes" class="prop-input" value="30">
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- EXPORT & OBS MODAL -->
+  <div class="modal-overlay" id="exportModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>🎉 Overlay Fertiggestellt!</h2>
+        <button class="btn-ghost" style="padding:4px 8px;" id="closeExportModalBtn">✕</button>
+      </div>
+
+      <p style="font-size:13px; color:var(--text-muted); line-height:1.5;">
+        Dein individuelles Overlay ist gespeichert und bereit für OBS Studio. Füge in OBS einfach eine <strong>Browser-Quelle</strong> hinzu und trage den Link ein:
+      </p>
+
+      <div class="obs-link-box">
+        <input type="text" id="modalObsUrl" readonly value="">
+        <button class="btn btn-primary" id="copyModalObsLinkBtn">Kopieren</button>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+        <span style="font-size:11px; color:var(--text-muted);">Empfohlene OBS Größe: 1920 x 1080 (Transparenz aktiv)</span>
+        <button class="btn btn-ghost" id="openObsTabBtn">Im neuen Tab testen</button>
+      </div>
+
+      <div style="border-top:1px solid var(--border); padding-top:14px; margin-top:6px; display:flex; gap:10px;">
+        <button class="btn btn-ghost" style="flex:1;" id="exportJsonBtn">JSON Datei exportieren</button>
+        <button class="btn btn-ghost" style="flex:1;" id="importJsonBtn">JSON importieren</button>
+        <input type="file" id="jsonFileInput" accept=".json" style="display:none;">
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- STATE MANAGEMENT ---
+    const STORAGE_KEY_PREFIX = 'minus_custom_overlay_';
+    let currentProjectId = 'default';
+    let currentProject = {
+      id: 'default',
+      name: 'Mein Custom Overlay',
+      width: 1920,
+      height: 1080,
+      elements: [],
+      timerState: {
+        isRunning: false,
+        isBreak: false,
+        seconds: 3600,
+        mode: 'countdown',
+        targetSeconds: 3600
+      }
+    };
+
+    let selectedElementId = null;
+    let zoomLevel = 0.45;
+
+    // --- DOM Elements ---
+    const stage = document.getElementById('stage');
+    const viewport = document.getElementById('viewport');
+    const projectNameInput = document.getElementById('projectName');
+    const zoomLabel = document.getElementById('zoomLabel');
+    const inspectorFields = document.getElementById('inspectorFields');
+    const emptyInspectorNotice = document.getElementById('emptyInspectorNotice');
+    const layersList = document.getElementById('layersList');
+    const layerCount = document.getElementById('layerCount');
+
+    // Inspector fields
+    const propX = document.getElementById('propX');
+    const propY = document.getElementById('propY');
+    const propW = document.getElementById('propW');
+    const propH = document.getElementById('propH');
+    const propOpacity = document.getElementById('propOpacity');
+    const propZIndex = document.getElementById('propZIndex');
+    const propText = document.getElementById('propText');
+    const propFontFamily = document.getElementById('propFontFamily');
+    const propFontSize = document.getElementById('propFontSize');
+    const propTextColor = document.getElementById('propTextColor');
+    const propTextColorHex = document.getElementById('propTextColorHex');
+    const propTextShadow = document.getElementById('propTextShadow');
+    const propBgColor = document.getElementById('propBgColor');
+    const propBgColorHex = document.getElementById('propBgColorHex');
+    const propBorderRadius = document.getElementById('propBorderRadius');
+    const propBorderWidth = document.getElementById('propBorderWidth');
+    const propBorderColor = document.getElementById('propBorderColor');
+    const propBorderColorHex = document.getElementById('propBorderColorHex');
+    const groupTypography = document.getElementById('groupTypography');
+    const groupTimerProps = document.getElementById('groupTimerProps');
+    const propTimerMode = document.getElementById('propTimerMode');
+    const propTimerMinutes = document.getElementById('propTimerMinutes');
+    const propBreakMinutes = document.getElementById('propBreakMinutes');
+
+    // Zoom Functions
+    function updateZoom(newZoom) {
+      zoomLevel = Math.max(0.2, Math.min(1.5, newZoom));
+      stage.style.transform = `scale(${zoomLevel})`;
+      zoomLabel.textContent = `${Math.round(zoomLevel * 100)}%`;
+    }
+
+    function fitStageToViewport() {
+      const vWidth = viewport.clientWidth - 40;
+      const vHeight = viewport.clientHeight - 40;
+      const scaleX = vWidth / 1920;
+      const scaleY = vHeight / 1080;
+      updateZoom(Math.min(scaleX, scaleY));
+    }
+
+    document.getElementById('zoomInBtn').addEventListener('click', () => updateZoom(zoomLevel + 0.05));
+    document.getElementById('zoomOutBtn').addEventListener('click', () => updateZoom(zoomLevel - 0.05));
+    document.getElementById('zoomFitBtn').addEventListener('click', fitStageToViewport);
+    window.addEventListener('resize', fitStageToViewport);
+
+    // Background switch
+    document.getElementById('stageBgSelect').addEventListener('change', (e) => {
+      stage.classList.remove('bg-black', 'bg-green');
+      if (e.target.value === 'black') stage.classList.add('bg-black');
+      if (e.target.value === 'green') stage.classList.add('bg-green');
+    });
+
+    // --- ELEMENT CREATION HELPERS ---
+    function addElement(elData) {
+      const id = 'el_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+      const newEl = {
+        id,
+        name: elData.name || 'Element',
+        type: elData.type || 'box',
+        x: elData.x !== undefined ? elData.x : 100,
+        y: elData.y !== undefined ? elData.y : 100,
+        w: elData.w !== undefined ? elData.w : 200,
+        h: elData.h !== undefined ? elData.h : 80,
+        zIndex: currentProject.elements.length + 1,
+        opacity: 100,
+        bgColor: elData.bgColor || 'rgba(20, 22, 28, 0.85)',
+        borderRadius: elData.borderRadius !== undefined ? elData.borderRadius : 12,
+        borderWidth: elData.borderWidth !== undefined ? elData.borderWidth : 1,
+        borderColor: elData.borderColor || '#3b82f6',
+        text: elData.text || '',
+        textColor: elData.textColor || '#ffffff',
+        fontFamily: elData.fontFamily || "'Outfit', sans-serif",
+        fontSize: elData.fontSize || 24,
+        textShadow: elData.textShadow || 'none',
+        imgSrc: elData.imgSrc || '',
+        timerMode: elData.timerMode || 'countdown',
+        timerMinutes: elData.timerMinutes || 60,
+        breakMinutes: elData.breakMinutes || 30
+      };
+
+      currentProject.elements.push(newEl);
+      renderCanvas();
+      selectElement(id);
+      saveProject();
+    }
+
+    // Tools Click Listeners
+    document.getElementById('addTextBtn').addEventListener('click', () => {
+      addElement({
+        name: 'Text',
+        type: 'text',
+        w: 300,
+        h: 60,
+        text: 'Mein Stream Titel',
+        bgColor: 'transparent',
+        borderWidth: 0,
+        fontSize: 32,
+        textColor: '#ffffff'
+      });
+    });
+
+    document.getElementById('addBoxBtn').addEventListener('click', () => {
+      addElement({
+        name: 'Karte / Box',
+        type: 'box',
+        w: 380,
+        h: 220,
+        bgColor: 'rgba(20, 22, 28, 0.85)',
+        borderRadius: 14,
+        borderWidth: 2,
+        borderColor: '#facc15'
+      });
+    });
+
+    document.getElementById('addTimerBtn').addEventListener('click', () => {
+      addElement({
+        name: 'Live Timer',
+        type: 'timer',
+        w: 340,
+        h: 90,
+        text: '01:00:00',
+        bgColor: 'rgba(15, 17, 23, 0.9)',
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: '#3b82f6',
+        fontFamily: "'Press Start 2P', monospace",
+        fontSize: 32,
+        textColor: '#ffffff',
+        textShadow: '0 0 16px rgba(59, 130, 246, 0.5)',
+        timerMode: 'countdown'
+      });
+    });
+
+    document.getElementById('addBreakBtn').addEventListener('click', () => {
+      addElement({
+        name: 'Mittagspause Banner',
+        type: 'break',
+        w: 320,
+        h: 64,
+        text: '🥪 MITTAGSPAUSE (30m)',
+        bgColor: 'rgba(234, 88, 12, 0.25)',
+        borderRadius: 10,
+        borderWidth: 2,
+        borderColor: '#f97316',
+        fontSize: 16,
+        textColor: '#fed7aa',
+        fontFamily: "'Outfit', sans-serif"
+      });
+    });
+
+    document.getElementById('addBadgeBtn').addEventListener('click', () => {
+      addElement({
+        name: 'Status Badge',
+        type: 'badge',
+        w: 160,
+        h: 36,
+        text: '🦺 IM DIENST',
+        bgColor: '#16a34a',
+        borderRadius: 18,
+        borderWidth: 0,
+        fontSize: 13,
+        textColor: '#ffffff'
+      });
+    });
+
+    document.getElementById('addProgressBarBtn').addEventListener('click', () => {
+      addElement({
+        name: 'Fortschrittsbalken',
+        type: 'progress',
+        w: 360,
+        h: 16,
+        bgColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)'
+      });
+    });
+
+    // PNG File Upload
+    const uploadZone = document.getElementById('uploadZone');
+    const pngFileInput = document.getElementById('pngFileInput');
+
+    uploadZone.addEventListener('click', () => pngFileInput.click());
+    pngFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target.result;
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width || 120;
+          let h = img.height || 120;
+          if (w > 400) { h = (h / w) * 400; w = 400; }
+          addElement({
+            name: file.name.replace(/\.[^/.]+$/, ''),
+            type: 'image',
+            w: Math.round(w),
+            h: Math.round(h),
+            bgColor: 'transparent',
+            borderWidth: 0,
+            imgSrc: dataUrl
+          });
+        };
+        img.src = dataUrl;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Preset Sticker Click
+    document.querySelectorAll('.asset-preset-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const preset = card.dataset.preset;
+        if (preset === 'vest') {
+          addElement({
+            name: 'Warnweste',
+            type: 'text',
+            w: 80,
+            h: 80,
+            text: '🦺',
+            fontSize: 54,
+            bgColor: 'transparent',
+            borderWidth: 0
+          });
+        } else if (preset === 'grabber') {
+          addElement({
+            name: 'Müllzange',
+            type: 'text',
+            w: 80,
+            h: 80,
+            text: '🗜️',
+            fontSize: 54,
+            bgColor: 'transparent',
+            borderWidth: 0
+          });
+        } else if (preset === 'pickaxe') {
+          addElement({
+            name: 'Spitzhacke',
+            type: 'text',
+            w: 80,
+            h: 80,
+            text: '⛏️',
+            fontSize: 54,
+            bgColor: 'transparent',
+            borderWidth: 0
+          });
+        } else if (preset === 'sandwich') {
+          addElement({
+            name: 'Sandwich',
+            type: 'text',
+            w: 80,
+            h: 80,
+            text: '🥪',
+            fontSize: 54,
+            bgColor: 'transparent',
+            borderWidth: 0
+          });
+        } else if (preset === 'hearts') {
+          addElement({
+            name: 'Herzen',
+            type: 'text',
+            w: 160,
+            h: 40,
+            text: '❤️❤️❤️❤️❤️',
+            fontSize: 22,
+            bgColor: 'transparent',
+            borderWidth: 0
+          });
+        } else if (preset === 'trophy') {
+          addElement({
+            name: 'Pokal',
+            type: 'text',
+            w: 80,
+            h: 80,
+            text: '🏆',
+            fontSize: 54,
+            bgColor: 'transparent',
+            borderWidth: 0
+          });
+        }
+      });
+    });
+
+    // --- CANVAS RENDERING & DRAGGING ---
+    function renderCanvas() {
+      stage.innerHTML = '';
+      currentProject.elements.forEach(el => {
+        const domEl = document.createElement('div');
+        domEl.className = 'canvas-element' + (el.id === selectedElementId ? ' selected' : '');
+        domEl.id = 'dom_' + el.id;
+        domEl.style.left = el.x + 'px';
+        domEl.style.top = el.y + 'px';
+        domEl.style.width = el.w + 'px';
+        domEl.style.height = el.h + 'px';
+        domEl.style.zIndex = el.zIndex || 1;
+        domEl.style.opacity = (el.opacity || 100) / 100;
+        domEl.style.backgroundColor = el.bgColor;
+        domEl.style.borderRadius = (el.borderRadius || 0) + 'px';
+        domEl.style.border = el.borderWidth ? `${el.borderWidth}px solid ${el.borderColor}` : 'none';
+
+        // Content
+        if (el.type === 'image' && el.imgSrc) {
+          domEl.innerHTML = `<img src="${el.imgSrc}" style="width:100%; height:100%; object-fit:contain; pointer-events:none;">`;
+        } else if (el.type === 'progress') {
+          domEl.innerHTML = `<div style="width:65%; height:100%; background:linear-gradient(90deg, #facc15, #22c55e); border-radius:inherit;"></div>`;
+        } else {
+          domEl.textContent = el.text || '';
+          domEl.style.color = el.textColor;
+          domEl.style.fontFamily = el.fontFamily;
+          domEl.style.fontSize = (el.fontSize || 20) + 'px';
+          domEl.style.textShadow = el.textShadow || 'none';
+        }
+
+        // Resize handles if selected
+        if (el.id === selectedElementId) {
+          ['nw','ne','se','sw','n','s','e','w'].forEach(pos => {
+            const rh = document.createElement('div');
+            rh.className = `resize-handle rh-${pos}`;
+            rh.dataset.handle = pos;
+            domEl.appendChild(rh);
+          });
+        }
+
+        // Mouse Down for Dragging / Selecting
+        domEl.addEventListener('mousedown', (e) => {
+          if (e.target.classList.contains('resize-handle')) {
+            startResize(e, el, e.target.dataset.handle);
+            return;
+          }
+          e.stopPropagation();
+          selectElement(el.id);
+          startDrag(e, el);
+        });
+
+        stage.appendChild(domEl);
+      });
+
+      renderLayersList();
+    }
+
+    // Deselect on clicking stage backdrop
+    viewport.addEventListener('mousedown', (e) => {
+      if (e.target === viewport || e.target === stage) {
+        selectElement(null);
+      }
+    });
+
+    // Element Selection
+    function selectElement(id) {
+      selectedElementId = id;
+      renderCanvas();
+      updateInspector();
+    }
+
+    // Drag Logic
+    function startDrag(e, el) {
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const initialX = el.x;
+      const initialY = el.y;
+
+      function onMouseMove(ev) {
+        const deltaX = (ev.clientX - startX) / zoomLevel;
+        const deltaY = (ev.clientY - startY) / zoomLevel;
+        el.x = Math.round(initialX + deltaX);
+        el.y = Math.round(initialY + deltaY);
+
+        const dom = document.getElementById('dom_' + el.id);
+        if (dom) {
+          dom.style.left = el.x + 'px';
+          dom.style.top = el.y + 'px';
+        }
+        propX.value = el.x;
+        propY.value = el.y;
+      }
+
+      function onMouseUp() {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        saveProject();
+      }
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    }
+
+    // Resize Logic
+    function startResize(e, el, handle) {
+      e.stopPropagation();
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const initialX = el.x;
+      const initialY = el.y;
+      const initialW = el.w;
+      const initialH = el.h;
+
+      function onMouseMove(ev) {
+        const deltaX = (ev.clientX - startX) / zoomLevel;
+        const deltaY = (ev.clientY - startY) / zoomLevel;
+
+        if (handle.includes('e')) el.w = Math.max(20, Math.round(initialW + deltaX));
+        if (handle.includes('s')) el.h = Math.max(10, Math.round(initialH + deltaY));
+        if (handle.includes('w')) {
+          const newW = Math.max(20, Math.round(initialW - deltaX));
+          el.x = Math.round(initialX + (initialW - newW));
+          el.w = newW;
+        }
+        if (handle.includes('n')) {
+          const newH = Math.max(10, Math.round(initialH - deltaY));
+          el.y = Math.round(initialY + (initialH - newH));
+          el.h = newH;
+        }
+
+        const dom = document.getElementById('dom_' + el.id);
+        if (dom) {
+          dom.style.left = el.x + 'px';
+          dom.style.top = el.y + 'px';
+          dom.style.width = el.w + 'px';
+          dom.style.height = el.h + 'px';
+        }
+        propX.value = el.x;
+        propY.value = el.y;
+        propW.value = el.w;
+        propH.value = el.h;
+      }
+
+      function onMouseUp() {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        saveProject();
+      }
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    }
+
+    // --- INSPECTOR LOGIC ---
+    function updateInspector() {
+      const el = currentProject.elements.find(item => item.id === selectedElementId);
+      if (!el) {
+        inspectorFields.style.display = 'none';
+        emptyInspectorNotice.style.display = 'block';
+        return;
+      }
+
+      inspectorFields.style.display = 'flex';
+      emptyInspectorNotice.style.display = 'none';
+
+      propX.value = el.x;
+      propY.value = el.y;
+      propW.value = el.w;
+      propH.value = el.h;
+      propOpacity.value = el.opacity || 100;
+      propZIndex.value = el.zIndex || 1;
+
+      propBgColor.value = rgbToHex(el.bgColor) || '#16181d';
+      propBgColorHex.value = el.bgColor;
+
+      propBorderRadius.value = el.borderRadius || 0;
+      propBorderWidth.value = el.borderWidth || 0;
+      propBorderColor.value = rgbToHex(el.borderColor) || '#3b82f6';
+      propBorderColorHex.value = el.borderColor;
+
+      if (el.type === 'image') {
+        groupTypography.style.display = 'none';
+        groupTimerProps.style.display = 'none';
+      } else if (el.type === 'timer') {
+        groupTypography.style.display = 'flex';
+        groupTimerProps.style.display = 'flex';
+        propText.value = el.text;
+        propFontFamily.value = el.fontFamily;
+        propFontSize.value = el.fontSize;
+        propTextColor.value = rgbToHex(el.textColor) || '#ffffff';
+        propTextColorHex.value = el.textColor;
+        propTextShadow.value = el.textShadow || 'none';
+        propTimerMode.value = el.timerMode || 'countdown';
+        propTimerMinutes.value = el.timerMinutes || 60;
+        propBreakMinutes.value = el.breakMinutes || 30;
+      } else {
+        groupTypography.style.display = 'flex';
+        groupTimerProps.style.display = 'none';
+        propText.value = el.text || '';
+        propFontFamily.value = el.fontFamily;
+        propFontSize.value = el.fontSize;
+        propTextColor.value = rgbToHex(el.textColor) || '#ffffff';
+        propTextColorHex.value = el.textColor;
+        propTextShadow.value = el.textShadow || 'none';
+      }
+    }
+
+    function rgbToHex(color) {
+      if (!color || color.startsWith('#')) return color;
+      return '#3b82f6'; // fallback default
+    }
+
+    // Inspector Inputs Binding
+    [propX, propY, propW, propH, propOpacity, propZIndex].forEach(input => {
+      input.addEventListener('input', () => {
+        const el = currentProject.elements.find(item => item.id === selectedElementId);
+        if (!el) return;
+        el.x = parseInt(propX.value, 10) || 0;
+        el.y = parseInt(propY.value, 10) || 0;
+        el.w = Math.max(10, parseInt(propW.value, 10) || 10);
+        el.h = Math.max(10, parseInt(propH.value, 10) || 10);
+        el.opacity = parseInt(propOpacity.value, 10) || 100;
+        el.zIndex = parseInt(propZIndex.value, 10) || 1;
+        renderCanvas();
+        saveProject();
+      });
+    });
+
+    propText.addEventListener('input', () => {
+      const el = currentProject.elements.find(item => item.id === selectedElementId);
+      if (!el) return;
+      el.text = propText.value;
+      renderCanvas();
+      saveProject();
+    });
+
+    propFontFamily.addEventListener('change', () => {
+      const el = currentProject.elements.find(item => item.id === selectedElementId);
+      if (!el) return;
+      el.fontFamily = propFontFamily.value;
+      renderCanvas();
+      saveProject();
+    });
+
+    propFontSize.addEventListener('input', () => {
+      const el = currentProject.elements.find(item => item.id === selectedElementId);
+      if (!el) return;
+      el.fontSize = parseInt(propFontSize.value, 10) || 16;
+      renderCanvas();
+      saveProject();
+    });
+
+    propTextColor.addEventListener('input', () => {
+      const el = currentProject.elements.find(item => item.id === selectedElementId);
+      if (!el) return;
+      el.textColor = propTextColor.value;
+      propTextColorHex.value = el.textColor;
+      renderCanvas();
+      saveProject();
+    });
+
+    propTextShadow.addEventListener('change', () => {
+      const el = currentProject.elements.find(item => item.id === selectedElementId);
+      if (!el) return;
+      el.textShadow = propTextShadow.value;
+      renderCanvas();
+      saveProject();
+    });
+
+    propBgColor.addEventListener('input', () => {
+      const el = currentProject.elements.find(item => item.id === selectedElementId);
+      if (!el) return;
+      el.bgColor = propBgColor.value;
+      propBgColorHex.value = el.bgColor;
+      renderCanvas();
+      saveProject();
+    });
+
+    propBgColorHex.addEventListener('input', () => {
+      const el = currentProject.elements.find(item => item.id === selectedElementId);
+      if (!el) return;
+      el.bgColor = propBgColorHex.value;
+      renderCanvas();
+      saveProject();
+    });
+
+    propBorderRadius.addEventListener('input', () => {
+      const el = currentProject.elements.find(item => item.id === selectedElementId);
+      if (!el) return;
+      el.borderRadius = parseInt(propBorderRadius.value, 10) || 0;
+      renderCanvas();
+      saveProject();
+    });
+
+    propBorderWidth.addEventListener('input', () => {
+      const el = currentProject.elements.find(item => item.id === selectedElementId);
+      if (!el) return;
+      el.borderWidth = parseInt(propBorderWidth.value, 10) || 0;
+      renderCanvas();
+      saveProject();
+    });
+
+    propBorderColor.addEventListener('input', () => {
+      const el = currentProject.elements.find(item => item.id === selectedElementId);
+      if (!el) return;
+      el.borderColor = propBorderColor.value;
+      propBorderColorHex.value = el.borderColor;
+      renderCanvas();
+      saveProject();
+    });
+
+    // Delete Element
+    document.getElementById('deleteElementBtn').addEventListener('click', () => {
+      if (!selectedElementId) return;
+      currentProject.elements = currentProject.elements.filter(item => item.id !== selectedElementId);
+      selectElement(null);
+      saveProject();
+    });
+
+    // Keyboard Shortcuts (Delete / Backspace / Layer Reordering)
+    window.addEventListener('keydown', (e) => {
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+      if (!selectedElementId) return;
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        currentProject.elements = currentProject.elements.filter(item => item.id !== selectedElementId);
+        selectElement(null);
+        saveProject();
+      } else if (e.key === 'PageUp' || (e.ctrlKey && e.key === ']')) {
+        e.preventDefault();
+        moveElementUp(selectedElementId);
+      } else if (e.key === 'PageDown' || (e.ctrlKey && e.key === '[')) {
+        e.preventDefault();
+        moveElementDown(selectedElementId);
+      }
+    });
+
+    // --- LAYER REORDERING & MANAGEMENT ---
+    function normalizeZIndices() {
+      currentProject.elements.forEach((el, idx) => {
+        el.zIndex = idx + 1;
+        const dom = document.getElementById('dom_' + el.id);
+        if (dom) dom.style.zIndex = el.zIndex;
+      });
+      if (selectedElementId) {
+        const selectedEl = currentProject.elements.find(e => e.id === selectedElementId);
+        if (selectedEl && propZIndex) propZIndex.value = selectedEl.zIndex;
+      }
+    }
+
+    function moveElementUp(id) {
+      const idx = currentProject.elements.findIndex(e => e.id === id);
+      if (idx === -1 || idx >= currentProject.elements.length - 1) return;
+      // Swap with higher index (moves closer to front, higher in layers list)
+      const temp = currentProject.elements[idx];
+      currentProject.elements[idx] = currentProject.elements[idx + 1];
+      currentProject.elements[idx + 1] = temp;
+      normalizeZIndices();
+      renderCanvas();
+      saveProject();
+    }
+
+    function moveElementDown(id) {
+      const idx = currentProject.elements.findIndex(e => e.id === id);
+      if (idx <= 0) return;
+      // Swap with lower index (moves closer to back, lower in layers list)
+      const temp = currentProject.elements[idx];
+      currentProject.elements[idx] = currentProject.elements[idx - 1];
+      currentProject.elements[idx - 1] = temp;
+      normalizeZIndices();
+      renderCanvas();
+      saveProject();
+    }
+
+    function moveElementToFront(id) {
+      const idx = currentProject.elements.findIndex(e => e.id === id);
+      if (idx === -1 || idx === currentProject.elements.length - 1) return;
+      const [el] = currentProject.elements.splice(idx, 1);
+      currentProject.elements.push(el);
+      normalizeZIndices();
+      renderCanvas();
+      saveProject();
+    }
+
+    function moveElementToBack(id) {
+      const idx = currentProject.elements.findIndex(e => e.id === id);
+      if (idx <= 0) return;
+      const [el] = currentProject.elements.splice(idx, 1);
+      currentProject.elements.unshift(el);
+      normalizeZIndices();
+      renderCanvas();
+      saveProject();
+    }
+
+    function moveElementToTarget(sourceId, targetId) {
+      const fromIdx = currentProject.elements.findIndex(e => e.id === sourceId);
+      const toIdx = currentProject.elements.findIndex(e => e.id === targetId);
+      if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+      const [el] = currentProject.elements.splice(fromIdx, 1);
+      currentProject.elements.splice(toIdx, 0, el);
+      normalizeZIndices();
+      renderCanvas();
+      saveProject();
+    }
+
+    // Helper for Layer Icon
+    function getLayerIcon(el) {
+      if (el.type === 'timer') return '⏱️';
+      if (el.type === 'image') return '🖼️';
+      if (el.type === 'break') return '🥪';
+      if (el.type === 'progress') return '📊';
+      if (el.type === 'badge') return '🏷️';
+      if (el.type === 'box') return '🟦';
+      return '🔤';
+    }
+
+    // --- LAYERS LIST RENDERING ---
+    let draggedLayerId = null;
+
+    function renderLayersList() {
+      layersList.innerHTML = '';
+      layerCount.textContent = currentProject.elements.length;
+
+      // Update Toolbar Buttons (Enable / Disable based on selected element)
+      const hasSelection = !!selectedElementId;
+      const selectedIndex = currentProject.elements.findIndex(e => e.id === selectedElementId);
+      const isTop = selectedIndex === currentProject.elements.length - 1;
+      const isBottom = selectedIndex === 0;
+
+      const toolFront = document.getElementById('toolLayerFront');
+      const toolUp = document.getElementById('toolLayerUp');
+      const toolDown = document.getElementById('toolLayerDown');
+      const toolBack = document.getElementById('toolLayerBack');
+
+      if (toolFront) toolFront.disabled = !hasSelection || isTop;
+      if (toolUp) toolUp.disabled = !hasSelection || isTop;
+      if (toolDown) toolDown.disabled = !hasSelection || isBottom;
+      if (toolBack) toolBack.disabled = !hasSelection || isBottom;
+
+      const inspFront = document.getElementById('inspBringFrontBtn');
+      const inspUp = document.getElementById('inspStepUpBtn');
+      const inspDown = document.getElementById('inspStepDownBtn');
+      const inspBack = document.getElementById('inspSendBackBtn');
+
+      if (inspFront) inspFront.disabled = !hasSelection || isTop;
+      if (inspUp) inspUp.disabled = !hasSelection || isTop;
+      if (inspDown) inspDown.disabled = !hasSelection || isBottom;
+      if (inspBack) inspBack.disabled = !hasSelection || isBottom;
+
+      // Render items from top to bottom (reverse array order)
+      const total = currentProject.elements.length;
+      [...currentProject.elements].reverse().forEach((el, revIdx) => {
+        const item = document.createElement('div');
+        item.className = 'layer-item' + (el.id === selectedElementId ? ' active' : '');
+        item.dataset.id = el.id;
+        item.setAttribute('draggable', 'true');
+
+        const arrayIdx = total - 1 - revIdx;
+        const canMoveUp = arrayIdx < total - 1;   // up in list / forward
+        const canMoveDown = arrayIdx > 0;         // down in list / backward
+
+        item.innerHTML = `
+          <div class="layer-left" title="Klicken zum Auswählen">
+            <span style="font-size:14px;">${getLayerIcon(el)}</span>
+            <span class="layer-name">${el.name}</span>
+          </div>
+          <div class="layer-actions">
+            <button class="layer-btn-action btn-move-up" title="Ebene nach oben (eine Ebene vor)" ${!canMoveUp ? 'disabled style="opacity:0.25; cursor:default;"' : ''}>▲</button>
+            <button class="layer-btn-action btn-move-down" title="Ebene nach unten (eine Ebene zurück)" ${!canMoveDown ? 'disabled style="opacity:0.25; cursor:default;"' : ''}>▼</button>
+            <button class="layer-btn-action btn-delete" title="Ebene löschen">✕</button>
+          </div>
+        `;
+
+        // Selection
+        item.addEventListener('click', (e) => {
+          if (!e.target.classList.contains('layer-btn-action')) {
+            selectElement(el.id);
+          }
+        });
+
+        // Up Button
+        const upBtn = item.querySelector('.btn-move-up');
+        if (canMoveUp) {
+          upBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectElement(el.id);
+            moveElementUp(el.id);
+          });
+        }
+
+        // Down Button
+        const downBtn = item.querySelector('.btn-move-down');
+        if (canMoveDown) {
+          downBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectElement(el.id);
+            moveElementDown(el.id);
+          });
+        }
+
+        // Delete Button
+        item.querySelector('.btn-delete').addEventListener('click', (e) => {
+          e.stopPropagation();
+          currentProject.elements = currentProject.elements.filter(it => it.id !== el.id);
+          if (selectedElementId === el.id) selectElement(null);
+          else renderCanvas();
+          saveProject();
+        });
+
+        // Drag and drop reordering
+        item.addEventListener('dragstart', (e) => {
+          draggedLayerId = el.id;
+          item.classList.add('dragging');
+          e.dataTransfer.setData('text/plain', el.id);
+        });
+
+        item.addEventListener('dragend', () => {
+          item.classList.remove('dragging');
+          document.querySelectorAll('.layer-item').forEach(it => it.classList.remove('drag-over'));
+        });
+
+        item.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          if (draggedLayerId && draggedLayerId !== el.id) {
+            item.classList.add('drag-over');
+          }
+        });
+
+        item.addEventListener('dragleave', () => {
+          item.classList.remove('drag-over');
+        });
+
+        item.addEventListener('drop', (e) => {
+          e.preventDefault();
+          item.classList.remove('drag-over');
+          if (draggedLayerId && draggedLayerId !== el.id) {
+            moveElementToTarget(draggedLayerId, el.id);
+          }
+        });
+
+        layersList.appendChild(item);
+      });
+    }
+
+    // Connect Top Layer Toolbar Buttons
+    document.getElementById('toolLayerFront').addEventListener('click', () => {
+      if (selectedElementId) moveElementToFront(selectedElementId);
+    });
+    document.getElementById('toolLayerUp').addEventListener('click', () => {
+      if (selectedElementId) moveElementUp(selectedElementId);
+    });
+    document.getElementById('toolLayerDown').addEventListener('click', () => {
+      if (selectedElementId) moveElementDown(selectedElementId);
+    });
+    document.getElementById('toolLayerBack').addEventListener('click', () => {
+      if (selectedElementId) moveElementToBack(selectedElementId);
+    });
+
+    // Connect Inspector Layer Buttons
+    document.getElementById('inspBringFrontBtn').addEventListener('click', () => {
+      if (selectedElementId) moveElementToFront(selectedElementId);
+    });
+    document.getElementById('inspStepUpBtn').addEventListener('click', () => {
+      if (selectedElementId) moveElementUp(selectedElementId);
+    });
+    document.getElementById('inspStepDownBtn').addEventListener('click', () => {
+      if (selectedElementId) moveElementDown(selectedElementId);
+    });
+    document.getElementById('inspSendBackBtn').addEventListener('click', () => {
+      if (selectedElementId) moveElementToBack(selectedElementId);
+    });
+
+    // Tab Switching (Elements vs Layers)
+    document.querySelectorAll('.sidebar-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        if (tab.dataset.tab === 'elements') {
+          document.getElementById('tabElementsContent').style.display = 'flex';
+          document.getElementById('tabLayersContent').style.display = 'none';
+        } else {
+          document.getElementById('tabElementsContent').style.display = 'none';
+          document.getElementById('tabLayersContent').style.display = 'flex';
+        }
+      });
+    });
+
+    // --- PERSISTENCE & EXPORT ---
+    function saveProject() {
+      currentProject.name = projectNameInput.value.trim() || 'Custom Overlay';
+      try {
+        localStorage.setItem(STORAGE_KEY_PREFIX + currentProjectId, JSON.stringify(currentProject));
+      } catch (err) {}
+    }
+
+    function loadProject() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_PREFIX + currentProjectId);
+        if (raw) {
+          currentProject = JSON.parse(raw);
+          projectNameInput.value = currentProject.name || 'Custom Overlay';
+        }
+      } catch (err) {}
+
+      // If empty project, pre-load an initial template
+      if (!currentProject.elements || currentProject.elements.length === 0) {
+        currentProject.elements = [
+          {
+            id: 'el_1',
+            name: 'Hintergrund Box',
+            type: 'box',
+            x: 50,
+            y: 50,
+            w: 420,
+            h: 120,
+            zIndex: 1,
+            opacity: 90,
+            bgColor: 'rgba(15, 17, 23, 0.88)',
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: 'rgba(250, 204, 21, 0.3)',
+            text: ''
+          },
+          {
+            id: 'el_2',
+            name: 'Warnweste Sticker',
+            type: 'text',
+            x: 70,
+            y: 70,
+            w: 80,
+            h: 80,
+            zIndex: 2,
+            bgColor: 'transparent',
+            borderWidth: 0,
+            text: '🦺',
+            fontSize: 54
+          },
+          {
+            id: 'el_3',
+            name: 'Titel',
+            type: 'text',
+            x: 165,
+            y: 65,
+            w: 280,
+            h: 30,
+            zIndex: 2,
+            bgColor: 'transparent',
+            borderWidth: 0,
+            text: 'SOZIALSTUNDEN',
+            textColor: '#facc15',
+            fontFamily: "'Press Start 2P', monospace",
+            fontSize: 14
+          },
+          {
+            id: 'el_4',
+            name: 'Live Timer',
+            type: 'timer',
+            x: 165,
+            y: 100,
+            w: 280,
+            h: 50,
+            zIndex: 2,
+            bgColor: 'transparent',
+            borderWidth: 0,
+            text: '01:00:00',
+            textColor: '#ffffff',
+            fontFamily: "'Press Start 2P', monospace",
+            fontSize: 28,
+            timerMode: 'countdown'
+          }
+        ];
+      }
+
+      renderCanvas();
+    }
+
+    projectNameInput.addEventListener('input', saveProject);
+    document.getElementById('saveLocalBtn').addEventListener('click', () => {
+      saveProject();
+      alert('Overlay erfolgreich im Browser gespeichert! 💾');
+    });
+
+    document.getElementById('clearCanvasBtn').addEventListener('click', () => {
+      if (confirm('Wirklich alle Elemente auf der Bühne löschen?')) {
+        currentProject.elements = [];
+        selectElement(null);
+        saveProject();
+      }
+    });
+
+    // --- MODAL EXPORT & OBS LINK ---
+    const exportModal = document.getElementById('exportModal');
+    const modalObsUrl = document.getElementById('modalObsUrl');
+    const openExportModalBtn = document.getElementById('openExportModalBtn');
+    const closeExportModalBtn = document.getElementById('closeExportModalBtn');
+    const copyModalObsLinkBtn = document.getElementById('copyModalObsLinkBtn');
+    const openObsTabBtn = document.getElementById('openObsTabBtn');
+
+    function buildObsUrl() {
+      saveProject();
+      const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+      return `${baseUrl}/custom-overlay.html?id=${currentProjectId}`;
+    }
+
+    openExportModalBtn.addEventListener('click', () => {
+      const url = buildObsUrl();
+      modalObsUrl.value = url;
+      exportModal.classList.add('active');
+    });
+
+    closeExportModalBtn.addEventListener('click', () => exportModal.classList.remove('active'));
+    exportModal.addEventListener('click', (e) => {
+      if (e.target === exportModal) exportModal.classList.remove('active');
+    });
+
+    copyModalObsLinkBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(modalObsUrl.value).then(() => {
+        copyModalObsLinkBtn.textContent = 'Kopiert! ✓';
+        setTimeout(() => copyModalObsLinkBtn.textContent = 'Kopieren', 2000);
+      });
+    });
+
+    openObsTabBtn.addEventListener('click', () => {
+      window.open(modalObsUrl.value, '_blank');
+    });
+
+    // JSON Export / Import
+    document.getElementById('exportJsonBtn').addEventListener('click', () => {
+      saveProject();
+      const str = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentProject, null, 2));
+      const a = document.createElement('a');
+      a.setAttribute('href', str);
+      a.setAttribute('download', `${currentProject.name || 'overlay'}.json`);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+
+    const jsonFileInput = document.getElementById('jsonFileInput');
+    document.getElementById('importJsonBtn').addEventListener('click', () => jsonFileInput.click());
+    jsonFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          currentProject = JSON.parse(ev.target.result);
+          projectNameInput.value = currentProject.name || 'Importiertes Overlay';
+          renderCanvas();
+          saveProject();
+          alert('Projekt erfolgreich importiert! 🎉');
+        } catch (err) {
+          alert('Fehler beim Einlesen der Datei.');
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    // Startup
+    loadProject();
+    setTimeout(fitStageToViewport, 100);
+  </script>
+</body>
+</html>

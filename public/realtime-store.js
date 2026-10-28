@@ -23,11 +23,11 @@
                 }
             },
             bingoStyle: {
-                fontSize: 34,
-                textColor: "#111111",
-                boardBackgroundColor: "#ffffff",
-                cellBackgroundColor: "#ffffff",
-                checkedBackgroundColor: "#bdf7bd"
+                fontSize: 28,
+                textColor: "#e0f2f1",
+                boardBackgroundColor: "#051a14",
+                cellBackgroundColor: "#0f2d26",
+                checkedBackgroundColor: "rgba(46, 125, 50, 0.6)"
             },
             scoreboardStyle: {
                 posX: 40,
@@ -37,7 +37,55 @@
                 teamWidth: 185,
                 teamFontSize: 14,
                 scoreFontSize: 22,
-                radius: 14
+                radius: 14,
+                scale: 1.0
+            },
+            timer: {
+                isRunning: false,
+                isVisible: true,
+                baseTime: Date.now(),
+                accumulatedTime: 0,
+                showSeconds: false,
+                addedTime: 0
+            },
+            redCards: {
+                home: 0,
+                away: 0
+            },
+            tournamentName: "FIFA WORLD CUP 2026™ - GROUP STAGE",
+            game2v2v2: {
+                title: "2V2V2 GAME",
+                teams: [
+                    { id: "team1", name: "Ali & Jussef", score: 0 },
+                    { id: "team2", name: "Ayman & Eli", score: 0 },
+                    { id: "team3", name: "Coach & Rohat", score: 0 }
+                ],
+                style: {
+                    posX: 40,
+                    posY: 40,
+                    scale: 1.0
+                }
+            },
+            videoOverlay: {
+                active: false,
+                type: "youtube",
+                source: "",
+                playing: false,
+                volume: 50,
+                muted: false,
+                loop: false,
+                seekTo: 0,
+                style: {
+                    posX: 0,
+                    posY: 0,
+                    width: 100,
+                    height: 100,
+                    scale: 1.0,
+                    opacity: 1.0,
+                    borderRadius: 0
+                },
+                presets: {},
+                updatedAt: Date.now()
             },
             updatedAt: Date.now()
         };
@@ -64,6 +112,15 @@
             teams: payload?.teams || fallback.teams,
             bingoStyle: payload?.bingoStyle || fallback.bingoStyle,
             scoreboardStyle: payload?.scoreboardStyle || fallback.scoreboardStyle,
+            timer: {
+                ...fallback.timer,
+                ...payload?.timer
+            },
+            redCards: payload?.redCards || fallback.redCards,
+            tournamentName: payload?.tournamentName ?? fallback.tournamentName,
+            game2v2v2: payload?.game2v2v2 || fallback.game2v2v2,
+            shootout: payload?.shootout || { active: false, homePenalties: [], awayPenalties: [], homeScore: 0, awayScore: 0 },
+            videoOverlay: payload?.videoOverlay || fallback.videoOverlay,
             updatedAt: payload?.updatedAt || Date.now()
         };
     }
@@ -90,6 +147,14 @@
 
     function streamDataRef(streamId) {
         return streamRef(streamId).child("data");
+    }
+
+    function globalLinksRef() {
+        return db.ref("global/savedLinks");
+    }
+
+    function botInstanceRef(botId) {
+        return db.ref("bot_instances/" + botId);
     }
 
     async function ensureInitialized(streamId) {
@@ -171,6 +236,15 @@
         });
     }
 
+    async function setTournamentName(name, streamId) {
+        const id = streamId || getActiveStreamId();
+        const baseRef = streamDataRef(id);
+        await baseRef.update({
+            tournamentName: (name || "").trim(),
+            updatedAt: Date.now()
+        });
+    }
+
     async function setScoreboardStyle(style, streamId) {
         const id = streamId || getActiveStreamId();
         const baseRef = streamDataRef(id);
@@ -182,7 +256,8 @@
             teamWidth: Math.max(120, Number(style?.teamWidth) || 185),
             teamFontSize: Math.max(8, Number(style?.teamFontSize) || 14),
             scoreFontSize: Math.max(14, Number(style?.scoreFontSize) || 22),
-            radius: Math.max(0, Number(style?.radius) || 8)
+            radius: Math.max(0, Number(style?.radius) || 8),
+            scale: Math.max(0.1, Number(style?.scale) || 1.0)
         };
         await baseRef.update({
             scoreboardStyle: safe,
@@ -202,6 +277,120 @@
         };
         await baseRef.update({
             bingoStyle: safe,
+            updatedAt: Date.now()
+        });
+    }
+
+    async function setVideoOverlay(videoData, streamId) {
+        const id = streamId || getActiveStreamId();
+        const baseRef = streamDataRef(id);
+        await baseRef.child("videoOverlay").update(videoData);
+        await baseRef.child("updatedAt").set(Date.now());
+    }
+
+    // --- TIMER LOGIK ---
+    async function startTimer(streamId) {
+        const id = streamId || getActiveStreamId();
+        const baseRef = streamDataRef(id);
+        const timerSnap = await baseRef.child("timer").once("value");
+        const currentTimer = timerSnap.val() || createDefaultState().timer;
+        
+        if (currentTimer.isRunning) return; // Schon gestartet
+        
+        await baseRef.update({
+            timer: {
+                ...currentTimer,
+                isRunning: true,
+                baseTime: Date.now(),
+                accumulatedTime: currentTimer.accumulatedTime
+            },
+            updatedAt: Date.now()
+        });
+    }
+
+    async function pauseTimer(streamId) {
+        const id = streamId || getActiveStreamId();
+        const baseRef = streamDataRef(id);
+        const timerSnap = await baseRef.child("timer").once("value");
+        const currentTimer = timerSnap.val() || createDefaultState().timer;
+        
+        if (!currentTimer.isRunning) return; // Schon pausiert
+        
+        const now = Date.now();
+        const addedTime = now - currentTimer.baseTime;
+        
+        await baseRef.update({
+            timer: {
+                ...currentTimer,
+                isRunning: false,
+                baseTime: now,
+                accumulatedTime: currentTimer.accumulatedTime + addedTime
+            },
+            updatedAt: Date.now()
+        });
+    }
+
+    async function resetTimer(streamId) {
+        const id = streamId || getActiveStreamId();
+        const baseRef = streamDataRef(id);
+        const timerSnap = await baseRef.child("timer").once("value");
+        const currentTimer = timerSnap.val() || createDefaultState().timer;
+        await baseRef.update({
+            timer: {
+                ...currentTimer,
+                isRunning: false,
+                baseTime: Date.now(),
+                accumulatedTime: 0
+            },
+            updatedAt: Date.now()
+        });
+    }
+
+    async function setTimerMinutes(minutes, streamId) {
+        const id = streamId || getActiveStreamId();
+        const baseRef = streamDataRef(id);
+        const timerSnap = await baseRef.child("timer").once("value");
+        const currentTimer = timerSnap.val() || createDefaultState().timer;
+        
+        const targetMs = Math.max(0, parseInt(minutes, 10)) * 60 * 1000;
+        
+        await baseRef.update({
+            timer: {
+                ...currentTimer,
+                isRunning: currentTimer.isRunning,
+                baseTime: Date.now(),
+                accumulatedTime: targetMs
+            },
+            updatedAt: Date.now()
+        });
+    }
+
+    async function toggleTimerVisibility(streamId) {
+        const id = streamId || getActiveStreamId();
+        const baseRef = streamDataRef(id);
+        const timerSnap = await baseRef.child("timer").once("value");
+        const currentTimer = timerSnap.val() || createDefaultState().timer;
+        
+        await baseRef.update({
+            timer: {
+                ...currentTimer,
+                isVisible: currentTimer.isVisible === false ? true : false
+            },
+            updatedAt: Date.now()
+        });
+    }
+
+    async function toggleTimerSeconds(streamId) {
+        const id = streamId || getActiveStreamId();
+        const baseRef = streamDataRef(id);
+        const timerSnap = await baseRef.child("timer").once("value");
+        const currentTimer = timerSnap.val() || createDefaultState().timer;
+        
+        await baseRef.update({
+            timer: {
+                ...currentTimer,
+                showSeconds: currentTimer.showSeconds === true ? false : true
+            },
             updatedAt: Date.now()
         });
     }
@@ -246,6 +435,21 @@
         }));
     }
 
+    function subscribeOwnedStreams(uid, onChange) {
+        if (!uid) return () => {};
+        const ref = db.ref("streams").orderByChild("meta/ownerUid").equalTo(uid);
+        const handler = (snap) => {
+            const value = snap.val() || {};
+            const items = Object.keys(value).map((id) => ({
+                id,
+                name: value[id]?.meta?.name || id
+            }));
+            onChange(items);
+        };
+        ref.on("value", handler);
+        return () => ref.off("value", handler);
+    }
+
     async function createStream(name, uid) {
         const newRef = db.ref("streams").push();
         const streamId = newRef.key;
@@ -258,6 +462,194 @@
             data: createDefaultState()
         });
         return streamId;
+    }
+
+    function normalizeSavedLink(payload, id) {
+        return {
+            id,
+            name: String(payload?.name || "").trim(),
+            url: String(payload?.url || "").trim(),
+            createdAt: Number(payload?.createdAt) || Date.now(),
+            updatedAt: Number(payload?.updatedAt) || Date.now()
+        };
+    }
+
+    async function listSavedLinks(uid) {
+        // Veraltet, behalten wir für Kompatibilität
+        return [];
+    }
+
+    function subscribeGlobalLinks(onChange) {
+        const ref = globalLinksRef();
+        const handler = (snap) => {
+            const value = snap.val() || {};
+            const items = Object.keys(value)
+                .map((id) => normalizeSavedLink(value[id], id))
+                .filter((item) => item.name && item.url)
+                .sort((a, b) => a.name.localeCompare(b.name, "de", { sensitivity: "base" }));
+            onChange(items);
+        };
+        ref.on("value", handler);
+        return () => ref.off("value", handler);
+    }
+
+    async function saveSavedLink(uid, link) {
+        if (!uid) throw new Error("Nicht eingeloggt.");
+        const name = String(link?.name || "").trim();
+        const url = String(link?.url || "").trim();
+        if (!name) throw new Error("Name fehlt.");
+        if (!url) throw new Error("Link fehlt.");
+
+        const now = Date.now();
+        const id = String(link?.id || "").trim();
+        if (id) {
+            const ref = globalLinksRef().child(id);
+            const existing = await ref.once("value");
+            const createdAt = Number(existing.val()?.createdAt) || now;
+            await ref.set({
+                name,
+                url,
+                createdAt,
+                updatedAt: now
+            });
+            return id;
+        }
+
+        const ref = globalLinksRef().push();
+        await ref.set({
+            name,
+            url,
+            createdAt: now,
+            updatedAt: now
+        });
+        return ref.key;
+    }
+
+    async function deleteSavedLink(uid, linkId) {
+        if (!uid) throw new Error("Nicht eingeloggt.");
+        const id = String(linkId || "").trim();
+        if (!id) return;
+        await globalLinksRef().child(id).remove();
+    }
+
+    // --- BOT MANAGEMENT ---
+
+    async function createBotInstance(name, uid, type = 'spotify') {
+        if (!uid) throw new Error("Nicht eingeloggt.");
+        const newRef = db.ref("bot_instances").push();
+        const botId = newRef.key;
+        await newRef.set({
+            meta: {
+                name: (name || "").trim() || "Neuer Bot",
+                ownerUid: uid,
+                createdAt: Date.now(),
+                type: type
+            },
+            config: {
+                isActive: false,
+                rewardTitle: "",
+                twitchConnected: false,
+                spotifyConnected: false,
+                allowTestsong: false,
+                testsongPermission: "all"
+            }
+        });
+        return botId;
+    }
+
+    function subscribeOwnedBots(uid, onChange) {
+        if (!uid) return () => {};
+        const ref = db.ref("bot_instances").orderByChild("meta/ownerUid").equalTo(uid);
+        const handler = (snap) => {
+            const value = snap.val() || {};
+            const items = Object.keys(value).map((id) => ({
+                id,
+                name: value[id]?.meta?.name || id,
+                type: value[id]?.meta?.type || 'spotify',
+                config: value[id]?.config || {}
+            }));
+            onChange(items);
+        };
+        ref.on("value", handler);
+        return () => ref.off("value", handler);
+    }
+
+    async function deleteBotInstance(botId, uid) {
+        if (!botId || !uid) return;
+        const ownerSnap = await botInstanceRef(botId).child("meta/ownerUid").once("value");
+        if (!ownerSnap.exists()) return;
+        if (ownerSnap.val() !== uid) {
+            throw new Error("Kein Zugriff auf diesen Bot.");
+        }
+        await botInstanceRef(botId).remove();
+    }
+
+    function subscribeBotConfig(botId, onChange) {
+        if (!botId) return () => {};
+        const ref = botInstanceRef(botId).child('config');
+        const handler = (snap) => {
+            onChange(snap.val() || {
+                isActive: false,
+                rewardTitle: "",
+                twitchConnected: false,
+                spotifyConnected: false
+            });
+        };
+        ref.on("value", handler);
+        return () => ref.off("value", handler);
+    }
+
+    async function saveBotConfig(botId, config) {
+        if (!botId) throw new Error("Kein Bot ausgewählt.");
+        await botInstanceRef(botId).child('config').update(config);
+    }
+
+    function subscribePlayback(botId, onChange) {
+        if (!botId) return () => {};
+        const ref = botInstanceRef(botId).child('playback');
+        const handler = (snap) => {
+            onChange(snap.val() || null);
+        };
+        ref.on("value", handler);
+        return () => ref.off("value", handler);
+    }
+
+    async function sendBotCommand(botId, command) {
+        if (!botId) throw new Error("Kein Bot ausgewählt.");
+        await botInstanceRef(botId).child('commands').push({
+            action: command,
+            timestamp: Date.now()
+        });
+    }
+
+    function subscribeBotLogs(botId, onChange) {
+        if (!botId) return () => {};
+        const ref = botInstanceRef(botId).child('mod_logs');
+        const handler = (snap) => {
+            const val = snap.val() || {};
+            const items = Object.keys(val).map(id => ({
+                id,
+                ...val[id]
+            })).sort((a, b) => b.timestamp - a.timestamp);
+            onChange(items);
+        };
+        ref.on("value", handler);
+        return () => ref.off("value", handler);
+    }
+
+    async function clearBotLogs(botId) {
+        if (!botId) throw new Error("Kein Bot ausgewählt.");
+        await botInstanceRef(botId).child('mod_logs').remove();
+    }
+
+    function subscribeModeratedChannels(botId, onChange) {
+        if (!botId) return () => {};
+        const ref = botInstanceRef(botId).child('moderated_channels');
+        const handler = (snap) => {
+            onChange(snap.val() || []);
+        };
+        ref.on("value", handler);
+        return () => ref.off("value", handler);
     }
 
     async function requireOwner(streamId, uid) {
@@ -281,6 +673,268 @@
         return true;
     }
 
+    // --- GENERAL OVERLAYS MANAGEMENT ---
+
+    async function createGeneralProfile(name, uid) {
+        if (!uid) throw new Error("Nicht eingeloggt.");
+        const newRef = db.ref("general_profiles").push();
+        const profileId = newRef.key;
+        const createdAt = Date.now();
+        const cleanName = (name || "").trim() || "Allgemeines Overlay";
+
+        await newRef.set({
+            meta: {
+                name: cleanName,
+                ownerUid: uid,
+                createdAt: createdAt
+            },
+            countdown: {
+                title: "Stream startet gleich",
+                minutes: 10,
+                accentColor: "#22c55e",
+                isRunning: false,
+                baseTime: createdAt,
+                accumulatedTime: 0
+            },
+            chat: {
+                channel: "",
+                theme: "glass",
+                fontSize: 16,
+                limit: 20,
+                fadeTime: 15
+            },
+            goal: {
+                title: "Follower Goal",
+                target: 100,
+                current: 0,
+                color: "#22c55e"
+            },
+            social: {
+                instagram: "",
+                tiktok: "",
+                youtube: "",
+                twitch: "",
+                duration: 5,
+                color: "#22c55e"
+            },
+            hearts: {
+                maxHearts: 3,
+                heartColor: "#ff3366",
+                entries: {}
+            }
+        });
+
+        // Index under users/{uid}/general_profiles
+        await db.ref(`users/${uid}/general_profiles/${profileId}`).set({
+            name: cleanName,
+            createdAt: createdAt
+        });
+
+        return profileId;
+    }
+
+    function subscribeGeneralProfiles(uid, onChange, onError) {
+        if (!uid) return () => {};
+        const ref = db.ref(`users/${uid}/general_profiles`);
+        const handler = (snap) => {
+            const value = snap.val() || {};
+            const items = Object.keys(value).map((id) => ({
+                id,
+                name: value[id]?.name || id,
+                createdAt: value[id]?.createdAt || 0
+            }));
+            items.sort((a, b) => b.createdAt - a.createdAt);
+            onChange(items);
+        };
+        const errHandler = (err) => {
+            if (onError) onError(err);
+        };
+        ref.on("value", handler, errHandler);
+        return () => ref.off("value", handler);
+    }
+
+    async function deleteGeneralProfile(profileId, uid) {
+        if (!profileId || !uid) return;
+        await db.ref(`users/${uid}/general_profiles/${profileId}`).remove();
+        try {
+            await db.ref("general_profiles/" + profileId).remove();
+        } catch (e) {
+            console.warn("Could not delete root general_profile node:", e);
+        }
+    }
+
+    function subscribeGeneralProfile(profileId, onChange) {
+        if (!profileId) return () => {};
+        const ref = db.ref("general_profiles/" + profileId);
+        const handler = (snap) => {
+            onChange(snap.val() || null);
+        };
+        ref.on("value", handler);
+        return () => ref.off("value", handler);
+    }
+
+    async function saveGeneralProfileConfig(profileId, section, config) {
+        if (!profileId) throw new Error("Kein Profil ausgewählt.");
+        await db.ref("general_profiles/" + profileId + "/" + section).update(config);
+    }
+
+    async function startGeneralTimer(profileId) {
+        if (!profileId) return;
+        const ref = db.ref("general_profiles/" + profileId + "/countdown");
+        const snap = await ref.once("value");
+        const current = snap.val() || {};
+        if (current.isRunning) return;
+        await ref.update({
+            isRunning: true,
+            baseTime: Date.now(),
+            accumulatedTime: current.accumulatedTime || 0
+        });
+    }
+
+    async function pauseGeneralTimer(profileId) {
+        if (!profileId) return;
+        const ref = db.ref("general_profiles/" + profileId + "/countdown");
+        const snap = await ref.once("value");
+        const current = snap.val() || {};
+        if (!current.isRunning) return;
+        const now = Date.now();
+        const added = now - (current.baseTime || now);
+        await ref.update({
+            isRunning: false,
+            baseTime: now,
+            accumulatedTime: (current.accumulatedTime || 0) + added
+        });
+    }
+
+    async function resetGeneralTimer(profileId) {
+        if (!profileId) return;
+        const ref = db.ref("general_profiles/" + profileId + "/countdown");
+        await ref.update({
+            isRunning: false,
+            baseTime: Date.now(),
+            accumulatedTime: 0
+        });
+    }
+
+    async function setGeneralTimerMinutes(minutes, profileId) {
+        if (!profileId) return;
+        const ref = db.ref("general_profiles/" + profileId + "/countdown");
+        await ref.update({
+            isRunning: false,
+            baseTime: Date.now(),
+            accumulatedTime: 0,
+            minutes: parseInt(minutes, 10)
+        });
+    }
+
+    async function startGeneralStopwatch(profileId) {
+        if (!profileId) return;
+        const ref = db.ref("general_profiles/" + profileId + "/stopwatch");
+        const snap = await ref.once("value");
+        const current = snap.val() || {};
+        if (current.isRunning) return;
+        await ref.update({
+            isRunning: true,
+            baseTime: Date.now(),
+            accumulatedTime: current.accumulatedTime || 0
+        });
+    }
+
+    async function pauseGeneralStopwatch(profileId) {
+        if (!profileId) return;
+        const ref = db.ref("general_profiles/" + profileId + "/stopwatch");
+        const snap = await ref.once("value");
+        const current = snap.val() || {};
+        if (!current.isRunning) return;
+        const now = Date.now();
+        const added = now - (current.baseTime || now);
+        await ref.update({
+            isRunning: false,
+            baseTime: now,
+            accumulatedTime: (current.accumulatedTime || 0) + added
+        });
+    }
+
+    async function resetGeneralStopwatch(profileId) {
+        if (!profileId) return;
+        const ref = db.ref("general_profiles/" + profileId + "/stopwatch");
+        await ref.update({
+            isRunning: false,
+            baseTime: Date.now(),
+            accumulatedTime: 0
+        });
+    }
+
+    async function setGeneralStopwatchMinutes(minutes, profileId) {
+        if (!profileId) return;
+        const ref = db.ref("general_profiles/" + profileId + "/stopwatch");
+        await ref.update({
+            isRunning: false,
+            baseTime: Date.now(),
+            accumulatedTime: 0,
+            minutes: parseInt(minutes, 10)
+        });
+    }
+
+    async function saveHeartsEntry(profileId, entryId, entryData) {
+        if (!profileId) throw new Error("Kein Profil ausgewählt.");
+        const entriesRef = db.ref("general_profiles/" + profileId + "/hearts/entries");
+        if (entryId) {
+            await entriesRef.child(entryId).update(entryData);
+            return entryId;
+        } else {
+            const newRef = entriesRef.push();
+            await newRef.set(entryData);
+            return newRef.key;
+        }
+    }
+
+    async function deleteHeartsEntry(profileId, entryId) {
+        if (!profileId || !entryId) return;
+        await db.ref("general_profiles/" + profileId + "/hearts/entries/" + entryId).remove();
+    }
+
+    async function saveHeartsConfig(profileId, config) {
+        if (!profileId) throw new Error("Kein Profil ausgewählt.");
+        const ref = db.ref("general_profiles/" + profileId + "/hearts");
+        await ref.update({
+            maxHearts: Math.max(1, Math.min(100, parseInt(config.maxHearts, 10) || 3)),
+            heartColor: config.heartColor || "#ff3366",
+            theme: config.theme || "standard"
+        });
+    }
+
+    async function saveSmashPassEntry(uid, entryId, entryData) {
+        if (!uid) throw new Error("Nicht eingeloggt.");
+        const entriesRef = db.ref("users/" + uid + "/smashpass/entries");
+        if (entryId) {
+            await entriesRef.child(entryId).update(entryData);
+            return entryId;
+        } else {
+            const newRef = entriesRef.push();
+            await newRef.set(entryData);
+            return newRef.key;
+        }
+    }
+
+    async function deleteSmashPassEntry(uid, entryId) {
+        if (!uid || !entryId) return;
+        await db.ref("users/" + uid + "/smashpass/entries/" + entryId).remove();
+    }
+
+    async function addSmashPassEntryText(uid, entryId, text) {
+        if (!uid || !entryId || !text) return;
+        const textsRef = db.ref("users/" + uid + "/smashpass/entries/" + entryId + "/texts");
+        const newRef = textsRef.push();
+        await newRef.set(text);
+        return newRef.key;
+    }
+
+    async function deleteSmashPassEntryText(uid, entryId, textId) {
+        if (!uid || !entryId || !textId) return;
+        await db.ref("users/" + uid + "/smashpass/entries/" + entryId + "/texts/" + textId).remove();
+    }
+
     window.BingoStore = {
         getActiveStreamId,
         ensureInitialized,
@@ -290,15 +944,58 @@
         setTerms,
         setScore,
         setTeams,
+        setTournamentName,
         setBingoStyle,
         setScoreboardStyle,
+        setVideoOverlay,
+        startTimer,
+        pauseTimer,
+        resetTimer,
+        setTimerMinutes,
+        toggleTimerVisibility,
+        toggleTimerSeconds,
         deleteStream,
         onAuthStateChanged,
         signIn,
         register,
         signOut,
         listOwnedStreams,
+        subscribeOwnedStreams,
         createStream,
-        requireOwner
+        requireOwner,
+        listSavedLinks,
+        subscribeGlobalLinks,
+        saveSavedLink,
+        deleteSavedLink,
+        createBotInstance,
+        subscribeOwnedBots,
+        deleteBotInstance,
+        subscribeBotConfig,
+        saveBotConfig,
+        subscribePlayback,
+        sendBotCommand,
+        subscribeBotLogs,
+        clearBotLogs,
+        subscribeModeratedChannels,
+        createGeneralProfile,
+        subscribeGeneralProfiles,
+        deleteGeneralProfile,
+        subscribeGeneralProfile,
+        saveGeneralProfileConfig,
+        startGeneralTimer,
+        pauseGeneralTimer,
+        resetGeneralTimer,
+        setGeneralTimerMinutes,
+        startGeneralStopwatch,
+        pauseGeneralStopwatch,
+        resetGeneralStopwatch,
+        setGeneralStopwatchMinutes,
+        saveHeartsEntry,
+        deleteHeartsEntry,
+        saveHeartsConfig,
+        saveSmashPassEntry,
+        deleteSmashPassEntry,
+        addSmashPassEntryText,
+        deleteSmashPassEntryText
     };
 })();

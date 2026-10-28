@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Twitch Chat Overlay</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="../app-config.js"></script>
+
+    <!-- Twitch Chat Client Library (tmi.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/tmi.js@1.8.5/dist/tmi.min.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: transparent !important;
+            overflow: hidden;
+            font-family: 'Outfit', sans-serif;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 20px;
+        }
+
+        #chatBox {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 100%;
+            overflow: hidden;
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .chat-message {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            animation: slideIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+            opacity: 0;
+            transform: translateY(20px);
+            word-break: break-word;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chat-message.fade-out {
+            animation: fadeOut 0.5s ease forwards;
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: scale(0.9) translateY(-10px);
+                max-height: 0;
+                padding-top: 0;
+                padding-bottom: 0;
+                margin-top: 0;
+                margin-bottom: 0;
+                border-width: 0;
+            }
+        }
+
+        .meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85em;
+        }
+
+        .username {
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+
+        .message-content {
+            font-weight: 400;
+            line-height: 1.4;
+        }
+
+        /* ─── THEMES ─── */
+        /* Glass Theme */
+        .theme-glass {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #f8fafc;
+        }
+        .theme-glass .username {
+            color: #a78bfa; /* Soft purple */
+        }
+
+        /* Neon Theme */
+        .theme-neon {
+            background: rgba(0, 0, 0, 0.85);
+            border: 1.5px solid #06b6d4;
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
+            color: #ffffff;
+        }
+        .theme-neon .username {
+            color: #22d3ee;
+            text-shadow: 0 0 5px rgba(34, 211, 238, 0.5);
+        }
+
+        /* Dark Theme */
+        .theme-dark {
+            background: #121214;
+            border: 1px solid #27272a;
+            color: #e4e4e7;
+        }
+        .theme-dark .username {
+            color: #f43f5e;
+        }
+
+        /* Light Theme */
+        .theme-light {
+            background: #ffffff;
+            border: 1px solid #e4e4e7;
+            color: #18181b;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        }
+        .theme-light .username {
+            color: #7c3aed;
+        }
+
+        /* Cyberpunk Theme */
+        .theme-cyberpunk {
+            background: #fef08a; /* Yellow bg */
+            border-left: 6px solid #000000;
+            border-top: 1px solid #000000;
+            border-bottom: 1px solid #000000;
+            border-right: 1px solid #000000;
+            border-radius: 0px !important;
+            color: #000000;
+            font-family: monospace;
+            font-weight: 700;
+        }
+        .theme-cyberpunk .username {
+            color: #000000;
+            text-transform: uppercase;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div id="chatBox"></div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const profileId = urlParams.get('profileId');
+
+        if (!profileId) {
+            document.body.innerHTML = "<div style='color: white; font-size: 20px; font-weight: 600; padding: 20px; background: rgba(0,0,0,0.8); border-radius: 10px; font-family: sans-serif;'>Fehlende profileId in der URL.</div>";
+        } else {
+            // Initialize Firebase
+            if (!firebase.apps.length) {
+                firebase.initializeApp(window.BINGO_CONFIG.firebaseConfig);
+            }
+            const db = firebase.database();
+            
+            const chatBoxEl = document.getElementById("chatBox");
+
+            let currentChannel = "";
+            let currentTheme = "glass";
+            let fontSize = 16;
+            let fadeTime = 15;
+            let client = null;
+
+            // Subscribe to chat configuration
+            db.ref(`general_profiles/${profileId}/chat`).on('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                
+                const newChannel = (data.channel || "").trim().toLowerCase();
+                currentTheme = data.theme || "glass";
+                fontSize = data.fontSize || 16;
+                fadeTime = data.fadeTime !== undefined ? data.fadeTime : 15;
+
+                // Adjust font size on chat box
+                chatBoxEl.style.fontSize = fontSize + "px";
+
+                // If twitch channel changed, reconnect client
+                if (newChannel !== currentChannel) {
+                    currentChannel = newChannel;
+                    reconnectTwitchChat();
+                }
+            });
+
+            function reconnectTwitchChat() {
+                if (client) {
+                    client.disconnect();
+                    client = null;
+                }
+
+                if (!currentChannel) {
+                    chatBoxEl.innerHTML = `<div style="color: rgba(255,255,255,0.4); font-size: 14px; font-style: italic; padding: 10px;">Warte auf Twitch-Kanal Konfiguration...</div>`;
+                    return;
+                }
+
+                chatBoxEl.innerHTML = ""; // Clear existing messages on reconnect
+
+                client = new tmi.Client({
+                    connection: {
+                        secure: true,
+                        reconnect: true
+                    },
+                    channels: [currentChannel]
+                });
+
+                client.connect().catch(console.error);
+
+                client.on('message', (channel, tags, message, self) => {
+                    addMessage(tags['display-name'] || tags.username, message, tags.color);
+                });
+            }
+
+            function addMessage(user, text, userColor) {
+                const msgDiv = document.createElement("div");
+                msgDiv.className = `chat-message theme-${currentTheme}`;
+                
+                // Construct user color style if provided and compatible with theme
+                let userColorStyle = "";
+                if (userColor && currentTheme !== 'cyberpunk') {
+                    userColorStyle = `style="color: ${userColor};"`;
+                }
+
+                msgDiv.innerHTML = `
+                    <div class="meta">
+                        <span class="username" ${userColorStyle}>${user}</span>
+                    </div>
+                    <div class="message-content">${escapeHTML(text)}</div>
+                `;
+
+                chatBoxEl.appendChild(msgDiv);
+
+                // Scroll to bottom
+                window.scrollTo(0, document.body.scrollHeight);
+
+                // Manage message limit (e.g. max 20 messages in display)
+                const messages = chatBoxEl.getElementsByClassName("chat-message");
+                if (messages.length > 20) {
+                    chatBoxEl.removeChild(messages[0]);
+                }
+
+                // Handle fading
+                if (fadeTime > 0) {
+                    setTimeout(() => {
+                        msgDiv.classList.add("fade-out");
+                        // Remove element after transition completes
+                        setTimeout(() => {
+                            if (msgDiv.parentNode === chatBoxEl) {
+                                chatBoxEl.removeChild(msgDiv);
+                            }
+                        }, 500);
+                    }, fadeTime * 1000);
+                }
+            }
+
+            function escapeHTML(str) {
+                return str.replace(/[&<>'"]/g, 
+                    tag => ({
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        "'": '&#39;',
+                        '"': '&quot;'
+                    }[tag] || tag)
+                );
+            }
+        }
+    </script>
+</body>
+</html>

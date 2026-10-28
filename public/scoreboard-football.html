@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scoreboard Football Overlay</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&display=swap');
+
+        :root {
+            --bg-dark-blue: #030616;
+            --bg-center-blue: #161b5c;
+            --accent-red: #e6193b;
+            --accent-blue: #444cf7;
+            --text-white: #ffffff;
+            --clock-bg: #f1f5f9;
+            --clock-text: #0f172a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: transparent;
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            color: var(--text-white);
+        }
+
+        .scoreboard-wrapper {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            display: flex;
+            align-items: stretch;
+            height: 48px;
+            gap: 6px; /* Die Lücke zwischen den Blöcken */
+        }
+
+        /* 1. Uhr-Block */
+        .sb-clock {
+            background: var(--clock-bg);
+            color: var(--clock-text);
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* 2. Dünne weiße Linie */
+        .sb-white-line {
+            background: #ffffff;
+            width: 5px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        /* 3. Haupt-Scoreboard Gruppe (Blau + Rot verbunden) */
+        .sb-main-group {
+            display: flex;
+            align-items: stretch;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+        }
+
+        .sb-main {
+            background: linear-gradient(90deg, var(--bg-dark-blue) 0%, var(--bg-center-blue) 50%, var(--bg-dark-blue) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 20px;
+            gap: 16px;
+            min-width: 400px;
+        }
+
+        /* 4. Roter Akzent am Ende */
+        .sb-red-accent {
+            background: var(--accent-red);
+            width: 8px;
+        }
+
+        /* Team Styles */
+        .team {
+            display: flex;
+            align-items: center;
+            font-weight: 700;
+            font-size: 18px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            gap: 10px;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .team.home {
+            justify-content: flex-end;
+        }
+        .team.away {
+            justify-content: flex-start;
+        }
+
+        .team-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: clip;
+        }
+
+        .team-logo {
+            height: 30px;
+            width: 30px;
+            object-fit: contain;
+        }
+
+        /* Score & Klammern */
+        .sb-scores {
+            display: flex;
+            align-items: center;
+            font-size: 28px;
+            font-weight: 900;
+            gap: 14px;
+        }
+
+        .score {
+            min-width: 24px;
+            text-align: center;
+        }
+
+        .bracket {
+            color: var(--accent-blue);
+            font-weight: 300;
+            font-size: 34px;
+            margin-top: -4px; /* Optische Korrektur für die geschwungenen Klammern */
+        }
+
+        .separator {
+            color: var(--accent-blue);
+            font-weight: 300;
+            font-size: 26px;
+            margin-top: -2px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scoreboard-wrapper" id="scoreboardWrapper">
+        <!-- Links: Uhr (Match Timer) -->
+        <div class="sb-clock" id="clockDisplay">00:00</div>
+        
+        <!-- Dünner weißer Strich mit Lücken -->
+        <div class="sb-white-line"></div>
+        
+        <!-- Hauptbereich (Blaues Feld + Roter Streifen) -->
+        <div class="sb-main-group">
+            <div class="sb-main" id="mainBlock">
+                <!-- Home Team -->
+                <div class="team home" id="homeTeamEl">
+                    <img id="logoHome" src="" class="team-logo">
+                    <span id="nameHome" class="team-name">HOME</span>
+                </div>
+                
+                <!-- Spielstand Mitte -->
+                <div class="sb-scores" id="scoreContainerEl">
+                    <span class="bracket">)</span>
+                    <span id="scoreHome" class="score">0</span>
+                    <span class="separator">|</span>
+                    <span id="scoreAway" class="score">0</span>
+                    <span class="bracket">(</span>
+                </div>
+
+                <!-- Away Team -->
+                <div class="team away" id="awayTeamEl">
+                    <span id="nameAway" class="team-name">AWAY</span>
+                    <img id="logoAway" src="" class="team-logo">
+                </div>
+            </div>
+            
+            <!-- Rechter Roter Strich -->
+            <div class="sb-red-accent"></div>
+        </div>
+    </div>
+
+    <script src="app-config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+    <script src="realtime-store.js"></script>
+    <script>
+        // Firebase / DOM Elemente
+        const scoreboardWrapper = document.getElementById('scoreboardWrapper');
+        const mainBlock = document.getElementById('mainBlock');
+        const homeTeamEl = document.getElementById('homeTeamEl');
+        const awayTeamEl = document.getElementById('awayTeamEl');
+        const scoreContainerEl = document.getElementById('scoreContainerEl');
+        const clockDisplay = document.getElementById('clockDisplay');
+        
+        const scoreHome = document.getElementById('scoreHome');
+        const scoreAway = document.getElementById('scoreAway');
+        const nameHome = document.getElementById('nameHome');
+        const logoHome = document.getElementById('logoHome');
+        const nameAway = document.getElementById('nameAway');
+        const logoAway = document.getElementById('logoAway');
+
+        let currentTimer = { isRunning: false, baseTime: Date.now(), accumulatedTime: 0 };
+
+        BingoStore.subscribe((data) => {
+            updateScore(data.score);
+            updateTeams(data.teams);
+            updateStyle(data.scoreboardStyle);
+            
+            if (data.timer) {
+                currentTimer = data.timer;
+            }
+        }, new URLSearchParams(window.location.search).get('stream') || (window.BINGO_CONFIG && window.BINGO_CONFIG.streamId) || 'default-stream');
+
+        // Render-Loop für den Timer (butterweich)
+        function renderTimer() {
+            let totalMs = currentTimer.accumulatedTime;
+            if (currentTimer.isRunning) {
+                totalMs += (Date.now() - currentTimer.baseTime);
+            }
+            
+            const totalSeconds = Math.floor(totalMs / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            
+            const mm = minutes.toString().padStart(2, '0');
+            const ss = seconds.toString().padStart(2, '0');
+            
+            if (currentTimer.isVisible === false) {
+                clockDisplay.style.color = 'transparent';
+            } else {
+                clockDisplay.style.color = 'var(--clock-text)';
+            }
+            
+            if (clockDisplay.textContent !== `${mm}:${ss}`) {
+                clockDisplay.textContent = `${mm}:${ss}`;
+            }
+            
+            requestAnimationFrame(renderTimer);
+        }
+        requestAnimationFrame(renderTimer);
+
+        function updateScore(score) {
+            scoreHome.textContent = score.home;
+            scoreAway.textContent = score.away;
+        }
+
+        function updateTeams(teams) {
+            if(teams.home) {
+                nameHome.textContent = teams.home.name;
+                logoHome.src = teams.home.logo;
+                logoHome.style.display = teams.home.logo ? 'block' : 'none';
+            }
+            if(teams.away) {
+                nameAway.textContent = teams.away.name;
+                logoAway.src = teams.away.logo;
+                logoAway.style.display = teams.away.logo ? 'block' : 'none';
+            }
+            requestAnimationFrame(() => {
+                fitTeamName(nameHome, homeTeamEl);
+                fitTeamName(nameAway, awayTeamEl);
+            });
+        }
+
+        function updateStyle(style) {
+            if (!style) return;
+            scoreboardWrapper.style.left = `${style.posX ?? 40}px`;
+            scoreboardWrapper.style.top = `${style.posY ?? 40}px`;
+            
+            // Wenden die Höhe auf den Wrapper an
+            scoreboardWrapper.style.height = `${style.height ?? 48}px`;
+            
+            // Wenden die konfigurierte Gesamtbreite auf den Main Block an
+            mainBlock.style.width = `${style.totalWidth ?? 460}px`;
+
+            homeTeamEl.style.fontSize = `${style.teamFontSize ?? 18}px`;
+            awayTeamEl.style.fontSize = `${style.teamFontSize ?? 18}px`;
+            
+            // Größenanpassung der Logos an die Höhe
+            const logoSize = (style.height ?? 48) - 18;
+            logoHome.style.width = `${logoSize}px`;
+            logoHome.style.height = `${logoSize}px`;
+            logoAway.style.width = `${logoSize}px`;
+            logoAway.style.height = `${logoSize}px`;
+            
+            // Adjust border radius
+            if (style.radius) {
+                const clockEl = document.querySelector('.sb-clock');
+                if (clockEl) clockEl.style.borderRadius = `${style.radius}px`;
+                const mainGroupEl = document.querySelector('.sb-main');
+                if (mainGroupEl) mainGroupEl.style.borderRadius = `${style.radius}px`;
+            }
+
+            requestAnimationFrame(() => {
+                fitTeamName(nameHome, homeTeamEl);
+                fitTeamName(nameAway, awayTeamEl);
+            });
+
+            const scale = style.scale ?? 1;
+            scoreboardWrapper.style.transform = `scale(${scale})`;
+            scoreboardWrapper.style.transformOrigin = 'top left';
+        }
+
+        function fitTeamName(nameEl, teamEl) {
+            const base = parseFloat(teamEl.style.fontSize || getComputedStyle(teamEl).fontSize || "18");
+            let size = base;
+            nameEl.style.fontSize = `${size}px`;
+            
+            // Wir passen die Breite dynamisch an, indem wir abgleichen ob es überlappt
+            let maxAttempts = 15;
+            while (nameEl.scrollWidth > nameEl.clientWidth && size > 10 && maxAttempts > 0) {
+                size -= 0.5;
+                nameEl.style.fontSize = `${size}px`;
+                maxAttempts--;
+            }
+        }
+    </script>
+</body>
+</html>

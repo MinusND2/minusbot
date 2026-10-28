@@ -1,0 +1,1010 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>[hidden]{display:none!important}body{margin:0}</style>
+<script>try{var t=new URLSearchParams(location.search).get("theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+</head>
+<body>
+<title>Berichtsheft-Assistent</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Layout: the week sheet rendered like the paper form (Tag | Arbeiten | Einzel-/Gesamtstunden | Abteilung); click a line opens a side panel (bottom sheet on phones) with suggestions; floating download button bottom right. */
+:root {
+  --bg: #eef4f5;
+  --surface: #ffffff;
+  --paper: #fbfdfd;
+  --fg: #11303a;
+  --muted: #557079;
+  --line: #d3e1e4;
+  --rule: #9fb9bf;
+  --accent: #0b6f7d;
+  --accent-soft: #dcf0f2;
+  --rope-a: #c8352b;
+  --rope-b: #f4f8f9;
+  --rope-c: #1f5fa8;
+  --good: #1e7a4a;
+  --warn: #a35d00;
+  --shade: rgba(9, 30, 36, .38);
+  --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1a1f; --surface: #12252c; --paper: #102127; --fg: #e3eef0; --muted: #93adb4; --line: #23404a; --rule: #3c6470;
+    --accent: #4fc0cd; --accent-soft: #163a42; --rope-a: #e0584e; --rope-b: #22383f; --rope-c: #5b94d6;
+    --good: #5fcf8f; --warn: #f0a94a; --shade: rgba(0, 0, 0, .55); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1a1f; --surface: #12252c; --paper: #102127; --fg: #e3eef0; --muted: #93adb4; --line: #23404a; --rule: #3c6470;
+  --accent: #4fc0cd; --accent-soft: #163a42; --rope-a: #e0584e; --rope-b: #22383f; --rope-c: #5b94d6;
+  --good: #5fcf8f; --warn: #f0a94a; --shade: rgba(0, 0, 0, .55); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; line-height: 1.45; }
+.wrap {
+  max-width: 1020px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 120px; display: flex; flex-direction: column; gap: 18px;
+}
+.rope { height: 8px; border-radius: 4px; background: repeating-linear-gradient(90deg, var(--rope-a) 0 22px, var(--rope-b) 22px 30px, var(--rope-c) 30px 52px, var(--rope-b) 52px 60px); }
+header h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(2rem, 6vw, 2.7rem); line-height: 1.05; margin: 12px 0 4px; }
+.filebar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; color: var(--muted); font-size: .9rem; }
+.filebar strong { color: var(--fg); font-weight: 600; overflow-wrap: anywhere; }
+.linkbtn { font: inherit; font-size: .9rem; background: none; border: 0; padding: 0; color: var(--accent); font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.weekbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.nav { font: inherit; font-size: 1.2rem; width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+.nav:disabled { opacity: .4; cursor: default; }
+select { font: inherit; font-size: .98rem; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); min-width: 0; max-width: 100%; flex: 1 1 260px; }
+.status { font-size: .88rem; color: var(--muted); }
+.status b { color: var(--fg); }
+
+/* sheet */
+.sheet { background: var(--paper); border: 1.5px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.sheet-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; padding: 10px 14px; border-bottom: 1.5px solid var(--rule); font-size: .9rem; }
+.sheet-head .nr { font-family: var(--font-display); font-weight: 700; font-size: 1.15rem; letter-spacing: .02em; }
+.cols, .lrow { display: grid; grid-template-columns: 124px minmax(0, 1fr) 64px 64px minmax(0, 190px); }
+.cols { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; border-bottom: 1px solid var(--rule); }
+.cols > div { padding: 6px 8px; }
+.cols > div + div { border-left: 1px solid var(--line); }
+.day { display: grid; grid-template-columns: 124px minmax(0, 1fr); border-bottom: 1.5px solid var(--rule); }
+.day:last-child { border-bottom: 0; }
+.dayname { padding: 10px 8px; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
+.dayname b { font-family: var(--font-display); font-size: 1.15rem; font-weight: 700; letter-spacing: .02em; }
+.dayname span { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; }
+.dayname .src { margin-top: 4px; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
+.lines { display: flex; flex-direction: column; min-width: 0; }
+.lrow { grid-template-columns: minmax(0, 1fr) 64px 64px minmax(0, 190px); border-bottom: 1px dotted var(--line); min-height: 40px; }
+.lrow:last-child { border-bottom: 0; }
+.lrow > * + * { border-left: 1px solid var(--line); }
+.linebtn { font: inherit; text-align: left; background: transparent; border: 0; color: var(--fg); padding: 8px 10px; cursor: pointer; min-width: 0; overflow-wrap: anywhere; display: flex; align-items: center; gap: 8px; }
+.linebtn:hover { background: var(--accent-soft); }
+.linebtn.empty { color: var(--muted); }
+.linebtn.empty::before { content: "+"; font-weight: 700; color: var(--accent); }
+.linebtn.changed { box-shadow: inset 3px 0 0 var(--accent); }
+.linebtn.long { box-shadow: inset 3px 0 0 var(--warn); }
+.cell-in { font: inherit; font-size: .95rem; width: 100%; min-width: 0; border: 0; background: transparent; color: var(--fg); padding: 8px; }
+.cell-in.hrs { text-align: center; font-variant-numeric: tabular-nums; }
+.cell-in:hover { background: var(--accent-soft); }
+.total { display: flex; align-items: center; justify-content: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.total.none { color: transparent; }
+.mlabel { display: none; }
+
+@media (max-width: 720px) {
+  .cols { display: none; }
+  .day { grid-template-columns: 1fr; }
+  .dayname { flex-direction: row; align-items: baseline; gap: 10px; border-right: 0; border-bottom: 1px solid var(--line); background: var(--accent-soft); }
+  .dayname .src { margin: 0 0 0 auto; }
+  .lrow { grid-template-columns: 1fr 1fr; }
+  .lrow .linebtn { grid-column: 1 / -1; }
+  .lrow > * + * { border-left: 0; }
+  .lrow .hrs-wrap, .lrow .dept-wrap { border-top: 1px dotted var(--line); }
+  .lrow .dept-wrap { border-left: 1px solid var(--line); }
+  .lrow .total-wrap { display: none; }
+  .mlabel { display: block; font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; padding: 4px 8px 0; }
+  .daytotal-m { display: inline; }
+}
+.daytotal-m { display: none; font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.hint { color: var(--muted); font-size: .88rem; margin: 0; }
+
+/* editor */
+.shade { position: fixed; inset: 0; background: var(--shade); z-index: 20; }
+.editor {
+  position: fixed; z-index: 21; background: var(--surface); color: var(--fg); display: flex; flex-direction: column;
+  top: 0; right: 0; bottom: 0; width: min(460px, 100%);
+  padding: calc(16px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) 18px;
+  border-left: 1px solid var(--line); gap: 12px; overflow-y: auto;
+}
+@media (max-width: 720px) {
+  .editor { top: auto; left: 0; width: 100%; max-height: 88vh; border-left: 0; border-top: 1px solid var(--line); border-radius: 14px 14px 0 0;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); }
+}
+.editor > * { flex-shrink: 0; }
+.ed-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.ed-head h2 { font-family: var(--font-display); font-size: 1.5rem; margin: 0; line-height: 1.1; }
+.ed-head p { margin: 2px 0 0; color: var(--muted); font-size: .88rem; }
+.x { font: inherit; font-size: 1.5rem; line-height: 1; border: 0; background: none; color: var(--muted); cursor: pointer; padding: 2px 6px; }
+.editor label { font-weight: 700; font-size: .92rem; }
+textarea { width: 100%; min-height: 72px; resize: vertical; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+textarea:focus, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; align-self: flex-start; }
+.seg button { font: inherit; font-size: .86rem; border: 0; background: transparent; color: var(--fg); padding: 6px 10px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); font-weight: 600; }
+.sugs { display: flex; flex-direction: column; gap: 10px; }
+.sug { border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.sug.best { border-color: var(--accent); }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: .78rem; color: var(--muted); align-items: center; }
+.ref { font-family: var(--font-display); font-weight: 600; font-size: .9rem; color: var(--accent); letter-spacing: .03em; }
+.pill { border-radius: 999px; padding: 0 8px; font-weight: 700; font-size: .72rem; background: var(--accent-soft); }
+.pill.good { color: var(--good); } .pill.warn { color: var(--warn); }
+.opt { font: inherit; text-align: left; border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 8px; padding: 8px 10px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.opt:hover { border-color: var(--accent); background: var(--accent-soft); }
+.opt small { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
+.opt.primary { border-color: var(--accent); }
+.opt .len { color: var(--warn); font-size: .76rem; font-weight: 600; text-transform: none; letter-spacing: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: inherit; font-size: .9rem; font-variant-numeric: tabular-nums; min-width: 40px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 700; }
+.row2 { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { font: inherit; font-size: .9rem; font-weight: 600; border-radius: 8px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--fg); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.btn:hover { border-color: var(--accent); }
+.none { color: var(--warn); margin: 0; font-size: .92rem; }
+
+/* download */
+.fab {
+  position: fixed; z-index: 15; right: calc(18px + env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  font: inherit; font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 10px;
+  padding: 13px 18px; border-radius: 12px; border: 0; background: var(--accent); color: var(--surface); cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .22);
+}
+.fab .badge { background: var(--surface); color: var(--accent); border-radius: 999px; padding: 0 8px; font-size: .82rem; font-variant-numeric: tabular-nums; }
+.fab:disabled { opacity: .7; cursor: wait; }
+.toast { position: fixed; z-index: 30; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 9px 16px; border-radius: 8px; font-weight: 600; font-size: .92rem; max-width: calc(100% - 32px); text-align: center; }
+footer { color: var(--muted); font-size: .82rem; max-width: 72ch; }
+.startbox { background: var(--surface); border: 2px dashed var(--rule); border-radius: 12px; padding: 32px 20px; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.startbox.drag { border-color: var(--accent); background: var(--accent-soft); }
+.startbox h2 { font-family: var(--font-display); font-size: 1.7rem; margin: 0; }
+.startbox p { margin: 0; color: var(--muted); max-width: 60ch; }
+.err { background: var(--surface); border: 1px solid var(--warn); color: var(--fg); border-radius: 10px; padding: 12px 14px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="rope" aria-hidden="true"></div>
+    <h1>Berichtsheft-Assistent</h1>
+    <div class="filebar">
+      <span>Datei: <strong id="fname">…</strong></span>
+      <label class="linkbtn" for="fileinput">Andere Datei öffnen</label>
+      <input type="file" id="fileinput" accept=".xls,application/vnd.ms-excel" hidden>
+      <button type="button" class="linkbtn" id="resetbtn">Meine Änderungen verwerfen</button>
+    </div>
+  </header>
+
+  <div id="errbox" class="err" hidden></div>
+
+  <section class="startbox" id="startbox" hidden>
+    <h2>Öffne deinen Ausbildungsnachweis</h2>
+    <p>Wähle deine .xls-Datei aus oder zieh sie hier hinein. Sie bleibt in deinem Browser und wird nirgendwo hochgeladen.</p>
+    <label class="btn primary" for="fileinput">Datei auswählen</label>
+  </section>
+
+  <div class="weekbar" id="weekbar">
+    <button type="button" class="nav" id="prev" aria-label="Vorherige Woche">‹</button>
+    <select id="weeksel" aria-label="Woche auswählen"></select>
+    <button type="button" class="nav" id="next" aria-label="Nächste Woche">›</button>
+    <span class="status" id="status"></span>
+  </div>
+
+  <section class="sheet" id="sheet" aria-label="Ausbildungsnachweis der Woche"></section>
+  <p class="hint">Tipp: Auf eine Zeile tippen, deine Tätigkeit eingeben und einen Vorschlag auswählen. Stunden und Abteilung trägst du direkt in der Zeile ein, die Gesamtstunden rechnet die Seite selbst.</p>
+
+  <footer>Formulierungen aus dem Ausbildungsrahmenplan (Anlage zu § 4 BäderFAngAusbV vom 26.03.1997) und dem KMK-Rahmenlehrplan vom 21.11.1996. Deine Datei und deine Änderungen bleiben nur in deinem Browser, es wird nichts auf einen Server geladen. Der Download ist wieder eine .xls im Original-Layout.</footer>
+</div>
+
+<div class="shade" id="shade" hidden></div>
+<aside class="editor" id="editor" hidden role="dialog" aria-modal="true" aria-labelledby="ed-title">
+  <div class="ed-head">
+    <div><h2 id="ed-title">Montag</h2><p id="ed-sub"></p></div>
+    <button type="button" class="x" id="ed-close" aria-label="Schließen">×</button>
+  </div>
+  <label for="ed-input">Was hast du gemacht?</label>
+  <textarea id="ed-input" placeholder="z. B. Hecke geschnitten"></textarea>
+  <div class="seg" role="group" aria-label="Quelle">
+    <button type="button" id="src-betrieb" data-src="betrieb" aria-pressed="true">Betrieb</button>
+    <button type="button" id="src-schule" data-src="schule" aria-pressed="false">Berufsschule</button>
+    <button type="button" id="src-beides" data-src="beides" aria-pressed="false">Beides</button>
+  </div>
+  <div class="sugs" id="sugs"></div>
+  <div>
+    <label>Stunden für diese Zeile</label>
+    <div class="chips" id="hchips"></div>
+  </div>
+  <div class="row2">
+    <button type="button" class="btn" id="ed-clear">Zeile leeren</button>
+    <button type="button" class="btn primary" id="ed-done">Fertig</button>
+  </div>
+</aside>
+
+<button type="button" class="fab" id="dl"><span>Fertige Datei herunterladen</span><span class="badge" id="dlcount">0</span></button>
+<datalist id="depts"></datalist>
+
+<script>
+// XLS (BIFF8) in-place cell editor: CFB read/write + record patching + ZIP. Pure JS.
+(function (root) {
+  "use strict";
+  const ENDOFCHAIN = 0xFFFFFFFE, FREESECT = 0xFFFFFFFF, FATSECT = 0xFFFFFFFD;
+  const u16 = (b, o) => b[o] | (b[o + 1] << 8);
+  const u32 = (b, o) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16)) + b[o + 3] * 0x1000000;
+
+  // ---------- CFB read ----------
+  function readCFB(buf) {
+    const b = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+    const sig = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
+    for (let i = 0; i < 8; i++) if (b[i] !== sig[i]) throw new Error("Das ist keine .xls-Datei im alten Excel-Format.");
+    const ssz = 1 << u16(b, 30), mssz = 1 << u16(b, 32);
+    const nFat = u32(b, 44), dirStart = u32(b, 48), miniCut = u32(b, 56), miniFatStart = u32(b, 60), difStart = u32(b, 68), nDif = u32(b, 72);
+    const sec = i => (ssz === 512 ? 512 : ssz) + i * ssz;
+    const fatSecs = [];
+    for (let i = 0; i < 109 && fatSecs.length < nFat; i++) { const v = u32(b, 76 + i * 4); if (v !== FREESECT) fatSecs.push(v); }
+    let d = difStart;
+    for (let k = 0; k < nDif && d !== ENDOFCHAIN; k++) {
+      for (let i = 0; i < ssz / 4 - 1 && fatSecs.length < nFat; i++) { const v = u32(b, sec(d) + i * 4); if (v !== FREESECT) fatSecs.push(v); }
+      d = u32(b, sec(d) + ssz - 4);
+    }
+    const fat = []; for (const s of fatSecs) for (let i = 0; i < ssz / 4; i++) fat.push(u32(b, sec(s) + i * 4));
+    const chain = (start, f) => { const out = []; let s = start, g = 0; while (s !== ENDOFCHAIN && s < f.length && g++ < 1e7) { out.push(s); s = f[s]; } return out; };
+    const readChain = (start, size) => { const out = new Uint8Array(size); let p = 0; for (const s of chain(start, fat)) { const n = Math.min(ssz, size - p); if (n <= 0) break; out.set(b.subarray(sec(s), sec(s) + n), p); p += n; } return out; };
+    const dc = chain(dirStart, fat); const dirBytes = new Uint8Array(dc.length * ssz); dc.forEach((s, i) => dirBytes.set(b.subarray(sec(s), sec(s) + ssz), i * ssz));
+    const entries = [];
+    for (let o = 0; o < dirBytes.length; o += 128) {
+      const nl = u16(dirBytes, o + 64); let name = "";
+      for (let i = 0; i < nl / 2 - 1; i++) name += String.fromCharCode(u16(dirBytes, o + i * 2));
+      entries.push({ name, type: dirBytes[o + 66], start: u32(dirBytes, o + 116), size: u32(dirBytes, o + 120), raw: dirBytes.slice(o, o + 128) });
+    }
+    const rootE = entries[0];
+    let mini = null; const minifat = [];
+    if (rootE && rootE.type === 5 && rootE.size > 0) {
+      mini = readChain(rootE.start, rootE.size);
+      for (const s of chain(miniFatStart, fat)) for (let i = 0; i < ssz / 4; i++) minifat.push(u32(b, sec(s) + i * 4));
+    }
+    const streams = [];
+    for (const e of entries) {
+      if (e.type !== 2) continue;
+      let data;
+      if (e.size < miniCut && mini) { data = new Uint8Array(e.size); let p = 0; for (const s of chain(e.start, minifat)) { const n = Math.min(mssz, e.size - p); if (n <= 0) break; data.set(mini.subarray(s * mssz, s * mssz + n), p); p += n; } }
+      else data = readChain(e.start, e.size);
+      streams.push({ name: e.name, data, raw: e.raw });
+    }
+    return { root: rootE, streams };
+  }
+
+  // ---------- CFB write (v3, 512-byte sectors, mini stream for small streams) ----------
+  function cfbCompare(a, b) { if (a.length !== b.length) return a.length - b.length; const A = a.toUpperCase(), B = b.toUpperCase(); return A < B ? -1 : A > B ? 1 : 0; }
+  function writeCFB(rootRaw, streams) {
+    const SS = 512, MS = 64, CUT = 4096;
+    const list = streams.slice().sort((x, y) => cfbCompare(x.name, y.name));
+    const small = list.filter(s => s.data.length < CUT), big = list.filter(s => s.data.length >= CUT);
+    // mini stream
+    let miniLen = 0; const miniStart = new Map();
+    for (const s of small) { miniStart.set(s, miniLen / MS); miniLen += Math.ceil(s.data.length / MS) * MS; }
+    const miniSecs = miniLen / MS;
+    const miniFatSecs = Math.ceil(miniSecs * 4 / SS);
+    const miniContSecs = Math.ceil(miniLen / SS);
+    const dirSecs = Math.ceil((1 + list.length) * 128 / SS);
+    const bigSecs = big.map(s => Math.ceil(s.data.length / SS));
+    const payload = miniFatSecs + dirSecs + miniContSecs + bigSecs.reduce((a, c) => a + c, 0);
+    let nFat = 1; while (nFat * (SS / 4) < payload + nFat) nFat++;
+    if (nFat > 109) throw new Error("Datei zu groß.");
+    const total = nFat + payload;
+    const out = new Uint8Array(SS + total * SS); const dv = new DataView(out.buffer);
+    [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1].forEach((v, i) => out[i] = v);
+    dv.setUint16(24, 0x3E, true); dv.setUint16(26, 3, true); dv.setUint16(28, 0xFFFE, true); dv.setUint16(30, 9, true); dv.setUint16(32, 6, true);
+    const fat = new Array(nFat * (SS / 4)).fill(FREESECT);
+    let s = 0;
+    for (let i = 0; i < nFat; i++) fat[s++] = FATSECT;
+    const alloc = n => { if (!n) return ENDOFCHAIN; const st = s; for (let i = 0; i < n; i++) { fat[s] = i === n - 1 ? ENDOFCHAIN : s + 1; s++; } return st; };
+    const miniFatStart = alloc(miniFatSecs), dirStart = alloc(dirSecs), miniContStart = alloc(miniContSecs);
+    const bigStart = big.map((x, k) => alloc(bigSecs[k]));
+    dv.setUint32(44, nFat, true); dv.setUint32(48, dirStart, true); dv.setUint32(56, CUT, true);
+    dv.setUint32(60, miniFatStart, true); dv.setUint32(64, miniFatSecs, true); dv.setUint32(68, ENDOFCHAIN, true); dv.setUint32(72, 0, true);
+    for (let i = 0; i < 109; i++) dv.setUint32(76 + i * 4, i < nFat ? i : FREESECT, true);
+    fat.forEach((v, i) => dv.setUint32(SS + i * 4, v >>> 0, true));
+    const off = sct => SS + sct * SS;
+    // mini fat + mini stream
+    if (miniFatSecs) {
+      const mf = new Array(miniFatSecs * (SS / 4)).fill(FREESECT);
+      for (const x of small) { const st = miniStart.get(x), n = Math.ceil(x.data.length / MS) || 0; for (let i = 0; i < n; i++) mf[st + i] = i === n - 1 ? ENDOFCHAIN : st + i + 1; }
+      mf.forEach((v, i) => dv.setUint32(off(miniFatStart) + i * 4, v >>> 0, true));
+      for (const x of small) out.set(x.data, off(miniContStart) + miniStart.get(x) * MS);
+    }
+    big.forEach((x, k) => out.set(x.data, off(bigStart[k])));
+    // directory: balanced BST of children under root
+    const dOff = off(dirStart);
+    const nEnt = dirSecs * (SS / 128);
+    for (let i = 0; i < nEnt; i++) { const o = dOff + i * 128; dv.setUint32(o + 68, FREESECT, true); dv.setUint32(o + 72, FREESECT, true); dv.setUint32(o + 76, FREESECT, true); }
+    const build = (lo, hi) => { if (lo > hi) return FREESECT; const m = (lo + hi) >> 1; return { m, l: build(lo, m - 1), r: build(m + 1, hi) }; };
+    const links = new Array(list.length);
+    const walk = n => { if (n === FREESECT) return FREESECT; links[n.m] = { l: walk(n.l), r: walk(n.r) }; return n.m + 1; };
+    const rootChild = walk(build(0, list.length - 1));
+    const putEntry = (idx, raw, name, type, l, r, child, start, size) => {
+      const o = dOff + idx * 128;
+      if (raw) out.set(raw.subarray(0, 128), o);
+      for (let i = 0; i < 32; i++) dv.setUint16(o + i * 2, 0, true);
+      for (let i = 0; i < name.length; i++) dv.setUint16(o + i * 2, name.charCodeAt(i), true);
+      dv.setUint16(o + 64, (name.length + 1) * 2, true); out[o + 66] = type; out[o + 67] = 1;
+      dv.setUint32(o + 68, l, true); dv.setUint32(o + 72, r, true); dv.setUint32(o + 76, child, true);
+      dv.setUint32(o + 116, start, true); dv.setUint32(o + 120, size, true); dv.setUint32(o + 124, 0, true);
+    };
+    putEntry(0, rootRaw, "Root Entry", 5, FREESECT, FREESECT, rootChild, miniLen ? miniContStart : ENDOFCHAIN, miniLen);
+    list.forEach((x, i) => {
+      const isSmall = x.data.length < CUT;
+      putEntry(i + 1, x.raw, x.name, 2, links[i].l, links[i].r, FREESECT, isSmall ? (x.data.length ? miniStart.get(x) : ENDOFCHAIN) : bigStart[big.indexOf(x)], x.data.length);
+    });
+    return out;
+  }
+
+  // ---------- BIFF ----------
+  function records(wb, start, end) { const out = []; let p = start || 0; const e = end || wb.length; while (p + 4 <= e) { const t = u16(wb, p), l = u16(wb, p + 2); out.push({ t, pos: p, len: l, data: wb.subarray(p + 4, p + 4 + l) }); p += 4 + l; if (t === 0x0A && start !== undefined) break; } return out; }
+
+  function parseSST(recs, i0) {
+    // recs[i0] is SST, followed by CONTINUE records
+    const parts = [recs[i0].data]; let i = i0 + 1; while (recs[i] && recs[i].t === 0x3C) parts.push(recs[i++].data);
+    let pi = 0, p = 8; const total = u32(parts[0], 4); const strs = [];
+    const need = n => { if (p + n > parts[pi].length) { pi++; p = 0; } };
+    const rd8 = () => { need(1); return parts[pi][p++]; };
+    const rd16 = () => { need(2); const v = u16(parts[pi], p); p += 2; return v; };
+    const rd32 = () => { need(4); const v = u32(parts[pi], p); p += 4; return v; };
+    const skip = n => { while (n > 0) { const a = Math.min(n, parts[pi].length - p); p += a; n -= a; if (n > 0) { pi++; p = 0; } } };
+    for (let k = 0; k < total && pi < parts.length; k++) {
+      const cch = rd16(); let fl = rd8(); let runs = 0, ext = 0;
+      if (fl & 8) runs = rd16(); if (fl & 4) ext = rd32();
+      let s = "", left = cch, hi = fl & 1;
+      while (left > 0) {
+        if (p >= parts[pi].length) { pi++; p = 0; hi = parts[pi][p++] & 1; }
+        const avail = hi ? (parts[pi].length - p) >> 1 : parts[pi].length - p;
+        const n = Math.min(left, avail);
+        for (let j = 0; j < n; j++) { s += String.fromCharCode(hi ? u16(parts[pi], p) : parts[pi][p]); p += hi ? 2 : 1; }
+        left -= n;
+      }
+      skip(runs * 4); skip(ext); strs.push(s);
+    }
+    return strs;
+  }
+
+  function rkVal(rk) { let v; if (rk & 2) v = (rk >> 2); else { const buf = new DataView(new ArrayBuffer(8)); buf.setUint32(0, 0, true); buf.setUint32(4, rk & 0xFFFFFFFC, true); v = buf.getFloat64(0, true); } return rk & 1 ? v / 100 : v; }
+  function readStrInline(d, o) { const cch = u16(d, o), fl = d[o + 2]; let s = ""; for (let j = 0; j < cch; j++) s += String.fromCharCode(fl & 1 ? u16(d, o + 3 + j * 2) : d[o + 3 + j]); return s; }
+
+  function parseWorkbook(bytes) {
+    const cfb = readCFB(bytes);
+    const ws = cfb.streams.find(s => s.name === "Workbook" || s.name === "Book");
+    if (!ws) throw new Error("In der Datei steckt keine Excel-Arbeitsmappe.");
+    const wb = ws.data;
+    const glob = records(wb, 0); // stops at first EOF
+    const globEnd = glob[glob.length - 1].pos + 4 + glob[glob.length - 1].len;
+    let sst = [];
+    const sstIdx = glob.findIndex(r => r.t === 0xFC); if (sstIdx >= 0) sst = parseSST(glob, sstIdx);
+    const sheets = glob.filter(r => r.t === 0x85).map(r => ({ boundRec: r, pos: u32(r.data, 0), name: readStrInline(r.data, 6).replace(/^.{0}/, ""), }));
+    // sheet name in BOUNDSHEET is ShortXLUnicodeString (cch 1 byte)
+    sheets.forEach(sh => { const d = sh.boundRec.data; const cch = d[6], fl = d[7]; let s = ""; for (let j = 0; j < cch; j++) s += String.fromCharCode(fl & 1 ? u16(d, 8 + j * 2) : d[8 + j]); sh.name = s; });
+    for (const sh of sheets) {
+      sh.recs = records(wb, sh.pos);
+      sh.cells = new Map();
+      for (const r of sh.recs) {
+        const d = r.data; const row = u16(d, 0), col = u16(d, 2);
+        if (r.t === 0xFD) sh.cells.set(row + "," + col, sst[u32(d, 6)]);
+        else if (r.t === 0x204) sh.cells.set(row + "," + col, readStrInline(d, 6));
+        else if (r.t === 0x27E) sh.cells.set(row + "," + col, rkVal(u32(d, 6)));
+        else if (r.t === 0x203) sh.cells.set(row + "," + col, new DataView(d.buffer, d.byteOffset + 6, 8).getFloat64(0, true));
+        else if (r.t === 0xBD) { const last = u16(d, r.len - 2); for (let c = col, o = 4; c <= last; c++, o += 6) sh.cells.set(row + "," + c, rkVal(u32(d, o + 2))); }
+      }
+    }
+    return { cfb, wb, globEnd, sheets, sst };
+  }
+
+  // ---------- record builders ----------
+  function rec(t, body) { const o = new Uint8Array(4 + body.length); o[0] = t & 255; o[1] = t >> 8; o[2] = body.length & 255; o[3] = body.length >> 8; o.set(body, 4); return o; }
+  function cellHead(row, col, xf, extra) { const b = new Uint8Array(6 + extra); b[0] = row & 255; b[1] = row >> 8; b[2] = col & 255; b[3] = col >> 8; b[4] = xf & 255; b[5] = xf >> 8; return b; }
+  function labelRec(row, col, xf, text) {
+    text = String(text).slice(0, 2000);
+    const b = cellHead(row, col, xf, 3 + text.length * 2);
+    b[6] = text.length & 255; b[7] = text.length >> 8; b[8] = 1;
+    for (let i = 0; i < text.length; i++) { const c = text.charCodeAt(i); b[9 + i * 2] = c & 255; b[10 + i * 2] = c >> 8; }
+    return rec(0x204, b);
+  }
+  function numberRec(row, col, xf, v) { const b = cellHead(row, col, xf, 8); new DataView(b.buffer).setFloat64(6, v, true); return rec(0x203, b); }
+  function blankRec(row, col, xf) { return rec(0x201, cellHead(row, col, xf, 0)); }
+  function valueRec(row, col, xf, v) { if (v && typeof v === "object") { if (v.xf != null) xf = v.xf; v = v.v; } if (v === null || v === undefined || v === "") return blankRec(row, col, xf); if (typeof v === "number") return numberRec(row, col, xf, v); return labelRec(row, col, xf, v); }
+  function mulBlank(row, c0, xfs) { if (xfs.length === 1) return blankRec(row, c0, xfs[0]); const b = new Uint8Array(4 + xfs.length * 2 + 2); b[0] = row & 255; b[1] = row >> 8; b[2] = c0 & 255; b[3] = c0 >> 8; xfs.forEach((x, i) => { b[4 + i * 2] = x & 255; b[5 + i * 2] = x >> 8; }); const last = c0 + xfs.length - 1; b[b.length - 2] = last & 255; b[b.length - 1] = last >> 8; return rec(0xBE, b); }
+  function mulRk(row, c0, items) { if (items.length === 1) { const b = cellHead(row, c0, items[0].xf, 4); b.set(items[0].rk, 6); return rec(0x27E, b); } const b = new Uint8Array(4 + items.length * 6 + 2); b[0] = row & 255; b[1] = row >> 8; b[2] = c0 & 255; b[3] = c0 >> 8; items.forEach((it, i) => { b[4 + i * 6] = it.xf & 255; b[5 + i * 6] = it.xf >> 8; b.set(it.rk, 6 + i * 6); }); const last = c0 + items.length - 1; b[b.length - 2] = last & 255; b[b.length - 1] = last >> 8; return rec(0xBD, b); }
+
+  const CELL = new Set([0x201, 0x203, 0x204, 0xFD, 0x27E, 0x06, 0x205, 0xBE, 0xBD]);
+
+  // edits: Map sheetIndex -> Map("r,c" -> value|null)
+  function buildWorkbook(P, edits) {
+    const chunks = []; const glob = P.wb.slice(0, P.globEnd); chunks.push(glob);
+    let pos = glob.length; const newPos = [];
+    P.sheets.forEach((sh, si) => {
+      newPos.push(pos);
+      const ed = edits.get(si);
+      const parts = [];
+      if (!ed || !ed.size) { for (const r of sh.recs) parts.push(P.wb.subarray(r.pos, r.pos + 4 + r.len)); }
+      else {
+        const pending = new Map(ed);
+        const key = (r, c) => r * 1000 + c;
+        const flushBefore = lim => { const ks = [...pending.keys()].map(k => { const [r, c] = k.split(",").map(Number); return { k, r, c }; }).filter(x => lim === Infinity || key(x.r, x.c) < lim).sort((a, b) => key(a.r, a.c) - key(b.r, b.c)); for (const x of ks) { const v = pending.get(x.k); pending.delete(x.k); const vv = v && typeof v === "object" ? v.v : v; if (vv !== null && vv !== "" && vv !== undefined) parts.push(valueRec(x.r, x.c, 15, v)); } };
+        let skipString = false, seenCell = false;
+        for (const r of sh.recs) {
+          const raw = P.wb.subarray(r.pos, r.pos + 4 + r.len), d = r.data;
+          if (skipString) { skipString = false; if (r.t === 0x207) continue; }
+          if (CELL.has(r.t)) {
+            seenCell = true;
+            const row = u16(d, 0), col = u16(d, 2);
+            flushBefore(key(row, col));
+            if (r.t === 0xBE || r.t === 0xBD) {
+              const last = u16(d, r.len - 2); const n = last - col + 1; const step = r.t === 0xBE ? 2 : 6;
+              const items = []; for (let i = 0; i < n; i++) { const o = 4 + i * step; items.push({ c: col + i, xf: u16(d, o), rk: r.t === 0xBD ? d.slice(o + 2, o + 6) : null }); }
+              let run = [];
+              const flushRun = () => { if (!run.length) return; parts.push(r.t === 0xBE ? mulBlank(row, run[0].c, run.map(x => x.xf)) : mulRk(row, run[0].c, run)); run = []; };
+              for (const it of items) { const k = row + "," + it.c; if (pending.has(k)) { flushRun(); parts.push(valueRec(row, it.c, it.xf, pending.get(k))); pending.delete(k); } else run.push(it); }
+              flushRun();
+            } else {
+              const k = row + "," + col;
+              if (pending.has(k)) { parts.push(valueRec(row, col, u16(d, 4), pending.get(k))); pending.delete(k); if (r.t === 0x06) skipString = true; }
+              else parts.push(raw);
+            }
+          } else {
+            if (seenCell && pending.size && r.t !== 0x207 && r.t !== 0x208) flushBefore(Infinity);
+            parts.push(raw);
+          }
+        }
+      }
+      for (const p of parts) { chunks.push(p); pos += p.length; }
+    });
+    const out = new Uint8Array(pos); let o = 0; for (const c of chunks) { out.set(c, o); o += c.length; }
+    // patch BOUNDSHEET offsets
+    P.sheets.forEach((sh, i) => { const at = sh.boundRec.pos + 4; out[at] = newPos[i] & 255; out[at + 1] = (newPos[i] >> 8) & 255; out[at + 2] = (newPos[i] >> 16) & 255; out[at + 3] = (newPos[i] >>> 24) & 255; });
+    const streams = P.cfb.streams.map(s => s.name === "Workbook" || s.name === "Book" ? { name: s.name, data: out, raw: s.raw } : s);
+    return writeCFB(P.cfb.root.raw, streams);
+  }
+
+  // ---------- ZIP (store) ----------
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  function zip(files) {
+    const enc = new TextEncoder(); const locals = []; const cents = []; let offset = 0;
+    const now = new Date(); const dt = ((now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1)) & 0xFFFF; const dd = (((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate()) & 0xFFFF;
+    for (const f of files) {
+      const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
+      const lh = new Uint8Array(30 + name.length); const lv = new DataView(lh.buffer);
+      lv.setUint32(0, 0x04034b50, true); lv.setUint16(4, 20, true); lv.setUint16(6, 0x0800, true); lv.setUint16(8, 0, true); lv.setUint16(10, dt, true); lv.setUint16(12, dd, true);
+      lv.setUint32(14, crc, true); lv.setUint32(18, size, true); lv.setUint32(22, size, true); lv.setUint16(26, name.length, true); lh.set(name, 30);
+      const ch = new Uint8Array(46 + name.length); const cv = new DataView(ch.buffer);
+      cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true); cv.setUint16(8, 0x0800, true); cv.setUint16(12, dt, true); cv.setUint16(14, dd, true);
+      cv.setUint32(16, crc, true); cv.setUint32(20, size, true); cv.setUint32(24, size, true); cv.setUint16(28, name.length, true); cv.setUint32(42, offset, true); ch.set(name, 46);
+      locals.push(lh, f.data); cents.push(ch); offset += lh.length + size;
+    }
+    const cdSize = cents.reduce((a, c) => a + c.length, 0);
+    const end = new Uint8Array(22); const ev = new DataView(end.buffer);
+    ev.setUint32(0, 0x06054b50, true); ev.setUint16(8, files.length, true); ev.setUint16(10, files.length, true); ev.setUint32(12, cdSize, true); ev.setUint32(16, offset, true);
+    const parts = [...locals, ...cents, end]; const out = new Uint8Array(parts.reduce((a, c) => a + c.length, 0)); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; } return out;
+  }
+
+  function cellXF(sh, row, col) {
+    for (const r of sh.recs) {
+      if (!CELL.has(r.t)) continue; const d = r.data; if (u16(d, 0) !== row) continue; const c0 = u16(d, 2);
+      if (r.t === 0xBE || r.t === 0xBD) { const last = u16(d, r.len - 2); if (col >= c0 && col <= last) return u16(d, 4 + (col - c0) * (r.t === 0xBE ? 2 : 6)); }
+      else if (c0 === col) return u16(d, 4);
+    }
+    return null;
+  }
+  root.XLS = { cellXF, readCFB, writeCFB, parseWorkbook, buildWorkbook, zip, records, u16, u32 };
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+
+// ---------- Daten: Ausbildungsrahmenplan (Betrieb) ----------
+const SECTIONS = {
+  1:"Berufsbildung",2:"Aufbau und Organisation des Ausbildungsbetriebes",3:"Arbeits- und Tarifrecht, Arbeitsschutz",
+  4:"Arbeitssicherheit, Umweltschutz und rationelle Energieverwendung",5:"Aufrechterhalten der Betriebssicherheit",
+  6:"Beaufsichtigen des Badebetriebes",7:"Betreuen von Besuchern",8:"Schwimmen",9:"Einleiten und Ausüben von Wasserrettungsmaßnahmen",
+  10:"Durchführen von Erster Hilfe und Wiederbelebungsmaßnahmen",11:"Messen physikalischer und chemischer Größen sowie Bestimmen von Stoffkonstanten",
+  12:"Kontrollieren und Sichern des technischen Betriebsablaufes",13:"Pflegen und Warten bäder- und freizeittechnischer Einrichtungen",
+  14:"Durchführen von Verwaltungsarbeiten im Bad",15:"Öffentlichkeitsarbeit"
+};
+// [Nr, Buchstabe, Jahr (0 = ganze Ausbildung), Plan-Satz, Berichtsheft-Satz, Stichwörter]
+const BETRIEB = [
+ [1,"a",0,"Bedeutung des Ausbildungsvertrages, insbesondere Abschluß, Dauer und Beendigung, erklären","Bedeutung des Ausbildungsvertrages (Abschluss, Dauer, Beendigung) besprochen","ausbildungsvertrag, vertrag unterschrieben, probezeit, ausbildungsdauer, kündigung ausbildung, verkürzung"],
+ [1,"b",0,"gegenseitige Rechte und Pflichten aus dem Ausbildungsvertrag nennen","Rechte und Pflichten aus dem Ausbildungsvertrag besprochen","rechte, pflichten, rechte und pflichten, berichtsheft, ausbildungsnachweis, azubi urlaub"],
+ [1,"c",0,"Möglichkeiten der beruflichen Fortbildung nennen","Möglichkeiten der beruflichen Fortbildung kennengelernt","fortbildung, weiterbildung, meister, meisterschule, lehrgang, seminar, schulung"],
+ [2,"a",0,"Struktur und Aufgabe von Freizeit- und Badebetrieben beschreiben","Struktur und Aufgaben des Bade- und Freizeitbetriebes kennengelernt","betrieb kennengelernt, rundgang betrieb, führung, einarbeitung, erster tag, freizeitbad, erlebnisbad, struktur"],
+ [2,"b",0,"Rechtsform, Aufbau und Ablauforganisation des ausbildenden Betriebes erläutern","Rechtsform, Aufbau und Ablauforganisation des Ausbildungsbetriebes kennengelernt","rechtsform, gmbh, stadtwerke, eigenbetrieb, organigramm, ablauforganisation, abteilungen, zuständigkeiten, aufbau betrieb"],
+ [2,"c",0,"Beziehungen des ausbildenden Betriebes und seiner Beschäftigten zu Wirtschaftsorganisationen, Fachverbänden, Berufsvertretungen, Gewerkschaften und Verwaltungen nennen","Beziehungen des Betriebes zu Fachverbänden, Gewerkschaften und Verwaltungen kennengelernt","gewerkschaft, verdi, fachverband, dgfdb, berufsverband, dlrg, verband, stadtverwaltung"],
+ [2,"d",0,"Grundlagen, Aufgaben und Arbeitsweise der betriebsverfassungs- oder personalvertretungsrechtlichen Organe des ausbildenden Betriebes beschreiben","Aufgaben und Arbeitsweise des Personal-/Betriebsrates kennengelernt","personalrat, betriebsrat, jav, jugendvertretung, personalversammlung, betriebsversammlung"],
+ [3,"a",0,"über Bedeutung und Inhalt von Arbeitsverträgen Auskunft geben","Bedeutung und Inhalt von Arbeitsverträgen besprochen","arbeitsvertrag, arbeitsverträge"],
+ [3,"b",0,"Bestimmungen der für den ausbildenden Betrieb geltenden Tarifverträge nennen","Bestimmungen des geltenden Tarifvertrages besprochen","tarifvertrag, tarif, tvöd, tvaöd, gehalt, lohn, zuschläge, ausbildungsvergütung"],
+ [3,"c",0,"Aufgaben des betrieblichen Arbeitsschutzes, der zuständigen Unfallversicherung und der Gewerbeaufsicht erläutern","Aufgaben von Arbeitsschutz, Unfallversicherung und Gewerbeaufsicht kennengelernt","arbeitsschutz, unfallkasse, berufsgenossenschaft, unfallversicherung, gewerbeaufsicht, sicherheitsbeauftragter, unterweisung"],
+ [3,"d",0,"Bestimmungen der für den ausbildenden Betrieb geltenden Arbeitsschutzgesetze anwenden","Bestimmungen der Arbeitsschutzgesetze angewendet","arbeitszeitgesetz, jugendarbeitsschutz, arbeitszeit, pausen, ruhezeit, mutterschutz"],
+ [3,"e",0,"Bestandteile der Sozialversicherung sowie Träger und Beitragssysteme aufzeigen","Bestandteile, Träger und Beitragssysteme der Sozialversicherung besprochen","sozialversicherung, krankenkasse, krankenversicherung, rentenversicherung, rente, lohnabrechnung, beiträge"],
+ [4,"a",0,"berufsbezogene Vorschriften der Träger der gesetzlichen Unfallversicherung, insbesondere Unfallverhütungsvorschriften, Richtlinien und Merkblätter, beachten","Unfallverhütungsvorschriften, Richtlinien und Merkblätter beachtet","unfallverhütungsvorschrift, uvv, dguv, merkblatt, richtlinie, sicherheitsunterweisung"],
+ [4,"b",0,"Arbeitssicherheitsvorschriften bei den Arbeitsabläufen anwenden","Arbeitssicherheitsvorschriften bei den Arbeitsabläufen angewendet","arbeitssicherheit, schutzausrüstung, psa, schutzbrille, handschuhe, sicherheitsschuhe, gehörschutz"],
+ [4,"c",0,"geeignete Maßnahmen zur Verhütung von Unfällen im eigenen Arbeitsbereich ergreifen und sich bei Unfällen situationsgerecht verhalten","Maßnahmen zur Unfallverhütung im eigenen Arbeitsbereich ergriffen","unfall verhindern, unfallverhütung, stolperfalle, rutschgefahr, glätte, absperren, warnschild, abgesperrt, gefahrenstelle"],
+ [4,"d",0,"Verhaltensregeln für den Brandfall nennen und Maßnahmen zur Brandbekämpfung ergreifen","Verhaltensregeln für den Brandfall und Maßnahmen zur Brandbekämpfung geübt","brand, feuer, feuerlöscher, brandschutz, brandschutzübung, evakuierung, räumungsübung, fluchtweg, feueralarm, rauchmelder"],
+ [4,"e",0,"Gefahren, die von Giften, Gasen, Dämpfen, leicht entzündlichen Stoffen sowie vom elektrischen Strom ausgehen, beachten","Gefahren durch Gifte, Gase, Dämpfe, entzündliche Stoffe und elektrischen Strom beachtet","gift, gase, dämpfe, chlorgas, chlorgasraum, entzündlich, strom, elektrik, gaswarnanlage, atemschutz"],
+ [4,"f",0,"berufsspezifische Bestimmungen zu Gefahrstoffen und -gütern anwenden","Bestimmungen zu Gefahrstoffen und -gütern angewendet","gefahrstoff, gefahrstoffe, chemikalien, sicherheitsdatenblatt, betriebsanweisung, salzsäure, natronlauge, natriumhypochlorit, kanister, chemikalien einlagern, lieferung chemikalien, umfüllen, ghs"],
+ [4,"g",0,"Vorschriften zum Schutz der Gesundheit am Arbeitsplatz anwenden","Vorschriften zum Gesundheitsschutz am Arbeitsplatz angewendet","gesundheitsschutz, hautschutz, hautschutzplan, heben, tragen, rückenschonend, lärm"],
+ [4,"h",0,"zur Vermeidung betriebsbedingter Umweltbelastungen im beruflichen Einwirkungsbereich nach ökologischen Gesichtspunkten beitragen","Zur Vermeidung betriebsbedingter Umweltbelastungen beigetragen","umweltschutz, umwelt, wasser sparen, abwasser, ökologisch"],
+ [4,"i",0,"Maßnahmen zur Entsorgung von Abfällen unter Beachtung betrieblicher und sonstiger berufsbezogener Sicherheitsbestimmungen ergreifen","Abfälle unter Beachtung der Sicherheitsbestimmungen entsorgt","müll, mülleimer, abfall, abfalleimer, entsorgt, entsorgen, mülltrennung, müll rausbringen, müll geleert, container, altöl, sperrmüll"],
+ [4,"k",0,"zur rationellen Energie- und Materialverwendung im beruflichen Beobachtungs- und Einwirkungsbereich beitragen","Zur rationellen Energie- und Materialverwendung beigetragen","energie sparen, strom sparen, licht ausgemacht, heizung, beckenabdeckung, abdeckung, material sparen, sparsam"],
+ [5,"a",1,"Rechtsvorschriften und betriebliche Bestimmungen, die für den Betrieb des Bades gelten, anwenden","Rechtsvorschriften und betriebliche Bestimmungen für den Badebetrieb angewendet","rechtsvorschriften, betriebliche bestimmungen, hausordnung, dienstanweisung, betriebsanweisung bad"],
+ [5,"b",1,"Rechtsvorschriften und betriebliche Grundsätze der Hygiene anwenden","Rechtsvorschriften und betriebliche Hygienegrundsätze angewendet","hygiene, hygieneplan, legionellen, duschen spülen, warmwasser spülen, trinkwasser, ifsg"],
+ [5,"c",1,"Mittel, Geräte und Verfahren zur Reinigung und Desinfektion anwenden und deren Auswahl begründen","Reinigungs- und Desinfektionsarbeiten mit geeigneten Mitteln, Geräten und Verfahren durchgeführt","reinigen, gereinigt, putzen, geputzt, sauber, saubergemacht, wischen, gewischt, schrubben, scheuern, scheuersaugmaschine, hochdruckreiniger, kärcher, fliesen, duschen, toiletten, wc, umkleide, umkleiden, sauna, beckenumgang, grundreinigung, desinfizieren, desinfektion, flächendesinfektion, reinigungsmittel, boden, rinne, überlaufrinne, beckenboden, beckensauger, sauger, unterwassersauger, roboter, poolroboter, spinde, schränke, glas, scheiben, fenster, kehren, gekehrt"],
+ [5,"d",2,"bei der Organisation von Betriebsabläufen des Badebetriebes mitwirken","Bei der Organisation von Betriebsabläufen des Badebetriebes mitgewirkt","organisation, betriebsablauf, dienstplan, schichtplan, schichtübergabe, schichtwechsel, übergabe, frühdienst, spätdienst, öffnen, geöffnet, aufgeschlossen, schließen, abschließen, abgeschlossen, bad öffnen, bad schließen, vorbereitung öffnung, schließdienst"],
+ [5,"e",3,"bei der Kontrolle und Beaufsichtigung im Rahmen der Verkehrssicherungspflicht mitwirken","Bei Kontrollen im Rahmen der Verkehrssicherungspflicht mitgewirkt","verkehrssicherungspflicht, kontrollgang, sicherheitskontrolle, begehung, rutsche kontrolliert, sprunganlage kontrolliert, startblock, leitern, geländer, spielgeräte kontrolliert, sichtkontrolle, mängel"],
+ [6,"a",1,"Gefahren des Badebetriebes in und an Naturgewässern erläutern","Gefahren des Badebetriebes in und an Naturgewässern kennengelernt","naturbad, badesee, see, naturgewässer, freigewässer, strömung, fluss, meer, strand"],
+ [6,"b",1,"Rechtsnormen, Verwaltungsvorschriften, Betriebs- und Dienstanweisungen zur Aufsicht im Badebetrieb sowie die Badeordnung anwenden","Dienstanweisungen zur Aufsicht und die Badeordnung angewendet","badeordnung, haus und badeordnung, regeln durchgesetzt, verwarnt, ermahnt, hausverbot, rausgeworfen, verwiesen, dienstanweisung aufsicht"],
+ [6,"c",2,"Beaufsichtigung im Badebetrieb, insbesondere im Beckenbereich, durchführen","Beaufsichtigung im Badebetrieb, insbesondere im Beckenbereich, durchgeführt","aufsicht, beckenaufsicht, badeaufsicht, wasseraufsicht, beaufsichtigt, beaufsichtigen, aufgepasst, aufpassen, turm, rutschenaufsicht, sprungturm, sprungturmaufsicht, nichtschwimmerbecken, schwimmerbecken, sportbecken, wellenbad, überwacht, beckenrand, aufsichtsdienst"],
+ [6,"d",3,"bei Planung und Organisation des Aufsichtsdienstes mitwirken","Bei Planung und Organisation des Aufsichtsdienstes mitgewirkt","aufsichtsplan, aufsicht planen, aufsichtsdienst planen, einsatzplan, aufsichtspositionen, rotation"],
+ [6,"e",3,"bedrohliche Situationen im Badebetrieb feststellen und Sofortmaßnahmen einleiten","Bedrohliche Situationen im Badebetrieb festgestellt und Sofortmaßnahmen eingeleitet","bedrohlich, notfall, gewitter, bad geräumt, räumung, schlägerei, prügelei, gefahr erkannt, sofortmaßnahmen, kind vermisst, vermisst, polizei gerufen, rettungsdienst gerufen"],
+ [7,"a",1,"Besucher empfangen und informieren","Besucher empfangen und informiert","empfang, empfangen, begrüßt, informiert, auskunft, fragen beantwortet, info, telefon, eingang, rezeption, gäste begrüßt"],
+ [7,"b",1,"Konfliktfelder beschreiben und Möglichkeiten zur Konfliktregelung anwenden","Möglichkeiten zur Konfliktregelung angewendet","konflikt, streit, beschwerde, ärger, gestritten, geschlichtet, schlichten, diskussion, beschwert"],
+ [7,"c",1,"über notwendige Hygienemaßnahmen beraten","Besucher über notwendige Hygienemaßnahmen beraten","hygiene beraten, duschen vor dem baden, badebekleidung, badekleidung, schwimmwindel, fußpilz, warzen, hygienehinweis"],
+ [7,"d",2,"Besucherwünsche ermitteln und entsprechende Spiel- und Sportarrangements anbieten","Besucherwünsche ermittelt und Spiel- und Sportarrangements angeboten","spiele, spielangebot, sportangebot, animation, wasserspiele, aquagymnastik, aquafitness, aquajogging, aquazumba, wassergymnastik, kursangebot, umfrage, besucherwünsche, spielgeräte rausgeholt, spieletag"],
+ [7,"e",3,"Besucher betreuen","Besucher betreut","betreut, betreuen, gäste betreut, kindergeburtstag, geburtstag, senioren, gruppe betreut, schulklasse betreut, besucherbetreuung"],
+ [7,"f",3,"Kommunikationsregeln in verschiedenen beruflichen Situationen anwenden und zur Vermeidung von Kommunikationsstörungen beitragen","Kommunikationsregeln in beruflichen Situationen angewendet","kommunikation, gespräch, gesprächsführung, freundlich, missverständnis"],
+ [8,"a",1,"Wettkampftechniken einschließlich Start- und Wendetechniken anwenden","Wettkampftechniken einschließlich Start- und Wendetechniken trainiert","schwimmen, geschwommen, schwimmtraining, training, trainiert, bahnen, kraul, kraulen, brust, brustschwimmen, rücken, rückenschwimmen, delfin, schmetterling, lagen, start, startsprung, wende, rollwende, zeitschwimmen, kondition"],
+ [8,"b",1,"Techniken des Strecken- und Tieftauchens anwenden","Techniken des Strecken- und Tieftauchens trainiert","tauchen, getaucht, streckentauchen, tieftauchen, ringe tauchen, tauchtraining"],
+ [8,"c",1,"Einfachsprünge ausführen","Einfachsprünge ausgeführt","sprung, sprünge, springen, gesprungen, kopfsprung, fußsprung, einfachsprung, dreimeter, brett, sprungbrett"],
+ [8,"d",2,"theoretischen und praktischen Schwimmunterricht für Anfänger durchführen","Schwimmunterricht für Anfänger durchgeführt","schwimmkurs, anfängerschwimmkurs, anfänger, seepferdchen, nichtschwimmer, wassergewöhnung, kinderschwimmen, schwimmunterricht, schwimmschule, kurs gegeben, babyschwimmen, schulschwimmen"],
+ [8,"e",3,"Schwimmunterricht für Fortgeschrittene durchführen","Schwimmunterricht für Fortgeschrittene durchgeführt","fortgeschrittene, fortgeschrittenenkurs, bronze, silber, gold, jugendschwimmabzeichen, schwimmabzeichen, technikkurs, kraulkurs"],
+ [8,"f",3,"Spring- und Tauchunterricht für Anfänger durchführen","Spring- und Tauchunterricht für Anfänger durchgeführt","springunterricht, sprungunterricht, tauchunterricht, tauchkurs, sprungkurs"],
+ [9,"a",1,"Rettungsmaßnahmen, insbesondere unter Anwendung der Methoden des Rettungsschwimmens, durchführen","Rettungsmaßnahmen mit Methoden des Rettungsschwimmens durchgeführt","rettungsschwimmen, retten, gerettet, rettung, rettungsübung, befreiungsgriff, befreiungsgriffe, abschleppen, abgeschleppt, transportschwimmen, kleiderschwimmen, schleppen, anlandbringen, rettungsschwimmer"],
+ [9,"b",2,"Rettungssituationen erläutern und entsprechende Rettungsmaßnahmen ableiten","Rettungssituationen besprochen und Rettungsmaßnahmen abgeleitet","rettungssituation, rettungsszenario, rettungskette, ertrinken, ertrinkender, fallbeispiel rettung"],
+ [9,"c",3,"Rettungsgeräte für Wasserrettungsmaßnahmen warten und einsetzen","Rettungsgeräte für die Wasserrettung gewartet und eingesetzt","rettungsgeräte, rettungsgerät, rettungsring, gurtretter, rettungsboje, rettungsbrett, spineboard, rettungsstange, rettungsball, rettungsboot, rettungsleine, wurfsack"],
+ [10,"a",1,"Aufgaben eines Ersthelfers nach den Unfallverhütungsvorschriften des Trägers der gesetzlichen Unfallversicherung ausüben","Aufgaben als Ersthelfer ausgeübt","erste hilfe, ersthelfer, pflaster, verband, verbunden, wunde, wunde versorgt, verletzung versorgt, verbandkasten, verbandbuch, sanitätsraum, sanraum, kühlen, coolpack, nasenbluten, schnittverletzung"],
+ [10,"b",1,"Herz-Lungen-Wiederbelebungsmaßnahmen an Personen unterschiedlicher Altersgruppen unter Berücksichtigung der verschiedenen anatomischen Gegebenheiten durchführen","Herz-Lungen-Wiederbelebung an verschiedenen Altersgruppen geübt","hlw, reanimation, wiederbelebung, herzdruckmassage, beatmung, cpr, phantom, übungspuppe, säugling, kind reanimation"],
+ [10,"c",2,"Unfallbeteiligte betreuen","Unfallbeteiligte betreut","unfallbeteiligte, betroffene betreut, beruhigt, zeugen, angehörige"],
+ [10,"d",3,"Herz-Lungen-Wiederbelebung mit einfachem Gerät, insbesondere Beutel- und Balgbeatmer, durchführen","Herz-Lungen-Wiederbelebung mit Beutel-/Balgbeatmer durchgeführt","beutel, beatmungsbeutel, ambubeutel, balgbeatmer, defibrillator, defi, aed, sauerstoff, absaugpumpe, beatmungsmaske"],
+ [10,"e",3,"Verletzten mit und ohne Gerät transportieren","Verletzte mit und ohne Gerät transportiert","transportieren, transportiert, trage, vakuummatratze, rautek, rettungsgriff, tragen verletzte"],
+ [11,"a",1,"Länge, Masse, Volumen, Temperatur und Druck messen","Länge, Masse, Volumen, Temperatur und Druck gemessen","messen, gemessen, temperatur, wassertemperatur, lufttemperatur, druck, manometer, volumen, zählerstand, zähler abgelesen, wasserzähler, abgelesen"],
+ [11,"b",1,"die Bedeutung von Schmelzpunkt, Siedepunkt und Dichte erläutern","Bedeutung von Schmelzpunkt, Siedepunkt und Dichte besprochen","schmelzpunkt, siedepunkt, dichte"],
+ [11,"c",1,"pH-Wert und Hygienehilfsparameter bestimmen","pH-Wert und Hygienehilfsparameter bestimmt","chlor, chlormessung, chlorwert, freies chlor, gebundenes chlor, ph, phwert, ph wert, redox, redoxspannung, hygienehilfsparameter, wasserwerte, wasserwerte gemessen, dpd, photometer, handmessung, messen, gemessen, messung, wasser gemessen, trübung"],
+ [11,"d",3,"Proben unter betrieblichen Bedingungen entnehmen","Proben unter betrieblichen Bedingungen entnommen","probe, proben, wasserprobe, probenahme, probe entnommen, labor, beprobung"],
+ [11,"e",3,"Meßgeräte zur Überwachung der Wasserqualität handhaben und pflegen","Messgeräte zur Überwachung der Wasserqualität gehandhabt und gepflegt","messgerät, messgeräte, messzelle, elektrode, elektroden, kalibriert, kalibrieren, pufferlösung, photometer gereinigt, messwasser, eichen"],
+ [12,"a",1,"Betriebsabläufe durch regelmäßige Kontrolle der bädertechnischen Anlagen und der Betriebszustände sichern","Bädertechnische Anlagen und Betriebszustände kontrolliert","technik, technikrundgang, technikkontrolle, technik kontrolliert, keller, technikkeller, anlage kontrolliert, pumpen kontrolliert, filteranlage, betriebszustand, rundgang technik"],
+ [12,"b",1,"Arbeits- und Bäderhygiene kontrollieren und sichern","Arbeits- und Bäderhygiene kontrolliert und gesichert","hygiene kontrolliert, hygienekontrolle, bäderhygiene, arbeitshygiene"],
+ [12,"c",2,"Betriebsdaten von Steuer-, Regel- und Sicherheitseinrichtungen prüfen und dokumentieren","Betriebsdaten von Steuer-, Regel- und Sicherheitseinrichtungen geprüft und dokumentiert","betriebsbuch, betriebstagebuch, dokumentiert, eingetragen, aufgeschrieben, notiert, protokoll, werte eingetragen, mess und regelanlage, msr, dosieranlage, sicherheitseinrichtung"],
+ [12,"d",2,"Notfallpläne zur Bewältigung häufiger Störungen anwenden","Notfallpläne zur Bewältigung von Störungen angewendet","störung, notfallplan, ausfall, stromausfall, pumpenausfall, alarm, störungsmeldung"],
+ [12,"e",3,"Prozeßabläufe technischer Anlagen, insbesondere zur Schwimm- und Badebeckenwasseraufbereitung, steuern","Prozessabläufe der Beckenwasseraufbereitung gesteuert","rückspülen, rückgespült, rückspülung, filterspülung, filter gespült, spülen, wasseraufbereitung, aufbereitung, flockung, flockungsmittel, nachspeisen, frischwasser, dosierung, chlordosierung, umwälzung, umwälzleistung, beckenwasser, beckenwasser abgelassen, becken befüllt, ph regeln"],
+ [13,"a",1,"Werkstoffe nach Eigenschaften und Einsatzmöglichkeiten beurteilen","Werkstoffe nach Eigenschaften und Einsatzmöglichkeiten beurteilt","werkstoff, werkstoffe, material, edelstahl, korrosion, rost, kunststoff"],
+ [13,"b",1,"Arbeitsgeräte, Werkzeuge und Werkstücke einsetzen","Arbeitsgeräte und Werkzeuge eingesetzt","werkzeug, werkzeuge, werkstatt, bohren, gebohrt, schrauben, geschraubt, sägen, gesägt, handwerk, montiert"],
+ [13,"c",2,"einfache Schlauch- und Rohrverbindungen zusammenfügen und lösen","Einfache Schlauch- und Rohrverbindungen zusammengefügt und gelöst","schlauch, schläuche, rohr, rohre, rohrverbindung, verschraubung, leitung, kupplung"],
+ [13,"d",2,"Aufbau, Einsatz und Wirkungsweise von Armaturen, Filtern und Aggregaten beschreiben","Aufbau und Wirkungsweise von Armaturen, Filtern und Aggregaten kennengelernt","armatur, armaturen, ventil, ventile, schieber, aggregat, pumpe aufbau, filter aufbau, wirkungsweise"],
+ [13,"e",3,"Dichtungen erneuern und Filtereinsätze auswechseln","Dichtungen erneuert und Filtereinsätze ausgewechselt","dichtung, dichtungen, filtereinsatz, haarfänger, haarsieb, vorfilter, sieb, ausgewechselt, gewechselt"],
+ [13,"f",3,"technische Anlagen, Geräte und Werkzeuge pflegen und warten","Technische Anlagen, Geräte und Werkzeuge gepflegt und gewartet","wartung, warten, gewartet, gepflegt, instandhaltung, repariert, reparieren, reparatur, geölt, geschmiert, maschine gepflegt, gerät gepflegt, scheuersaugmaschine gewartet"],
+ [13,"g",3,"Innen- und Außenanlagen pflegen und warten","Innen- und Außenanlagen gepflegt und gewartet","hecke, hecken, schneiden, geschnitten, heckenschere, rasen, mähen, gemäht, rasenmäher, rasen gemäht, laub, laubbläser, unkraut, grünfläche, grünflächen, grünpflege, außenanlage, außenanlagen, außenbereich, liegewiese, wiese, bäume, büsche, sträucher, gartenarbeit, beet, harken, gegossen, gießen, schnee, winterdienst, gestreut, streuen, parkplatz, gefegt, fegen, wege, zaun, gestrichen, streichen, freibad herrichten, winterfest, eingewintert, sonnenschirme, liegen, bänke, innenanlage, innenanlagen"],
+ [14,"a",2,"Ablauforganisation der Verwaltungsarbeiten im Bad beschreiben","Ablauforganisation der Verwaltungsarbeiten im Bad kennengelernt","verwaltung, büro, bürotätigkeit, verwaltungsarbeit"],
+ [14,"b",2,"Kassensysteme unterscheiden und Kassenabrechnungen erstellen","Kassenabrechnungen erstellt","kasse, kassieren, kassiert, kassendienst, kassenabrechnung, kassenabschluss, tagesabschluss, abrechnung, eintritt, tickets, karten verkauft, kassensystem, kassenbericht"],
+ [14,"c",2,"einfache Buchungen durchführen","Einfache Buchungen durchgeführt","buchung, buchungen, gebucht, buchen, rechnung"],
+ [14,"d",2,"Schriftverkehr erledigen","Schriftverkehr erledigt","schriftverkehr, brief, briefe, email, mail, mails, geschrieben, bestellung, formular, ablage"],
+ [14,"e",2,"Vorschriften zum Datenschutz anwenden","Vorschriften zum Datenschutz angewendet","datenschutz, dsgvo, personendaten"],
+ [14,"f",2,"Informations- und Kommunikationssysteme aufgabenorientiert einsetzen","Informations- und Kommunikationssysteme aufgabenorientiert eingesetzt","computer, pc, edv, excel, word, software, programm, drucker, tablet"],
+ [14,"g",3,"ausgewählte Vorschriften des Vertrags- und Haftungsrechts anwenden","Vorschriften des Vertrags- und Haftungsrechts angewendet","fundsache, fundsachen, fundbüro, verloren, gefunden, haftung, schaden, schadensmeldung, versicherung, wertfach, diebstahl, vertragsrecht"],
+ [14,"h",3,"Zahlungsverkehr abwickeln","Zahlungsverkehr abgewickelt","zahlungsverkehr, überweisung, bargeld, einzahlung, bank, wechselgeld, kartenzahlung, ec"],
+ [15,"a",1,"Inhalte und Zielstellung öffentlichkeitswirksamer Maßnahmen darstellen","Inhalte und Ziele öffentlichkeitswirksamer Maßnahmen dargestellt","öffentlichkeitsarbeit, presse, pressemitteilung, zielgruppe"],
+ [15,"b",2,"einfache Texte und Werbeträger gestalten","Einfache Texte und Werbeträger gestaltet","plakat, plakate, flyer, aushang, schild, schilder, text, instagram, social media, homepage, webseite, werbetext, gestaltet"],
+ [15,"c",3,"bei Planung und Organisation von Werbemaßnahmen mitwirken","Bei Planung und Organisation von Werbemaßnahmen mitgewirkt","aktion geplant, veranstaltung geplant, event geplant, werbung geplant, planung"],
+ [15,"d",3,"Werbemaßnahmen durchführen","Werbemaßnahmen durchgeführt","werbung, werbemaßnahme, flyer verteilt, aktionstag, tag der offenen tür, event, veranstaltung, beachparty, disco, nachtschwimmen, stadtfest"]
+];
+
+// ---------- Daten: KMK-Rahmenlehrplan (Berufsschule) ----------
+// [Lerngebiet-Nr, Jahr, Lerngebiet, Lernziel, Lerninhalte]
+const SCHULE = [
+ ["1.1",1,"Dienst-, Verwaltungs- und Vertragsrecht für Bäderbetriebe","auf der Basis von Kenntnissen über das allgemeine Vertragsrecht Vertragsangelegenheiten bearbeiten","rechtliche Grundlagen bäderspezifischer Verträge, Vertrag, Vertragsrecht"],
+ ["1.1",1,"Dienst-, Verwaltungs- und Vertragsrecht für Bäderbetriebe","auf der Basis von Kenntnissen über allgemeine Rechtsgrundlagen Haftungsfragen im betrieblichen Umfeld regeln","Ansprüche des Badegastes aus dem Haftungs- und Fundsachenrecht, Haftung, Fundsachen"],
+ ["1.1",1,"Dienst-, Verwaltungs- und Vertragsrecht für Bäderbetriebe","anhand von einschlägigen Rechtsnormen, Verwaltungsvorschriften und Dienstanweisungen Grundprinzipien für Haus- und Badeordnungen herleiten","BGB, StGB, Unfallverhütungsvorschriften, Aufsichtspflichtregelungen, Badeordnung, Hausordnung"],
+ ["1.2",1,"Organisation von Bädern und Grundlagen wirtschaftlicher Betriebsführung","die Vielfalt betrieblich-organisatorischer Erscheinungsformen als Leistungsanbieter im Bäder- und Freizeitbereich unterscheiden","öffentliche Bäder, Privatbäder, Gesellschaftsformen, Erlebnisbäder, Kurbäder, Bäder in Ferienanlagen"],
+ ["1.3",1,"Besucherbetreuung und Öffentlichkeitsarbeit","Gespräche mit einzelnen und Gruppen von Gästen situationsangemessen führen","Grundlagen der Gesprächsführung, Kommunikation"],
+ ["1.3",1,"Besucherbetreuung und Öffentlichkeitsarbeit","rechtliche Grundlagen beim Umgang mit Gästen anwenden","Notwehr, Nothilfe, Notstand, Hilfeleistung, unterlassene Hilfeleistung, Strafrecht, Straftaten im Bäderbereich, vorläufige Festnahme, Strafantrag, Strafanzeige"],
+ ["1.3",1,"Besucherbetreuung und Öffentlichkeitsarbeit","Grundlagen zur Aktivierung von Gästen beschreiben","Methoden zur Motivation, Motivation"],
+ ["1.4",1,"Wasser","Wasser als Rohstoff beschreiben und Umweltzusammenhänge erläutern","Wassergewinnung, Aufbereitung, mathematisch-naturwissenschaftliche Grundlagen, Chemie, Physik, Rechnen"],
+ ["1.4",1,"Wasser","Beckenwasseraufbereitung im Überblick darstellen","Hydraulik, Flockung, Reinigung, Desinfektion, Erwärmung, Wasseraufbereitung, Filter"],
+ ["1.5",1,"Bäderarten, Bäderbau und Bädertechnik","Gestaltungsprinzipien beim Bäderbau erklären","Bäderarten, Funktionsbereiche, Beckenarten, sicherheitstechnische Anforderungen, Rettungsausstattung, elektrotechnische Sicherheitsvorschriften"],
+ ["1.5",1,"Bäderarten, Bäderbau und Bädertechnik","Reinigung in Bädern begründen","Reinigung, Methoden, Arten, Geräte, Mittel und Wirkung, Gefahrstoff-Verordnung, Reinigungsmittel"],
+ ["1.6",1,"Gesundheitslehre","Voraussetzungen zur Erhaltung der Gesundheit beschreiben","körperliches, soziales und seelisches Wohlbefinden, Gesundheit"],
+ ["1.6",1,"Gesundheitslehre","Aufbau und Funktion des menschlichen Körpers erklären","Zellen, Gewebe, Bewegungssystem, Knochen, Muskeln, Nervensystem, Hormonsystem, Sinnesorgane, Haut, Herz, Kreislauf, Atmung, Lunge, Verdauung, Harnsystem, Anatomie, Biologie"],
+ ["1.7",1,"Hilfeleistung bei Notfällen","Sofortmaßnahmen begründen","Erste Hilfe, Reanimation, Wiederbelebung, Sofortmaßnahmen"],
+ ["1.8",1,"Schwimmlehre","schwimmsportliche Bewegungsabläufe analysieren und beschreiben, Wettkampfbestimmungen nennen","biomechanische Grundlagen, Techniken des Schwimmens, Tauchens und Springens, Wettkampfbestimmungen, Schwimmprüfungen, Biomechanik"],
+ ["2.1",2,"Dienst-, Verwaltungs- und Vertragsrecht für Bäderbetriebe","die Einbindung des eigenen Badebetriebes in das Gesamtverwaltungssystem des Trägers beschreiben","private Trägerschaft, öffentlich-rechtliche Trägerschaft, Träger"],
+ ["2.1",2,"Dienst-, Verwaltungs- und Vertragsrecht für Bäderbetriebe","die für den Umgang mit Badegästen erforderlichen rechtlichen Bestimmungen und allgemeinen Verordnungen anwenden","Handlungsspielraum im dienstlichen Einsatz, Verantwortung gegenüber Betrieb und Badegast"],
+ ["2.1",2,"Dienst-, Verwaltungs- und Vertragsrecht für Bäderbetriebe","die Notwendigkeit von Aufsicht in Freizeit- und Bäderbetrieben unter Berücksichtigung der Besucherstruktur begründen und Aufsichtsprinzipien erläutern","Freibad, Hallenbad, Naturbad, Freizeitbad, Erlebnisbad, Aufsicht, Aufsichtsprinzipien"],
+ ["2.2",2,"Organisation von Bädern und Grundlagen wirtschaftlicher Betriebsführung","Einsatzpläne, insbesondere unter Berücksichtigung der besonderen Aufsichtspflicht im Beckenbereich, erläutern","Einsatzpläne, Nutzungsarten, Aufsichtspflicht, Dienstplan"],
+ ["2.2",2,"Organisation von Bädern und Grundlagen wirtschaftlicher Betriebsführung","besondere Ereignisse und Gefahrensituationen in Freizeit- und Bäderbetrieben beschreiben und daraus Verhaltensregeln für den Aufsichtsdienst entwickeln","Störungen des technischen Betriebsablaufes, Gefahrensituationen beim Schwimmen, Springen und Tauchen, Verhaltensregeln, Sofortmaßnahmen"],
+ ["2.3",2,"Besucherbetreuung und Öffentlichkeitsarbeit","Kontakte zu Gästen systematisch vorbereiten","Präsentation des Eingangsbereichs, Informationstafeln, Anzeigetafeln, Meckerkasten, Interviews"],
+ ["2.3",2,"Besucherbetreuung und Öffentlichkeitsarbeit","Wünsche und Erwartungen von Einzelpersonen und Gruppen ermitteln","mündliche und schriftliche Befragungen, Umfrage, Beobachtungen, Presseberichte"],
+ ["2.3",2,"Besucherbetreuung und Öffentlichkeitsarbeit","Grundsätze des Umgangs mit Gästen, insbesondere jüngeren und älteren, beachten","Alter, Nationalität, Verhaltensweisen von Einzelpersonen und Gruppen, Kinder, Senioren"],
+ ["2.3",2,"Besucherbetreuung und Öffentlichkeitsarbeit","Lösungsstrategien zur Konfliktbewältigung entwickeln","Rollenspiele zur Konfliktbewältigung, psychosoziale Lösungsstrategien, aggressives Verhalten, Konflikt, Streit"],
+ ["2.4",2,"Wasser","Einfache Analysen von Badewässern durchführen","Anforderungen an Badewässer, Parameter, photometrische und kolorimetrische Messmethoden, Chlor, pH-Wert, Wasseranalyse"],
+ ["2.4",2,"Wasser","Wasseraufbereitungsprozeß in verschiedenen Bereichen der Schwimmbäder erläutern","Hydraulik, Flockung, Reinigung, Desinfektion, Erwärmung, Kontrolle und Wartung, Wasseraufbereitung"],
+ ["2.5",2,"Bäderarten, Bäderbau und Bädertechnik","beckenhydraulische Anlagen beschreiben","Durchströmungssysteme, Beckenkopf, Wasserspeicher, Beckenhydraulik, Überlaufrinne"],
+ ["2.5",2,"Bäderarten, Bäderbau und Bädertechnik","Einflüsse auf Werkstoffe im Bäderbereich beschreiben und Maßnahmen daraus ableiten","Umwelteinflüsse, Witterungseinflüsse, physikalische, technologische und chemische Einflüsse, Werkstoffe, Korrosion"],
+ ["2.5",2,"Bäderarten, Bäderbau und Bädertechnik","Desinfektion in Bädern begründen","Desinfektion, Methoden, Arten, Geräte, Mittel und Wirkung, Gefahrstoff-Verordnung"],
+ ["2.6",2,"Gesundheitslehre","Maßnahmen zur Erhaltung und Förderung der Gesundheit beschreiben","Bewegungsübungen im und am Wasser, Kräftigung der Organsysteme, Hygiene im Bäderbereich"],
+ ["2.7",2,"Hilfeleistung bei Notfällen","Notfälle im Wasser analysieren und notwendige Maßnahmen begründen","Wasserrettung, Selbstrettung, Fremdrettung, Rettungsgeräte, Bootsrettung, Eisrettung, Rettung bei Tauchunfällen"],
+ ["2.8",2,"Schwimmlehre","pädagogische Grundsätze, Voraussetzungen und Bedingungen für Schwimmunterricht, Training und Besucherbetreuung erklären und analysieren","Analyse der Lernbedingungen, didaktisch-methodische Grundsätze, Pädagogik, Didaktik, Methodik"],
+ ["3.1",3,"Dienst-, Verwaltungs- und Vertragsrecht für Bäderbetriebe","Rechtsgrundlagen für Verwaltungstätigkeiten beschreiben","Rechts- und Verwaltungsvorschriften"],
+ ["3.1",3,"Dienst-, Verwaltungs- und Vertragsrecht für Bäderbetriebe","einfache Verwaltungstätigkeiten durchführen","Geschäftsgänge im Bäderbereich, Beschaffungswesen, Betriebsbuch, Schriftverkehr, EDV-Anwendungen"],
+ ["3.1",3,"Dienst-, Verwaltungs- und Vertragsrecht für Bäderbetriebe","Bäderkassen führen","Organisationsformen und Abrechnung von Kassen, Kasse"],
+ ["3.2",3,"Organisation von Bädern und Grundlagen wirtschaftlicher Betriebsführung","die Notwendigkeit der Anpassung des betrieblichen Handelns an den ständigen strukturellen Wandel in Wirtschaft und Gesellschaft beschreiben","struktureller Wandel, Wirtschaft, Politik, Gesellschaft, Wettbewerb"],
+ ["3.3",3,"Besucherbetreuung und Öffentlichkeitsarbeit","Spiel- und Sportarrangements für unterschiedliche Anlässe und Zielgruppen planen","Aquagymnastik, kleine Spiele im Wasser und an Land, Sportwettbewerbe, gesundheitliche Aspekte, Altersgruppen"],
+ ["3.3",3,"Besucherbetreuung und Öffentlichkeitsarbeit","Freizeitveranstaltungen planen","Spielenachmittage, Kindergeburtstage, Betriebsgruppenfeiern, Beachpartys, Veranstaltung"],
+ ["3.3",3,"Besucherbetreuung und Öffentlichkeitsarbeit","Zusammenhänge von Besucherverhalten und Angeboten eines Bades erläutern sowie Erhebungsdaten auswerten","Zielgruppenanalyse, Darstellung von Erhebungsdaten, Statistik, EDV-Anwendungen"],
+ ["3.3",3,"Besucherbetreuung und Öffentlichkeitsarbeit","öffentlichkeitswirksame Maßnahmen entwickeln","Öffentlichkeitsarbeit, Werbung, Planung und Gestaltung von Veranstaltungen"],
+ ["3.4",3,"Wasser","Analysen von Badewässern durchführen und Umweltauswirkungen beurteilen","Anforderungen an Badewässer, Parameter, elektronische Messmethoden, Gefahrstoff-Verordnung, Prozesssteuerung"],
+ ["3.5",3,"Bäderarten, Bäderbau und Bädertechnik","beckenhydraulische Geräte beschreiben","Pumpen, Armaturen, Kontrolle und Wartung"],
+ ["3.5",3,"Bäderarten, Bäderbau und Bädertechnik","Lüftung und Klimatisierung von Hallenbädern beschreiben","Lüftung, Klimatisierung, Luftfeuchte, Aufbau und Funktionen, MSR-Anwendungen"],
+ ["3.6",3,"Gesundheitslehre","mikrobiologische Anforderungen zur Vermeidung von Infektionskrankheiten beschreiben","Krankheitserreger, Bakterien, Viren, Pilze, infektionsepidemiologische Vorgänge, Infektionskrankheiten, Erkrankungen"],
+ ["3.7",3,"Hilfeleistung bei Notfällen","Notfälle im betriebstechnischen Bereich analysieren und notwendige Maßnahmen begründen","Unfälle durch Gefahrstoffe, Unfälle mit technischen Anlagen und Geräten, Unfälle mit Sport- und Spielgeräten, Chlorgas"],
+ ["3.8",3,"Schwimmlehre","Schwimmunterricht und Besucherbetreuung planen","methodische Übungsreihen, Entwürfe für Unterricht, Training und Besucherbetreuung, Unterrichtsentwurf"]
+];
+
+// ---------- Matching ----------
+const STOP = new Set("und oder der die das den dem des ein eine einer einem einen im in am an auf aus bei beim mit von vom zu zum zur fuer ueber unter nach vor ich wir habe hab haben hat heute gestern gemacht machen mache mal noch auch dann alle alles etwas viel paar wurde wurden worden ist sind war waren gewesen sowie sich mich mir uns es er sie man nicht nur so wie als".split(" "));
+const PREF = ["zurueck","rueck","durch","nach","fest","auf","aus","ein","mit","vor","ab","an","zu","um","weg","sauber","frei"];
+function norm(s){ return s.toLowerCase().replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss").replace(/[^a-z0-9]+/g," ").trim(); }
+function variants(t){
+  const v = new Set([t]);
+  if (t.length > 5 && t.startsWith("ge")) v.add(t.slice(2));
+  for (const p of PREF) if (t.startsWith(p + "ge") && t.length > p.length + 4) v.add(p + t.slice(p.length + 2));
+  return [...v];
+}
+function tokens(s){ return norm(s).split(" ").filter(t => t.length >= 2 && !STOP.has(t)); }
+function prefixLen(a,b){ let i=0; while(i<a.length && i<b.length && a[i]===b[i]) i++; return i; }
+function wordSim(t, k){
+  let best = 0;
+  for (const a of variants(t)) for (const b of variants(k)) {
+    if (a === b) return 3;
+    const s = Math.min(a.length, b.length);
+    if (s >= 4 && (a.startsWith(b) || b.startsWith(a))) best = Math.max(best, 2.5);
+    else if (b.length >= 5 && a.includes(b)) best = Math.max(best, 2.2);
+    else if (a.length >= 5 && b.includes(a)) best = Math.max(best, 1.6);
+    else { const p = prefixLen(a,b); if (p >= 5 && p >= 0.7*s) best = Math.max(best, 1.8); else if (p >= 4 && p >= s - 2) best = Math.max(best, 1.5); }
+  }
+  return best;
+}
+function compile(entry){
+  const kws = entry.kw.split(",").map(k => norm(k)).filter(Boolean);
+  entry.single = kws.filter(k => !k.includes(" "));
+  entry.phrases = kws.filter(k => k.includes(" ")).map(k => k.split(" "));
+  entry.textTok = tokens(entry.text + " " + (entry.extra || ""));
+  return entry;
+}
+const ENTRIES = [
+  ...BETRIEB.map(([n,l,y,text,bh,kw]) => compile({src:"betrieb", ref:"§ 3 Nr. " + n + " " + l, section:SECTIONS[n], year:y, text, bh, kw})),
+  ...SCHULE.map(([lg,y,area,text,inh]) => compile({src:"schule", ref:"Lerngebiet " + lg, section:area, year:y, text, extra:inh, bh:"Berufsschule, " + area + ": " + inh.split(",").slice(0,3).join(",").trim(), kw:inh}))
+];
+function score(entry, toks){
+  let total = 0, hits = 0;
+  for (const t of toks) {
+    let best = 0;
+    for (const k of entry.single) { const s = wordSim(t,k); if (s > best) best = s; if (best === 3) break; }
+    if (best < 1.5) { let b2 = 0; for (const k of entry.textTok) { if (k.length < 4) continue; const s = wordSim(t,k); if (s > b2) b2 = s; } best = Math.max(best, b2 * 0.45); }
+    if (best > 0) { total += best; hits++; }
+  }
+  for (const ph of entry.phrases) {
+    if (ph.every(w => toks.some(t => wordSim(t,w) >= 2.2))) total += 1.5 * ph.length;
+  }
+  return total;
+}
+function match(line, src){
+  const toks = tokens(line);
+  if (!toks.length) return [];
+  return ENTRIES.filter(e => src === "beides" || e.src === src)
+    .map(e => ({e, s: score(e, toks)})).filter(r => r.s > 0)
+    .sort((a,b) => b.s - a.s).slice(0, 4);
+}
+
+
+</script>
+<script>
+const EMBEDDED_NAME = "";
+const EMBEDDED_B64 = "";
+(function () {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const DAYS = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag"];
+  const FIRST = [3, 8, 13, 18, 23], LINES = 5, COL_B = 1, COL_D = 3, COL_E = 4, COL_F = 5, MAXLEN = 62;
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
+    del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+  };
+  const b64ToBytes = s => { const bin = atob(s); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
+  const bytesToB64 = u => { let s = ""; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const fmtNum = v => (typeof v === "number" ? String(v).replace(".", ",") : "");
+  const crc = u => { let h = 2166136261; for (let i = 0; i < u.length; i += 7) { h ^= u[i]; h = Math.imul(h, 16777619); } return (h >>> 0).toString(16) + "-" + u.length; };
+
+  let P = null, fileName = "", fileKey = "", edits = new Map(), cur = 0, ed = null, srcOverride = null, bTemplate = new Map(), nameCells = null;
+
+  // ---------- state ----------
+  function orig(si, r, c) { return P.sheets[si].cells.get(r + "," + c); }
+  function val(si, r, c) { const m = edits.get(si); const k = r + "," + c; if (m && m.has(k)) { const v = m.get(k); return v && typeof v === "object" ? v.v : v; } return orig(si, r, c); }
+  function setVal(si, r, c, v) {
+    if (typeof v === "string") v = v.replace(/\s+$/, "");
+    if (v === "") v = null;
+    let m = edits.get(si); if (!m) { m = new Map(); edits.set(si, m); }
+    const o = orig(si, r, c);
+    const same = (o === undefined || o === null || o === "" ? null : (typeof o === "string" ? o.replace(/\s+$/, "") : o)) === v;
+    const k = r + "," + c;
+    if (same) m.delete(k);
+    else m.set(k, c === COL_B && bTemplate.has(r) ? { v, xf: bTemplate.get(r) } : v);
+    if (!m.size) edits.delete(si);
+  }
+  function dayHours(si, d) { let s = 0, any = false; for (let i = 0; i < LINES; i++) { const v = val(si, FIRST[d] + i, COL_D); if (typeof v === "number") { s += v; any = true; } } return any ? Math.round(s * 100) / 100 : null; }
+  function touchDay(si, d) {
+    const last = FIRST[d] + LINES - 1;
+    let dayChanged = false; const m = edits.get(si);
+    if (m) for (let i = 0; i < LINES; i++) for (const c of [COL_B, COL_D, COL_F]) if (m.has((FIRST[d] + i) + "," + c)) dayChanged = true;
+    if (dayChanged) setVal(si, last, COL_E, dayHours(si, d));
+    else if (m) { m.delete(last + "," + COL_E); if (!m.size) edits.delete(si); }
+    // name on edited sheets
+    if (nameCells) {
+      const em = edits.get(si);
+      const hasOwn = em && [...em.keys()].some(k => k !== "0,0" && k !== "0,2");
+      for (const [c, v] of nameCells) {
+        const o = String(orig(si, 0, c) || "").replace(/\s+/g, "");
+        if (/^(Name|Vorname):?$/.test(o)) { if (hasOwn) setVal(si, 0, c, v); else if (em) em.delete("0," + c); }
+      }
+      if (em && !em.size) edits.delete(si);
+    }
+    save();
+  }
+  function changeCount() { let n = 0; for (const [, m] of edits) for (const k of m.keys()) { const c = +k.split(",")[1]; if (c === COL_B || c === COL_D || c === COL_F) n++; } return n; }
+  function save() {
+    const obj = {}; for (const [si, m] of edits) obj[si] = [...m.entries()];
+    store.set("bh-edits:" + fileKey, JSON.stringify(obj));
+    $("dlcount").textContent = changeCount();
+  }
+  function loadEdits() {
+    edits = new Map();
+    const raw = store.get("bh-edits:" + fileKey); if (!raw) return;
+    try { const obj = JSON.parse(raw); for (const si of Object.keys(obj)) edits.set(+si, new Map(obj[si])); } catch (e) {}
+  }
+
+  // ---------- week info ----------
+  function weekInfo(si) {
+    const h = String(orig(si, 1, 0) || "");
+    const nr = (h.match(/Nr\.\s*(\d+)/) || [])[1] || String(si + 1);
+    const ds = [...h.matchAll(/(\d{2})\.(\d{2})\.(\d{4})/g)].map(m => new Date(+m[3], +m[2] - 1, +m[1]));
+    const yr = (h.match(/(\d)\.\s*Ausbildungsjahr/) || [])[1] || "";
+    return { nr, start: ds[0] || null, end: ds[1] || null, year: yr };
+  }
+  const dfmt = (d, y) => d ? String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + (y ? d.getFullYear() : "") : "";
+  function filledDays(si) { let n = 0; for (let d = 0; d < 5; d++) { for (let i = 0; i < LINES; i++) { const v = val(si, FIRST[d] + i, COL_B); if (v && String(v).trim()) { n++; break; } } } return n; }
+  function daySource(si, d) { for (let i = 0; i < LINES; i++) { const f = String(val(si, FIRST[d] + i, COL_F) || ""); if (/schul/i.test(f)) return "schule"; } for (let i = 0; i < LINES; i++) { const b = String(val(si, FIRST[d] + i, COL_B) || ""); if (/^(Bädertechnik|Bäderorganisation|Schwimm|Wirtschaft|Deutsch|Politik|Religion|Sport ?unterricht|Rettungslehre)/i.test(b)) return "schule"; } return "betrieb"; }
+
+  // ---------- render ----------
+  function renderWeeks() {
+    const sel = $("weeksel");
+    sel.innerHTML = P.sheets.map((sh, si) => { const w = weekInfo(si); return `<option value="${si}">Nr. ${esc(w.nr)} · ${dfmt(w.start)}–${dfmt(w.end, 1)} · ${filledDays(si)}/5 Tage</option>`; }).join("");
+    sel.value = String(cur);
+  }
+  function updateWeekOption(si) { const o = $("weeksel").options[si]; if (o) { const w = weekInfo(si); o.textContent = `Nr. ${w.nr} · ${dfmt(w.start)}–${dfmt(w.end, 1)} · ${filledDays(si)}/5 Tage`; } }
+  function renderSheet() {
+    const si = cur, w = weekInfo(si);
+    $("prev").disabled = si === 0; $("next").disabled = si === P.sheets.length - 1;
+    $("weeksel").value = String(si);
+    const em = edits.get(si);
+    const name = [val(si, 0, 0), val(si, 0, 2)].filter(Boolean).join("  ");
+    let h = `<div class="sheet-head"><span class="nr">Ausbildungsnachweis Nr. ${esc(w.nr)}</span><span>${dfmt(w.start, 1)} bis ${dfmt(w.end, 1)}${w.year ? " · " + w.year + ". Ausbildungsjahr" : ""}</span><span>${esc(name)}</span></div>`;
+    h += `<div class="cols" aria-hidden="true"><div>Tag</div><div>Ausgeführte Arbeiten, Unterricht usw.</div><div>Einzel&shy;std.</div><div>Gesamt&shy;std.</div><div>Ausbildungs&shy;abteilung</div></div>`;
+    for (let d = 0; d < 5; d++) {
+      const dt = w.start ? new Date(w.start.getFullYear(), w.start.getMonth(), w.start.getDate() + d) : null;
+      const tot = dayHours(si, d);
+      const src = daySource(si, d);
+      h += `<div class="day"><div class="dayname"><b>${DAYS[d]}</b><span>${dfmt(dt, 1)}</span><span class="daytotal-m">${tot !== null ? fmtNum(tot) + " Std." : ""}</span>${src === "schule" ? `<span class="src">Berufsschule</span>` : ""}</div><div class="lines">`;
+      for (let i = 0; i < LINES; i++) {
+        const r = FIRST[d] + i;
+        const b = val(si, r, COL_B), dh = val(si, r, COL_D), f = val(si, r, COL_F);
+        const text = b ? String(b).trim() : "";
+        const changed = em && em.has(r + "," + COL_B);
+        const cls = ["linebtn", text ? "" : "empty", changed ? (text.length > MAXLEN ? "long" : "changed") : ""].join(" ");
+        h += `<div class="lrow">
+          <button type="button" class="${cls}" data-d="${d}" data-i="${i}" aria-label="${DAYS[d]} Zeile ${i + 1}${text ? ": " + esc(text) : ", leer"}">${text ? esc(text) : "Tätigkeit eintragen"}</button>
+          <div class="hrs-wrap"><span class="mlabel">Std.</span><input class="cell-in hrs" type="number" inputmode="decimal" min="0" max="24" step="0.25" id="h-${si}-${r}" data-r="${r}" data-d="${d}" value="${typeof dh === "number" ? dh : ""}" aria-label="Stunden ${DAYS[d]} Zeile ${i + 1}"></div>
+          <div class="total-wrap total ${i === LINES - 1 && tot !== null ? "" : "none"}">${i === LINES - 1 && tot !== null ? fmtNum(tot) : "·"}</div>
+          <div class="dept-wrap"><span class="mlabel">Abteilung</span><input class="cell-in dept" type="text" list="depts" id="f-${si}-${r}" data-r="${r}" data-d="${d}" value="${f ? esc(String(f).trim()) : ""}" aria-label="Abteilung ${DAYS[d]} Zeile ${i + 1}"></div>
+        </div>`;
+      }
+      h += `</div></div>`;
+    }
+    $("sheet").innerHTML = h;
+    $("status").innerHTML = `<b>${filledDays(si)}</b> von 5 Tagen ausgefüllt`;
+    store.set("bh-week:" + fileKey, String(si));
+  }
+
+  // ---------- editor ----------
+  function lineText(si, r) { const v = val(si, r, COL_B); return v ? String(v).trim() : ""; }
+  function openEditor(d, i) {
+    const si = cur, r = FIRST[d] + i, w = weekInfo(si);
+    const dt = w.start ? new Date(w.start.getFullYear(), w.start.getMonth(), w.start.getDate() + d) : null;
+    ed = { si, d, i, r, src: srcOverride || daySource(si, d) };
+    $("ed-title").textContent = DAYS[d] + (dt ? ", " + dfmt(dt, 1) : "");
+    $("ed-sub").textContent = "Zeile " + (i + 1) + " von " + LINES;
+    $("ed-input").value = lineText(si, r);
+    setSrcButtons(); renderHours(); renderSugs();
+    $("shade").hidden = false; $("editor").hidden = false;
+    setTimeout(() => { $("ed-input").focus(); $("ed-input").select(); }, 30);
+  }
+  function closeEditor() { $("editor").hidden = true; $("shade").hidden = true; const last = ed; ed = null; renderSheet(); if (last) { const b = document.querySelector(`.linebtn[data-d="${last.d}"][data-i="${last.i}"]`); if (b) b.focus(); } }
+  function setSrcButtons() { document.querySelectorAll("#editor .seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.src === ed.src))); }
+  function renderHours() {
+    const cv = val(ed.si, ed.r, COL_D);
+    const opts = [0.5, 1, 1.5, 2, 3, 4, 5, 6, 7, 8];
+    $("hchips").innerHTML = opts.map(h => `<button type="button" class="chip" data-h="${h}" aria-pressed="${cv === h}">${fmtNum(h)}</button>`).join("") + `<button type="button" class="chip" data-h="" aria-pressed="false">keine</button>`;
+  }
+  function freeLinesAfter() { const out = []; for (let j = ed.i + 1; j < LINES; j++) { const r = FIRST[ed.d] + j; if (lineText(ed.si, r)) break; out.push(r); } return out; }
+  function splitText(t, n) { const pi = t.indexOf(" ("); if (n >= 2 && pi > 0 && pi <= MAXLEN && t.length - pi - 1 <= MAXLEN) return [t.slice(0, pi), t.slice(pi + 1)]; const words = t.split(/\s+/); const lines = []; let cur = ""; for (const w of words) { if (cur && (cur + " " + w).length > MAXLEN) { lines.push(cur); cur = w; } else cur = cur ? cur + " " + w : w; } if (cur) lines.push(cur); if (lines.length > n) { const head = lines.slice(0, n - 1); head.push(lines.slice(n - 1).join(" ")); return head; } return lines; }
+  function lenNote(t) {
+    if (t.length <= MAXLEN) return "";
+    const free = freeLinesAfter().length;
+    return free ? `<span class="len">Lang, wird auf ${Math.min(splitText(t, 99).length, free + 1)} Zeilen verteilt</span>` : `<span class="len">Lang, passt evtl. nicht ganz in die Zeile</span>`;
+  }
+  function renderSugs() {
+    const raw = $("ed-input").value.trim();
+    const box = $("sugs");
+    if (!raw) { box.innerHTML = `<p class="hint">Schreib oben, was du gemacht hast. Die passenden Formulierungen erscheinen hier.</p>`; return; }
+    const res = match(raw, ed.src).filter(x => x.s >= 1.2).slice(0, 4);
+    let h = "";
+    if (!res.length || res[0].s < 1.5) h += `<p class="none">Dazu finde ich keine sichere Formulierung. Versuch ein anderes Wort oder schalte auf „Beides“.</p>`;
+    res.forEach((x, k) => {
+      const e = x.e, best = k === 0 && x.s >= 1.5;
+      const conf = x.s >= 4 ? ["good", "passt gut"] : x.s >= 2.4 ? ["", "passt wahrscheinlich"] : ["warn", "unsicher"];
+      const withAct = e.bh + " (" + raw.replace(/[.\s]+$/, "") + ")";
+      const opts = [[withAct, "Mit deiner Tätigkeit"], [e.bh, "Nur Rahmenplan-Formulierung"]];
+      if (best) opts.push([cap(e.text), "Plan-Satz wörtlich"]);
+      h += `<div class="sug${best ? " best" : ""}"><div class="meta"><span class="ref">${esc(e.ref)}</span><span>${esc(e.section)}</span>${k === 0 ? `<span class="pill ${conf[0]}">${conf[1]}</span>` : ""}</div>` +
+        opts.map(([t, l], j) => `<button type="button" class="opt${best && j === 0 ? " primary" : ""}" data-text="${esc(t)}"><small>${l} ${lenNote(t)}</small><span>${esc(t)}</span></button>`).join("") + `</div>`;
+    });
+    h += `<button type="button" class="opt" data-text="${esc(raw)}"><small>So übernehmen, wie ich es geschrieben habe ${lenNote(raw)}</small><span>${esc(raw)}</span></button>`;
+    box.innerHTML = h;
+  }
+  function applyText(t) {
+    const si = ed.si; t = t.trim();
+    if (t.length > MAXLEN) {
+      const free = freeLinesAfter();
+      if (free.length) {
+        const parts = splitText(t, free.length + 1);
+        const rows = [ed.r, ...free].slice(0, parts.length);
+        rows.forEach((r, k) => setVal(si, r, COL_B, parts[k]));
+        // hours go to the last line of the entry, as on paper
+        const hv = val(si, ed.r, COL_D);
+        if (typeof hv === "number" && rows.length > 1) { setVal(si, ed.r, COL_D, null); setVal(si, rows[rows.length - 1], COL_D, hv); }
+        touchDay(si, ed.d); toast("Auf " + rows.length + " Zeilen verteilt"); closeEditor(); return;
+      }
+    }
+    setVal(si, ed.r, COL_B, t); touchDay(si, ed.d); toast("Eingetragen"); closeEditor();
+  }
+
+  // ---------- download ----------
+  let dlApi; let dlTried = false;
+  const dlReady = (async () => { try { dlApi = window.claude && window.claude.use ? await window.claude.use("downloads") : null; } catch (e) { dlApi = null; } dlTried = true; return dlApi; })();
+  async function download() {
+    const btn = $("dl");
+    if (!changeCount()) { toast("Noch keine Änderungen. Trag erst etwas ein."); return; }
+    btn.disabled = true;
+    try {
+      const api = dlTried ? dlApi : await dlReady;
+      const xls = XLS.buildWorkbook(P, edits);
+      if (!api) {
+        const url = URL.createObjectURL(new Blob([xls], { type: "application/vnd.ms-excel" }));
+        const a = document.createElement("a"); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+        toast("Heruntergeladen: " + fileName); return;
+      }
+      const z = XLS.zip([{ name: fileName, data: xls }]);
+      const base = fileName.replace(/\.xls$/i, "");
+      await api.save({ filename: base + ".zip", data: new Blob([z]) });
+      toast("Gespeichert. ZIP entpacken, dann hast du deine .xls.");
+    } catch (e) {
+      const code = e && e.code;
+      if (code === "declined") toast("Download abgebrochen.");
+      else if (code === "rate_limited") toast("Moment, ein Download-Dialog ist schon offen.");
+      else toast("Download hat nicht geklappt" + (e && e.message ? ": " + e.message : "."));
+    } finally { btn.disabled = false; }
+  }
+
+  // ---------- load ----------
+  function useFile(bytes, name, persist) {
+    const parsed = XLS.parseWorkbook(bytes);
+    if (!parsed.sheets.length) throw new Error("Die Datei hat keine Tabellenblätter.");
+    P = parsed; fileName = name; fileKey = crc(bytes);
+    bTemplate = new Map(); for (let d = 0; d < 5; d++) for (let i = 0; i < LINES; i++) { const r = FIRST[d] + i; const xf = XLS.cellXF(P.sheets[0], r, COL_B); if (xf != null) bTemplate.set(r, xf); }
+    const n0 = String(orig(0, 0, 0) || ""), v0 = String(orig(0, 0, 2) || "");
+    nameCells = /Name:\s*\S/.test(n0) ? [[0, n0.trim()], [2, v0.trim()]] : null;
+    if (persist) { store.set("bh-base", bytesToB64(bytes)); store.set("bh-base-name", name); }
+    loadEdits();
+    const depts = new Set(); P.sheets.forEach((sh, si) => { for (let r = 3; r < 28; r++) { const f = sh.cells.get(r + "," + COL_F); if (typeof f === "string" && f.trim()) depts.add(f.trim()); } });
+    $("depts").innerHTML = [...depts].sort().map(d => `<option value="${esc(d)}"></option>`).join("");
+    $("fname").textContent = name;
+    const savedWeek = store.get("bh-week:" + fileKey);
+    if (savedWeek !== null && +savedWeek < P.sheets.length) cur = +savedWeek;
+    else {
+      const today = new Date(); today.setHours(0, 0, 0, 0); cur = 0;
+      for (let si = 0; si < P.sheets.length; si++) { const w = weekInfo(si); if (w.start && w.end && today >= w.start && today <= new Date(w.end.getTime() + 2 * 864e5)) { cur = si; break; } if (w.start && w.start > today) { cur = Math.max(0, si - 1); break; } }
+    }
+    $("errbox").hidden = true;
+    $("startbox").hidden = true; $("weekbar").hidden = false; $("sheet").hidden = false; $("dl").hidden = false; $("resetbtn").hidden = false;
+    renderWeeks(); renderSheet(); $("dlcount").textContent = changeCount();
+  }
+  function showErr(msg) { $("errbox").textContent = msg; $("errbox").hidden = false; }
+
+  let toastTimer;
+  function toast(msg) { let t = document.querySelector(".toast"); if (!t) { t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); document.body.appendChild(t); } t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2600); }
+
+  // ---------- events ----------
+  $("sheet").addEventListener("click", ev => { const b = ev.target.closest(".linebtn"); if (b) openEditor(+b.dataset.d, +b.dataset.i); });
+  $("sheet").addEventListener("change", ev => {
+    const t = ev.target; if (!t.classList.contains("cell-in")) return;
+    const r = +t.dataset.r, d = +t.dataset.d;
+    if (t.classList.contains("hrs")) { const v = t.value.trim() === "" ? null : Math.round(parseFloat(t.value.replace(",", ".")) * 100) / 100; setVal(cur, r, COL_D, isNaN(v) ? null : v); }
+    else setVal(cur, r, COL_F, t.value.trim());
+    touchDay(cur, d); updateWeekOption(cur);
+    const tot = dayHours(cur, d); const lines = document.querySelectorAll(".day")[d];
+    if (lines) { const tw = lines.querySelectorAll(".total-wrap")[LINES - 1]; tw.textContent = tot !== null ? fmtNum(tot) : "·"; tw.classList.toggle("none", tot === null); const m = lines.querySelector(".daytotal-m"); if (m) m.textContent = tot !== null ? fmtNum(tot) + " Std." : ""; }
+  });
+  $("weeksel").addEventListener("change", e => { cur = +e.target.value; srcOverride = null; renderSheet(); });
+  $("prev").addEventListener("click", () => { if (cur > 0) { cur--; srcOverride = null; renderSheet(); } });
+  $("next").addEventListener("click", () => { if (cur < P.sheets.length - 1) { cur++; srcOverride = null; renderSheet(); } });
+  let deb; $("ed-input").addEventListener("input", () => { clearTimeout(deb); deb = setTimeout(renderSugs, 120); });
+  $("ed-input").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); const first = $("sugs").querySelector(".opt"); if (first) applyText(first.dataset.text); } });
+  $("sugs").addEventListener("click", e => { const o = e.target.closest(".opt"); if (o) applyText(o.dataset.text); });
+  document.querySelectorAll("#editor .seg button").forEach(b => b.addEventListener("click", () => { ed.src = b.dataset.src; srcOverride = ed.src; setSrcButtons(); renderSugs(); }));
+  $("hchips").addEventListener("click", e => { const c = e.target.closest(".chip"); if (!c) return; setVal(ed.si, ed.r, COL_D, c.dataset.h === "" ? null : +c.dataset.h); touchDay(ed.si, ed.d); renderHours(); });
+  $("ed-clear").addEventListener("click", () => { setVal(ed.si, ed.r, COL_B, null); setVal(ed.si, ed.r, COL_D, null); touchDay(ed.si, ed.d); toast("Zeile geleert"); closeEditor(); });
+  $("ed-done").addEventListener("click", () => { const raw = $("ed-input").value.trim(); if (raw && raw !== lineText(ed.si, ed.r)) { applyText(raw); return; } updateWeekOption(cur); closeEditor(); });
+  $("ed-close").addEventListener("click", closeEditor);
+  $("shade").addEventListener("click", closeEditor);
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && ed) closeEditor(); });
+  $("dl").addEventListener("click", download);
+  let resetArmed = false;
+  $("resetbtn").addEventListener("click", () => {
+    if (!resetArmed) { resetArmed = true; $("resetbtn").textContent = "Wirklich alle Änderungen verwerfen?"; setTimeout(() => { resetArmed = false; $("resetbtn").textContent = "Meine Änderungen verwerfen"; }, 4000); return; }
+    resetArmed = false; $("resetbtn").textContent = "Meine Änderungen verwerfen";
+    edits = new Map(); store.del("bh-edits:" + fileKey); save(); renderWeeks(); renderSheet(); toast("Änderungen verworfen");
+  });
+  $("fileinput").addEventListener("change", async e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    await takeFile(f); e.target.value = "";
+  });
+
+  // ---------- start ----------
+  function showStart() { $("startbox").hidden = false; $("weekbar").hidden = true; $("sheet").hidden = true; $("dl").hidden = true; $("resetbtn").hidden = true; $("fname").textContent = "keine geöffnet"; }
+  async function takeFile(f) {
+    try { const bytes = new Uint8Array(await f.arrayBuffer()); useFile(bytes, f.name, true); toast("Datei geladen: " + f.name); }
+    catch (err) { showErr("Die Datei konnte nicht gelesen werden. " + (err && err.message ? err.message : "") + " Es geht nur das alte Excel-Format .xls."); }
+  }
+  const sb = $("startbox");
+  ["dragenter", "dragover"].forEach(t => document.addEventListener(t, e => { e.preventDefault(); sb.classList.add("drag"); }));
+  ["dragleave", "drop"].forEach(t => document.addEventListener(t, e => { e.preventDefault(); sb.classList.remove("drag"); }));
+  document.addEventListener("drop", e => { const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) takeFile(f); });
+  try {
+    const b = store.get("bh-base"), n = store.get("bh-base-name");
+    if (b && n) useFile(b64ToBytes(b), n, false);
+    else if (EMBEDDED_B64) useFile(b64ToBytes(EMBEDDED_B64), EMBEDDED_NAME, false);
+    else showStart();
+  } catch (e) { showStart(); }
+})();
+</script>
+
+</body>
+</html>
